@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radar — Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
+    header { background: #1e40af; color: white; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.25rem; font-weight: 600; }
+    .badge { background: #3b82f6; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; }
+    nav { display: flex; gap: 0; border-bottom: 1px solid #e2e8f0; background: white; padding: 0 24px; }
+    nav button { padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 0.9rem; color: #64748b; border-bottom: 2px solid transparent; }
+    nav button.active { color: #1e40af; border-bottom-color: #1e40af; font-weight: 500; }
+    .content { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+    .stat .num { font-size: 2rem; font-weight: 700; color: #1e40af; }
+    .stat .label { color: #64748b; font-size: 0.85rem; margin-top: 4px; }
+    table { width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 8px; border-collapse: collapse; overflow: hidden; }
+    th { background: #f1f5f9; padding: 10px 12px; text-align: left; font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+    td { padding: 10px 12px; border-top: 1px solid #f1f5f9; font-size: 0.875rem; }
+    tr:hover td { background: #f8fafc; }
+    td a { color: #2563eb; text-decoration: none; }
+    td a:hover { text-decoration: underline; }
+    .banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.875rem; color: #92400e; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .source-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .source-card h3 { font-size: 1rem; margin-bottom: 4px; }
+    .source-card p { color: #64748b; font-size: 0.875rem; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+    .pill.competitor { background: #fee2e2; color: #991b1b; }
+    .pill.partner { background: #d1fae5; color: #065f46; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>📡 Radar</h1>
+  <span class="badge" id="totalBadge">0 leads</span>
+</header>
+<nav>
+  <button class="active" onclick="showTab('dashboard')">Dashboard</button>
+  <button onclick="showTab('targets')">Targets</button>
+  <button onclick="showTab('sources')">Sources</button>
+</nav>
+<div class="content">
+  <div id="configBanner" class="banner" style="display:none">
+    ⚠️ WEBAPP_URL not configured — open <code>app/index.html</code> and set <code>CONFIG.WEBAPP_URL</code>.
+  </div>
+
+  <!-- Dashboard tab -->
+  <div id="tab-dashboard" class="tab-panel active">
+    <div class="stats">
+      <div class="stat"><div class="num" id="statTotal">—</div><div class="label">Total leads</div></div>
+      <div class="stat"><div class="num" id="statToday">—</div><div class="label">Added today</div></div>
+      <div class="stat"><div class="num" id="statPushed">—</div><div class="label">Pushed to Botdog</div></div>
+      <div class="stat"><div class="num" id="statBridges">—</div><div class="label">Bridges active</div></div>
+    </div>
+    <table id="dashTable">
+      <thead><tr>
+        <th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Date</th><th>LinkedIn</th>
+      </tr></thead>
+      <tbody id="dashBody"><tr><td colspan="6" style="text-align:center;color:#64748b;padding:32px">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Targets tab -->
+  <div id="tab-targets" class="tab-panel">
+    <table id="targetsTable">
+      <thead><tr>
+        <th>Name</th><th>Company</th><th>Title</th><th>Bridge</th><th>LinkedIn</th><th>Botdog pushed</th>
+      </tr></thead>
+      <tbody id="targetsBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Sources tab -->
+  <div id="tab-sources" class="tab-panel">
+    <p style="margin-bottom:16px;color:#64748b;font-size:0.875rem">Bridges configured in the Chrome extension (sync-core.js BRIDGES)</p>
+    <div id="sourcesBody"></div>
+  </div>
+</div>
+
+<script>
+const CONFIG = {
+  WEBAPP_URL: '__WEBAPP_URL__',   // ← replace with your /exec URL after deploying Apps Script
+  BRIDGE_SOURCE: {
+    'Elie Cohen': { category: 'partner', description: 'The Triana Group connections' }
+  },
+  SOURCES: ['The Triana Group', 'Business France NA 2026', 'OSCI 2026', 'Allios 2026', 'CNCCEF']
+};
+
+let allRows = [];
+
+async function load() {
+  if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
+    document.getElementById('configBanner').style.display = 'block';
+    document.getElementById('dashBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">Configure WEBAPP_URL to load data</td></tr>';
+    return;
+  }
+  try {
+    const data = await new Promise((resolve, reject) => {
+      const cb = 'radarCb_' + Date.now();
+      window[cb] = d => { delete window[cb]; resolve(d); };
+      const s = document.createElement('script');
+      s.src = CONFIG.WEBAPP_URL + '?callback=' + cb;
+      s.onerror = reject;
+      document.head.appendChild(s);
+      setTimeout(() => reject(new Error('timeout')), 10000);
+    });
+    allRows = data.rows || [];
+    render();
+  } catch (err) {
+    document.getElementById('dashBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#ef4444;padding:32px">Fetch failed: ' + err.message + '</td></tr>';
+  }
+}
+
+function render() {
+  const total    = allRows.length;
+  const today    = allRows.filter(r => isToday(r.collected_date)).length;
+  const pushed   = allRows.filter(r => r.botdog_pushed).length;
+  const bridges  = new Set(allRows.map(r => r.radar_person).filter(Boolean)).size;
+
+  document.getElementById('statTotal').textContent   = total;
+  document.getElementById('statToday').textContent   = today;
+  document.getElementById('statPushed').textContent  = pushed;
+  document.getElementById('statBridges').textContent = bridges;
+  document.getElementById('totalBadge').textContent  = total + ' leads';
+
+  const rows = allRows.slice().reverse().slice(0, 50);
+  document.getElementById('dashBody').innerHTML = rows.map(r => `
+    <tr>
+      <td>${esc(r.first_name)} ${esc(r.last_name)}</td>
+      <td>${esc(r.title)}</td>
+      <td>${esc(r.company)}</td>
+      <td>${esc(r.radar_person)}</td>
+      <td>${fmtDate(r.collected_date)}</td>
+      <td>${r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">View</a>' : '—'}</td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">No leads yet</td></tr>';
+
+  document.getElementById('targetsBody').innerHTML = allRows.map(r => `
+    <tr>
+      <td>${esc(r.first_name)} ${esc(r.last_name)}</td>
+      <td>${esc(r.company)}</td>
+      <td>${esc(r.title)}</td>
+      <td>${esc(r.radar_person)}</td>
+      <td>${r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—'}</td>
+      <td>${r.botdog_pushed ? '✅ ' + fmtDate(r.botdog_pushed) : '—'}</td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">No leads yet</td></tr>';
+
+  document.getElementById('sourcesBody').innerHTML = CONFIG.SOURCES.map(s => `
+    <div class="source-card"><h3>${esc(s)}</h3><p>LinkedIn Sales Navigator bridge source</p></div>`).join('');
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function isToday(d) {
+  if (!d) return false;
+  const dt = new Date(d);
+  const now = new Date();
+  return dt.getDate() === now.getDate() && dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+}
+function fmtDate(d) { return d ? new Date(d).toLocaleDateString() : '—'; }
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+load();
+</script>
+</body>
+</html>
