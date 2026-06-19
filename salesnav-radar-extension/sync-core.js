@@ -4,7 +4,7 @@
 // POSTs to Apps Script hub.
 // =============================================================
 
-const WEBAPP_URL       = '__WEBAPP_URL__';  // ← set this after deploying Apps Script
+const WEBAPP_URL      = 'https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec';
 const INGEST_SECRET    = 'radar_7Kq3mZ9pX2vL8nT';
 const MAX_PAGES        = 25;
 const MAX_RESOLVE_PER_RUN = 100;
