@@ -33,6 +33,18 @@
     .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
     .pill.competitor { background: #fee2e2; color: #991b1b; }
     .pill.partner { background: #d1fae5; color: #065f46; }
+        .settings-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 16px; max-width: 560px; }
+        .settings-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+        .settings-card p { color: #64748b; font-size: 0.85rem; margin-bottom: 16px; }
+        .field { margin-bottom: 14px; }
+        .field label { display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+        .field input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-family: monospace; }
+        .field input:focus { outline: none; border-color: #1e40af; box-shadow: 0 0 0 2px #bfdbfe; }
+                            .key-status { font-size: 0.75rem; margin-top: 4px; }
+        .key-set { color: #065f46; } .key-missing { color: #991b1b; }
+        .btn-save { background: #1e40af; color: white; border: none; padding: 9px 20px; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+        .btn-save:hover { background: #1d3a9e; } .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+        .save-msg { margin-left: 12px; font-size: 0.85rem; }
   </style>
 </head>
 <body>
@@ -44,6 +56,7 @@
   <button class="active" onclick="showTab('dashboard')">Dashboard</button>
   <button onclick="showTab('targets')">Targets</button>
   <button onclick="showTab('sources')">Sources</button>
+      <button onclick="showTab('settings')">Settings</button>
 </nav>
 <div class="content">
   <div id="configBanner" class="banner" style="display:none">
@@ -82,6 +95,26 @@
     <div id="sourcesBody"></div>
   </div>
 </div>
+
+  <!-- Settings tab -->
+  <div id="tab-settings" class="tab-panel">
+      <div class="settings-card">
+            <h2>API Keys</h2>
+          <p>Paste your keys below and click Save. Keys are stored securely in Apps Script Script Properties and never exposed in the UI.</p>
+          <div class="field">
+                <label>Botdog API Key</label>
+                <input type="password" id="inputBotdog" placeholder="Paste Botdog API key">
+                <div class="key-status" id="statusBotdog"></div>div>
+          </div>div>
+          <div class="field">
+                <label>Resend API Key</label>
+                <input type="password" id="inputResend" placeholder="Paste Resend API key">
+                <div class="key-status" id="statusResend"></div>div>
+          </div>div>
+          <button class="btn-save" id="btnSave" onclick="saveSettings()">Save Keys</button>button>
+          <span class="save-msg" id="saveMsg"></span>span>
+      </div>div>
+  </div>div></label></label></p></h2>
 
 <script>
 const CONFIG = {
@@ -170,7 +203,54 @@ function isToday(d) {
 function fmtDate(d) { return d ? new Date(d).toLocaleDateString() : '—'; }
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+  async function saveSettings() {
+      const botdog = document.getElementById('inputBotdog').value.trim();
+      const resend = document.getElementById('inputResend').value.trim();
+      if (!botdog && !resend) { document.getElementById('saveMsg').textContent = 'Enter at least one key.'; return; }
+      const btn = document.getElementById('btnSave');
+      btn.disabled = true; btn.textContent = 'Saving...';
+      document.getElementById('saveMsg').textContent = '';
+      try {
+            const payload = { secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig' };
+            if (botdog) payload.botdog_api_key = botdog;
+            if (resend) payload.resend_api_key = resend;
+            const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const data = await resp.json();
+            if (data.success) {
+                    document.getElementById('saveMsg').style.color = '#065f46';
+                    document.getElementById('saveMsg').textContent = 'Keys saved successfully!';
+                    document.getElementById('inputBotdog').value = '';
+                    document.getElementById('inputResend').value = '';
+                    loadKeyStatus();
+            } else { throw new Error(data.error || 'Unknown error'); }
+      } catch(err) {
+            document.getElementById('saveMsg').style.color = '#991b1b';
+            document.getElementById('saveMsg').textContent = 'Error: ' + err.message;
+      } finally {
+            btn.disabled = false; btn.textContent = 'Save Keys';
+      }
+  }
+
+  async function loadKeyStatus() {
+      try {
+            const data = await new Promise((resolve, reject) => {
+                    const cb = 'cfgCb_' + Date.now();
+                    window[cb] = d => { delete window[cb]; resolve(d); };
+                    const s = document.createElement('script');
+                    s.src = CONFIG.WEBAPP_URL + '?action=getConfig&callback=' + cb;
+                    s.onerror = reject; document.head.appendChild(s);
+                    setTimeout(() => reject(new Error('timeout')), 8000);
+            });
+            const bEl = document.getElementById('statusBotdog');
+            const rEl = document.getElementById('statusResend');
+            bEl.className = 'key-status ' + (data.botdog_key_set ? 'key-set' : 'key-missing');
+            bEl.textContent = data.botdog_key_set ? 'Key is set' : 'Not set';
+            rEl.className = 'key-status ' + (data.resend_key_set ? 'key-set' : 'key-missing');
+            rEl.textContent = data.resend_key_set ? 'Key is set' : 'Not set';
+      } catch(e) { console.warn('loadKeyStatus failed', e); }
+  }
 load();
+  loadKeyStatus();
 </script>
 </body>
 </html>
