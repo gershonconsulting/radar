@@ -11,20 +11,22 @@ const MAX_RESOLVE_PER_RUN = 100;
 
 // Bridges: each entry is a Sales Navigator list URL fragment + metadata
 const BRIDGES = [
-  { bridge: 'Elie Cohen',               category: 'partner',   urn: 'ACwAAAALvckBqvkWA1X60puCvmWbDTndKhJyWdw' },
-  { bridge: 'Jabril Bensedrine',        category: 'partner',   urn: 'ACwAAAAZ62QBFLpds_ZGdkq4MHkHmJvovRixzkM' },
-  { bridge: 'Phil Jeudy',               category: 'partner',   urn: 'ACwAAAAbEFEBcIoDyt1Se4852krlmZrdxTryE-I' },
-  { bridge: 'Mathias Cohen',            category: 'partner',   urn: 'ACwAAAARL38BwmwLt6iIb6vHgLP6Up5fXq3Qoms' },
-  { bridge: 'Anne Charlotte Le Bourhis',category: 'partner',   urn: 'ACwAAABWZEIB8mgZv6MlSCv22joSKYhvnrBylvU' },
-  { bridge: 'Marie-Josee Rodi-Andrieu', category: 'partner',   urn: 'ACwAAABSExEBFWA3dHRNEffTytW-ivqxxt45vDg' },
+  {
+    bridge: 'Elie Cohen',
+    category: 'partner',
+    urn: 'ACwAAAALvckBqvkWA1X60puCvmWbDTndKhJyWdw',
+    // Exact saved-search query (Olivier's ICP: Owner/Partner+CXO, 11-50, Europe, connections-of Elie Cohen, exclude Messaged)
+    savedSearchId: '5671606490'
+  },
 ];
 
 // ICP target filters applied during scrape
 const SEARCH_FILTERS = {
-  seniority: ['CXO', 'Owner'],
-  geography: 'France',
-  headcountMin: 11,
-  headcountMax: 50
+  seniority:      ['Owner / Partner', 'CXO'],   // ids: 320, 310
+  geography:      'Europe',                      // id: 100506914
+  headcountMin:   11,
+  headcountMax:   50,                            // headcount bucket C: 11-50
+  excludeMessaged: true,                         // LEAD_INTERACTIONS: LIMP excluded
 };
 
 // ---------------------------------------------------------------
