@@ -16,6 +16,10 @@ const REPORT_TO            = 'aina@gershonconsulting.com';
 
 function doGet(e) {
   const cb      = (e && e.parameter && e.parameter.callback) || 'callback';
+  if (e && e.parameter && e.parameter.action === 'getConfig') {
+    const props = PropertiesService.getScriptProperties();
+    return _jsonp(cb, { success: true, botdog_key_set: !!props.getProperty('BOTDOG_API_KEY'), resend_key_set: !!props.getProperty('RESEND_API_KEY') });
+  }
   const sheet   = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) {
@@ -35,6 +39,12 @@ function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
     if (payload.secret !== RADAR_INGEST_SECRET) return _json({ success: false, error: 'unauthorized' });
+    if (payload.action === 'setConfig') {
+      const props = PropertiesService.getScriptProperties();
+      if (payload.botdog_api_key) props.setProperty('BOTDOG_API_KEY', payload.botdog_api_key);
+      if (payload.resend_api_key) props.setProperty('RESEND_API_KEY', payload.resend_api_key);
+      return _json({ success: true, action: 'setConfig', saved: true });
+    }
     const leads = payload.leads || [];
     if (!leads.length) return _json({ success: true, service: 'radar-ingest', written: 0 });
     const sheet   = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
