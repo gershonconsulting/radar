@@ -11,8 +11,12 @@ const MAX_RESOLVE_PER_RUN = 100;
 
 // Bridges: each entry is a Sales Navigator list URL fragment + metadata
 const BRIDGES = [
-  { bridge: 'Elie Cohen',            category: 'partner',    urn: 'ACwAAAxxxxx' }, // ← replace urn with actual
-  // Add more bridges here as needed
+  { bridge: 'Elie Cohen',               category: 'partner',   urn: 'ACwAAAALvckBqvkWA1X60puCvmWbDTndKhJyWdw' },
+  { bridge: 'Jabril Bensedrine',        category: 'partner',   urn: 'ACwAAAAZ62QBFLpds_ZGdkq4MHkHmJvovRixzkM' },
+  { bridge: 'Phil Jeudy',               category: 'partner',   urn: 'ACwAAAAbEFEBcIoDyt1Se4852krlmZrdxTryE-I' },
+  { bridge: 'Mathias Cohen',            category: 'partner',   urn: 'ACwAAAARL38BwmwLt6iIb6vHgLP6Up5fXq3Qoms' },
+  { bridge: 'Anne Charlotte Le Bourhis',category: 'partner',   urn: 'ACwAAABWZEIB8mgZv6MlSCv22joSKYhvnrBylvU' },
+  { bridge: 'Marie-Josee Rodi-Andrieu', category: 'partner',   urn: 'ACwAAABSExEBFWA3dHRNEffTytW-ivqxxt45vDg' },
 ];
 
 // ICP target filters applied during scrape
