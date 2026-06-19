@@ -1,256 +1,257 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Radar — Dashboard</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
-    header { background: #1e40af; color: white; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
-    header h1 { font-size: 1.25rem; font-weight: 600; }
-    .badge { background: #3b82f6; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; }
-    nav { display: flex; gap: 0; border-bottom: 1px solid #e2e8f0; background: white; padding: 0 24px; }
-    nav button { padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 0.9rem; color: #64748b; border-bottom: 2px solid transparent; }
-    nav button.active { color: #1e40af; border-bottom-color: #1e40af; font-weight: 500; }
-    .content { padding: 24px; max-width: 1200px; margin: 0 auto; }
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .stat { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
-    .stat .num { font-size: 2rem; font-weight: 700; color: #1e40af; }
-    .stat .label { color: #64748b; font-size: 0.85rem; margin-top: 4px; }
-    table { width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 8px; border-collapse: collapse; overflow: hidden; }
-    th { background: #f1f5f9; padding: 10px 12px; text-align: left; font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-    td { padding: 10px 12px; border-top: 1px solid #f1f5f9; font-size: 0.875rem; }
-    tr:hover td { background: #f8fafc; }
-    td a { color: #2563eb; text-decoration: none; }
-    td a:hover { text-decoration: underline; }
-    .banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.875rem; color: #92400e; }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-    .source-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-    .source-card h3 { font-size: 1rem; margin-bottom: 4px; }
-    .source-card p { color: #64748b; font-size: 0.875rem; }
-    .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
-    .pill.competitor { background: #fee2e2; color: #991b1b; }
-    .pill.partner { background: #d1fae5; color: #065f46; }
-        .settings-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 16px; max-width: 560px; }
-        .settings-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
-        .settings-card p { color: #64748b; font-size: 0.85rem; margin-bottom: 16px; }
-        .field { margin-bottom: 14px; }
-        .field label { display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
-        .field input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-family: monospace; }
-        .field input:focus { outline: none; border-color: #1e40af; box-shadow: 0 0 0 2px #bfdbfe; }
-                            .key-status { font-size: 0.75rem; margin-top: 4px; }
-        .key-set { color: #065f46; } .key-missing { color: #991b1b; }
-        .btn-save { background: #1e40af; color: white; border: none; padding: 9px 20px; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
-        .btn-save:hover { background: #1d3a9e; } .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
-        .save-msg { margin-left: 12px; font-size: 0.85rem; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radar — Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
+header { background: #1e40af; color: white; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 1.25rem; font-weight: 600; }
+.badge { background: #3b82f6; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; }
+nav { display: flex; gap: 0; border-bottom: 1px solid #e2e8f0; background: white; padding: 0 24px; }
+nav button { padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 0.9rem; color: #64748b; border-bottom: 2px solid transparent; }
+nav button.active { color: #1e40af; border-bottom-color: #1e40af; font-weight: 500; }
+.content { padding: 24px; max-width: 1200px; margin: 0 auto; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+.stat .num { font-size: 2rem; font-weight: 700; color: #1e40af; }
+.stat .label { color: #64748b; font-size: 0.85rem; margin-top: 4px; }
+table { width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 8px; border-collapse: collapse; overflow: hidden; }
+th { background: #f1f5f9; padding: 10px 12px; text-align: left; font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+td { padding: 10px 12px; border-top: 1px solid #f1f5f9; font-size: 0.875rem; }
+tr:hover td { background: #f8fafc; }
+td a { color: #2563eb; text-decoration: none; }
+td a:hover { text-decoration: underline; }
+.banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.875rem; color: #92400e; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.source-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.source-card h3 { font-size: 1rem; margin-bottom: 4px; }
+.source-card p { color: #64748b; font-size: 0.875rem; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+.pill.competitor { background: #fee2e2; color: #991b1b; }
+.pill.partner { background: #d1fae5; color: #065f46; }
+.settings-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 16px; max-width: 560px; }
+.settings-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+.settings-card p { color: #64748b; font-size: 0.85rem; margin-bottom: 16px; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.field input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-family: monospace; }
+.field input:focus { outline: none; border-color: #1e40af; box-shadow: 0 0 0 2px #bfdbfe; }
+.key-status { font-size: 0.75rem; margin-top: 4px; }
+.key-set { color: #065f46; } .key-missing { color: #991b1b; }
+.btn-save { background: #1e40af; color: white; border: none; padding: 9px 20px; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+.btn-save:hover { background: #1d3a9e; } .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+.save-msg { margin-left: 12px; font-size: 0.85rem; }
+</style>
 </head>
 <body>
 <header>
-  <h1>📡 Radar</h1>
-  <span class="badge" id="totalBadge">0 leads</span>
+<h1>📡 Radar</h1>
+<span class="badge" id="totalBadge">0 leads</span>
 </header>
 <nav>
-  <button class="active" onclick="showTab('dashboard')">Dashboard</button>
-  <button onclick="showTab('targets')">Targets</button>
-  <button onclick="showTab('sources')">Sources</button>
-      <button onclick="showTab('settings')">Settings</button>
+<button class="active" onclick="showTab('dashboard')">Dashboard</button>
+<button onclick="showTab('targets')">Targets</button>
+<button onclick="showTab('sources')">Sources</button>
+<button onclick="showTab('settings')">Settings</button>
 </nav>
 <div class="content">
-  <div id="configBanner" class="banner" style="display:none">
-    ⚠️ WEBAPP_URL not configured — open <code>app/index.html</code> and set <code>CONFIG.WEBAPP_URL</code>.
-  </div>
-
-  <!-- Dashboard tab -->
-  <div id="tab-dashboard" class="tab-panel active">
-    <div class="stats">
-      <div class="stat"><div class="num" id="statTotal">—</div><div class="label">Total leads</div></div>
-      <div class="stat"><div class="num" id="statToday">—</div><div class="label">Added today</div></div>
-      <div class="stat"><div class="num" id="statPushed">—</div><div class="label">Pushed to Botdog</div></div>
-      <div class="stat"><div class="num" id="statBridges">—</div><div class="label">Bridges active</div></div>
-    </div>
-    <table id="dashTable">
-      <thead><tr>
-        <th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Date</th><th>LinkedIn</th>
-      </tr></thead>
-      <tbody id="dashBody"><tr><td colspan="6" style="text-align:center;color:#64748b;padding:32px">Loading…</td></tr></tbody>
-    </table>
-  </div>
-
-  <!-- Targets tab -->
-  <div id="tab-targets" class="tab-panel">
-    <table id="targetsTable">
-      <thead><tr>
-        <th>Name</th><th>Company</th><th>Title</th><th>Bridge</th><th>LinkedIn</th><th>Botdog pushed</th>
-      </tr></thead>
-      <tbody id="targetsBody"></tbody>
-    </table>
-  </div>
-
-  <!-- Sources tab -->
-  <div id="tab-sources" class="tab-panel">
-    <p style="margin-bottom:16px;color:#64748b;font-size:0.875rem">Bridges configured in the Chrome extension (sync-core.js BRIDGES)</p>
-    <div id="sourcesBody"></div>
-  </div>
+<div id="configBanner" class="banner" style="display:none">
+⚠️ WEBAPP_URL not configured — open <code>app/index.html</code> and set <code>CONFIG.WEBAPP_URL</code>.
 </div>
 
-  <!-- Settings tab -->
-  <div id="tab-settings" class="tab-panel">
-      <div class="settings-card">
-            <h2>API Keys</h2>
-          <p>Paste your keys below and click Save. Keys are stored securely in Apps Script Script Properties and never exposed in the UI.</p>
-          <div class="field">
-                <label>Botdog API Key</label>
-                <input type="password" id="inputBotdog" placeholder="Paste Botdog API key">
-                <div class="key-status" id="statusBotdog"></div>div>
-          </div>div>
-          <div class="field">
-                <label>Resend API Key</label>
-                <input type="password" id="inputResend" placeholder="Paste Resend API key">
-                <div class="key-status" id="statusResend"></div>div>
-          </div>div>
-          <button class="btn-save" id="btnSave" onclick="saveSettings()">Save Keys</button>button>
-          <span class="save-msg" id="saveMsg"></span>span>
-      </div>div>
-  </div>div></label></label></p></h2>
+<!-- Dashboard tab -->
+<div id="tab-dashboard" class="tab-panel active">
+<div class="stats">
+<div class="stat"><div class="num" id="statTotal">—</div><div class="label">Total leads</div></div>
+<div class="stat"><div class="num" id="statToday">—</div><div class="label">Added today</div></div>
+<div class="stat"><div class="num" id="statPushed">—</div><div class="label">Pushed to Botdog</div></div>
+<div class="stat"><div class="num" id="statBridges">—</div><div class="label">Bridges active</div></div>
+</div>
+<table id="dashTable">
+<thead><tr>
+<th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Date</th><th>LinkedIn</th>
+</tr></thead>
+<tbody id="dashBody"><tr><td colspan="6" style="text-align:center;color:#64748b;padding:32px">Loading…</td></tr></tbody>
+</table>
+</div>
+
+<!-- Targets tab -->
+<div id="tab-targets" class="tab-panel">
+<table id="targetsTable">
+<thead><tr>
+<th>Name</th><th>Company</th><th>Title</th><th>Bridge</th><th>LinkedIn</th><th>Botdog pushed</th>
+</tr></thead>
+<tbody id="targetsBody"></tbody>
+</table>
+</div>
+
+<!-- Sources tab -->
+<div id="tab-sources" class="tab-panel">
+<p style="margin-bottom:16px;color:#64748b;font-size:0.875rem">Bridges configured in the Chrome extension (sync-core.js BRIDGES)</p>
+<div id="sourcesBody"></div>
+</div>
+
+<!-- Settings tab -->
+<div id="tab-settings" class="tab-panel">
+<div class="settings-card">
+<h2>API Keys</h2>
+<p>Paste your keys below and click Save. Keys are stored securely in Apps Script Script Properties and never exposed in the UI.</p>
+<div class="field">
+<label>Botdog API Key</label>
+<input type="password" id="inputBotdog" placeholder="Paste Botdog API key">
+<div class="key-status" id="statusBotdog"></div>
+</div>
+<div class="field">
+<label>Resend API Key</label>
+<input type="password" id="inputResend" placeholder="Paste Resend API key">
+<div class="key-status" id="statusResend"></div>
+</div>
+<button class="btn-save" id="btnSave" onclick="saveSettings()">Save Keys</button>
+<span class="save-msg" id="saveMsg"></span>
+</div>
+</div>
+
+</div>
 
 <script>
 const CONFIG = {
-      WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec',
-  BRIDGE_SOURCE: {
-    'Elie Cohen': { category: 'partner', description: 'The Triana Group connections' }
-  },
-  SOURCES: ['The Triana Group', 'Business France NA 2026', 'OSCI 2026', 'Allios 2026', 'CNCCEF']
+WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec',
+BRIDGE_SOURCE: {
+'Elie Cohen': { category: 'partner', description: 'The Triana Group connections' }
+},
+SOURCES: ['The Triana Group', 'Business France NA 2026', 'OSCI 2026', 'Allios 2026', 'CNCCEF']
 };
 
 let allRows = [];
 
 async function load() {
-  if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
-    document.getElementById('configBanner').style.display = 'block';
-    document.getElementById('dashBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">Configure WEBAPP_URL to load data</td></tr>';
-    return;
-  }
-  try {
-    const data = await new Promise((resolve, reject) => {
-      const cb = 'radarCb_' + Date.now();
-      window[cb] = d => { delete window[cb]; resolve(d); };
-      const s = document.createElement('script');
-      s.src = CONFIG.WEBAPP_URL + '?callback=' + cb;
-      s.onerror = reject;
-      document.head.appendChild(s);
-      setTimeout(() => reject(new Error('timeout')), 10000);
-    });
-    allRows = data.rows || [];
-    render();
-  } catch (err) {
-    document.getElementById('dashBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#ef4444;padding:32px">Fetch failed: ' + err.message + '</td></tr>';
-  }
+if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
+document.getElementById('configBanner').style.display = 'block';
+document.getElementById('dashBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">Configure WEBAPP_URL to load data</td></tr>';
+return;
+}
+try {
+const data = await new Promise((resolve, reject) => {
+const cb = 'radarCb_' + Date.now();
+window[cb] = d => { delete window[cb]; resolve(d); };
+const s = document.createElement('script');
+s.src = CONFIG.WEBAPP_URL + '?callback=' + cb;
+s.onerror = reject;
+document.head.appendChild(s);
+setTimeout(() => reject(new Error('timeout')), 10000);
+});
+allRows = data.rows || [];
+render();
+} catch (err) {
+document.getElementById('dashBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#ef4444;padding:32px">Fetch failed: ' + err.message + '</td></tr>';
+}
 }
 
 function render() {
-  const total    = allRows.length;
-  const today    = allRows.filter(r => isToday(r.collected_date)).length;
-  const pushed   = allRows.filter(r => r.botdog_pushed).length;
-  const bridges  = new Set(allRows.map(r => r.radar_person).filter(Boolean)).size;
+const total = allRows.length;
+const today = allRows.filter(r => isToday(r.collected_date)).length;
+const pushed = allRows.filter(r => r.botdog_pushed).length;
+const bridges = new Set(allRows.map(r => r.radar_person).filter(Boolean)).size;
 
-  document.getElementById('statTotal').textContent   = total;
-  document.getElementById('statToday').textContent   = today;
-  document.getElementById('statPushed').textContent  = pushed;
-  document.getElementById('statBridges').textContent = bridges;
-  document.getElementById('totalBadge').textContent  = total + ' leads';
+document.getElementById('statTotal').textContent = total;
+document.getElementById('statToday').textContent = today;
+document.getElementById('statPushed').textContent = pushed;
+document.getElementById('statBridges').textContent = bridges;
+document.getElementById('totalBadge').textContent = total + ' leads';
 
-  const rows = allRows.slice().reverse().slice(0, 50);
-  document.getElementById('dashBody').innerHTML = rows.map(r => `
-    <tr>
-      <td>${esc(r.first_name)} ${esc(r.last_name)}</td>
-      <td>${esc(r.title)}</td>
-      <td>${esc(r.company)}</td>
-      <td>${esc(r.radar_person)}</td>
-      <td>${fmtDate(r.collected_date)}</td>
-      <td>${r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">View</a>' : '—'}</td>
-    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">No leads yet</td></tr>';
+const rows = allRows.slice().reverse().slice(0, 50);
+document.getElementById('dashBody').innerHTML = rows.map(r => `
+<tr>
+<td>${esc(r.first_name)} ${esc(r.last_name)}</td>
+<td>${esc(r.title)}</td>
+<td>${esc(r.company)}</td>
+<td>${esc(r.radar_person)}</td>
+<td>${fmtDate(r.collected_date)}</td>
+<td>${r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">View</a>' : '—'}</td>
+</tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">No leads yet</td></tr>';
 
-  document.getElementById('targetsBody').innerHTML = allRows.map(r => `
-    <tr>
-      <td>${esc(r.first_name)} ${esc(r.last_name)}</td>
-      <td>${esc(r.company)}</td>
-      <td>${esc(r.title)}</td>
-      <td>${esc(r.radar_person)}</td>
-      <td>${r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—'}</td>
-      <td>${r.botdog_pushed ? '✅ ' + fmtDate(r.botdog_pushed) : '—'}</td>
-    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">No leads yet</td></tr>';
+document.getElementById('targetsBody').innerHTML = allRows.map(r => `
+<tr>
+<td>${esc(r.first_name)} ${esc(r.last_name)}</td>
+<td>${esc(r.company)}</td>
+<td>${esc(r.title)}</td>
+<td>${esc(r.radar_person)}</td>
+<td>${r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—'}</td>
+<td>${r.botdog_pushed ? '✅ ' + fmtDate(r.botdog_pushed) : '—'}</td>
+</tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">No leads yet</td></tr>';
 
-  document.getElementById('sourcesBody').innerHTML = CONFIG.SOURCES.map(s => `
-    <div class="source-card"><h3>${esc(s)}</h3><p>LinkedIn Sales Navigator bridge source</p></div>`).join('');
+document.getElementById('sourcesBody').innerHTML = CONFIG.SOURCES.map(s => `
+<div class="source-card"><h3>${esc(s)}</h3><p>LinkedIn Sales Navigator bridge source</p></div>`).join('');
 }
 
 function showTab(name) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  event.target.classList.add('active');
+document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+document.getElementById('tab-' + name).classList.add('active');
+event.target.classList.add('active');
 }
 
 function isToday(d) {
-  if (!d) return false;
-  const dt = new Date(d);
-  const now = new Date();
-  return dt.getDate() === now.getDate() && dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+if (!d) return false;
+const dt = new Date(d);
+const now = new Date();
+return dt.getDate() === now.getDate() && dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
 }
 function fmtDate(d) { return d ? new Date(d).toLocaleDateString() : '—'; }
 function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  async function saveSettings() {
-      const botdog = document.getElementById('inputBotdog').value.trim();
-      const resend = document.getElementById('inputResend').value.trim();
-      if (!botdog && !resend) { document.getElementById('saveMsg').textContent = 'Enter at least one key.'; return; }
-      const btn = document.getElementById('btnSave');
-      btn.disabled = true; btn.textContent = 'Saving...';
-      document.getElementById('saveMsg').textContent = '';
-      try {
-            const payload = { secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig' };
-            if (botdog) payload.botdog_api_key = botdog;
-            if (resend) payload.resend_api_key = resend;
-            const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', body: JSON.stringify(payload) });
-            const data = await resp.json();
-            if (data.success) {
-                    document.getElementById('saveMsg').style.color = '#065f46';
-                    document.getElementById('saveMsg').textContent = 'Keys saved successfully!';
-                    document.getElementById('inputBotdog').value = '';
-                    document.getElementById('inputResend').value = '';
-                    loadKeyStatus();
-            } else { throw new Error(data.error || 'Unknown error'); }
-      } catch(err) {
-            document.getElementById('saveMsg').style.color = '#991b1b';
-            document.getElementById('saveMsg').textContent = 'Error: ' + err.message;
-      } finally {
-            btn.disabled = false; btn.textContent = 'Save Keys';
-      }
-  }
+async function saveSettings() {
+const botdog = document.getElementById('inputBotdog').value.trim();
+const resend = document.getElementById('inputResend').value.trim();
+if (!botdog && !resend) { document.getElementById('saveMsg').textContent = 'Enter at least one key.'; return; }
+const btn = document.getElementById('btnSave');
+btn.disabled = true; btn.textContent = 'Saving...';
+document.getElementById('saveMsg').textContent = '';
+try {
+const payload = { secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig' };
+if (botdog) payload.botdog_api_key = botdog;
+if (resend) payload.resend_api_key = resend;
+const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', body: JSON.stringify(payload) });
+const data = await resp.json();
+if (data.success) {
+document.getElementById('saveMsg').style.color = '#065f46';
+document.getElementById('saveMsg').textContent = 'Keys saved successfully!';
+document.getElementById('inputBotdog').value = '';
+document.getElementById('inputResend').value = '';
+loadKeyStatus();
+} else { throw new Error(data.error || 'Unknown error'); }
+} catch(err) {
+document.getElementById('saveMsg').style.color = '#991b1b';
+document.getElementById('saveMsg').textContent = 'Error: ' + err.message;
+} finally {
+btn.disabled = false; btn.textContent = 'Save Keys';
+}
+}
 
-  async function loadKeyStatus() {
-      try {
-            const data = await new Promise((resolve, reject) => {
-                    const cb = 'cfgCb_' + Date.now();
-                    window[cb] = d => { delete window[cb]; resolve(d); };
-                    const s = document.createElement('script');
-                    s.src = CONFIG.WEBAPP_URL + '?action=getConfig&callback=' + cb;
-                    s.onerror = reject; document.head.appendChild(s);
-                    setTimeout(() => reject(new Error('timeout')), 8000);
-            });
-            const bEl = document.getElementById('statusBotdog');
-            const rEl = document.getElementById('statusResend');
-            bEl.className = 'key-status ' + (data.botdog_key_set ? 'key-set' : 'key-missing');
-            bEl.textContent = data.botdog_key_set ? 'Key is set' : 'Not set';
-            rEl.className = 'key-status ' + (data.resend_key_set ? 'key-set' : 'key-missing');
-            rEl.textContent = data.resend_key_set ? 'Key is set' : 'Not set';
-      } catch(e) { console.warn('loadKeyStatus failed', e); }
-  }
+async function loadKeyStatus() {
+try {
+const data = await new Promise((resolve, reject) => {
+const cb = 'cfgCb_' + Date.now();
+window[cb] = d => { delete window[cb]; resolve(d); };
+const s = document.createElement('script');
+s.src = CONFIG.WEBAPP_URL + '?action=getConfig&callback=' + cb;
+s.onerror = reject; document.head.appendChild(s);
+setTimeout(() => reject(new Error('timeout')), 8000);
+});
+const bEl = document.getElementById('statusBotdog');
+const rEl = document.getElementById('statusResend');
+bEl.className = 'key-status ' + (data.botdog_key_set ? 'key-set' : 'key-missing');
+bEl.textContent = data.botdog_key_set ? 'Key is set' : 'Not set';
+rEl.className = 'key-status ' + (data.resend_key_set ? 'key-set' : 'key-missing');
+rEl.textContent = data.resend_key_set ? 'Key is set' : 'Not set';
+} catch(e) { console.warn('loadKeyStatus failed', e); }
+}
 load();
-  loadKeyStatus();
+loadKeyStatus();
 </script>
 </body>
 </html>
