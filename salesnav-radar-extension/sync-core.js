@@ -109,22 +109,27 @@ async function checkLogin() {
 // Scrape a bridge's Sales Navigator ICP-filtered search
 async function scrapeBridge(bridge) {
   const leads = [];
-  // Build ICP-filtered search URL matching user's exact parameters:
-  // Seniority: Owner/Partner(320) + CXO(310), Headcount: 11-50(C),
-  // Connection of: bridge.urn, Region: Europe(100506914), Exclude Messaged(LIMP)
-  const query = encodeURIComponent(
-    `(filters:List(` +
-    `(type:SENIORITY_LEVEL,values:List((id:320,text:Owner%2520%252F%2520Partner,selectionType:INCLUDED),(id:310,text:CXO,selectionType:INCLUDED))),` +
-    `(type:COMPANY_HEADCOUNT,values:List((id:C,text:11-50,selectionType:INCLUDED))),` +
-    `(type:CONNECTION_OF,values:List((id:${bridge.urn},text:${encodeURIComponent(bridge.bridge)},selectionType:INCLUDED))),` +
-    `(type:REGION,values:List((id:100506914,text:Europe,selectionType:INCLUDED))),` +
-    `(type:LEAD_INTERACTIONS,values:List((id:LIMP,text:Messaged,selectionType:EXCLUDED)))` +
-    `))`
-  );
-  const baseUrl = `https://www.linkedin.com/sales/search/people?query=${query}`;
+  // Use the same query structure as the verified working Sales Nav search URLs.
+  // Build it as a plain string — the browser will encode it correctly on fetch.
+  const urn = bridge.urn;
+  const name = bridge.bridge.replace(/ /g, '%20');
+  const query = '(filters:List(' +
+    '(type:SENIORITY_LEVEL,values:List(' +
+      '(id:320,text:Owner%20%2F%20Partner,selectionType:INCLUDED),' +
+      '(id:310,text:CXO,selectionType:INCLUDED))),' +
+    '(type:COMPANY_HEADCOUNT,values:List(' +
+      '(id:C,text:11-50,selectionType:INCLUDED))),' +
+    '(type:CONNECTION_OF,values:List(' +
+      '(id:' + urn + ',text:' + name + ',selectionType:INCLUDED))),' +
+    '(type:REGION,values:List(' +
+      '(id:100506914,text:Europe,selectionType:INCLUDED))),' +
+    '(type:LEAD_INTERACTIONS,values:List(' +
+      '(id:LIMP,text:Messaged,selectionType:EXCLUDED)))' +
+    '))';
+  const baseUrl = 'https://www.linkedin.com/sales/search/people?query=' + encodeURIComponent(query);
 
   for (let page = 1; page <= MAX_PAGES; page++) {
-    const url = baseUrl + (page > 1 ? `&page=${page}` : '');
+    const url = baseUrl + (page > 1 ? '&page=' + page : '');
     const pageLeads = await scrapePageInTab(url, bridge);
     if (!pageLeads || pageLeads.length === 0) break;
     leads.push(...pageLeads);
