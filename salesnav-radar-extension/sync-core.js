@@ -106,15 +106,25 @@ async function checkLogin() {
 }
 
 // ---------------------------------------------------------------
-// Scrape a bridge's Sales Navigator connection list
-// ---------------------------------------------------------------
+// Scrape a bridge's Sales Navigator ICP-filtered search
 async function scrapeBridge(bridge) {
   const leads = [];
-  // Open a hidden tab to Sales Nav connections filtered by bridge URN
-  const baseUrl = `https://www.linkedin.com/sales/lists/people?listType=CONNECTIONS&connectionOf=${bridge.urn}`;
+  // Build ICP-filtered search URL matching user's exact parameters:
+  // Seniority: Owner/Partner(320) + CXO(310), Headcount: 11-50(C),
+  // Connection of: bridge.urn, Region: Europe(100506914), Exclude Messaged(LIMP)
+  const query = encodeURIComponent(
+    `(filters:List(` +
+    `(type:SENIORITY_LEVEL,values:List((id:320,text:Owner%2520%252F%2520Partner,selectionType:INCLUDED),(id:310,text:CXO,selectionType:INCLUDED))),` +
+    `(type:COMPANY_HEADCOUNT,values:List((id:C,text:11-50,selectionType:INCLUDED))),` +
+    `(type:CONNECTION_OF,values:List((id:${bridge.urn},text:${encodeURIComponent(bridge.bridge)},selectionType:INCLUDED))),` +
+    `(type:REGION,values:List((id:100506914,text:Europe,selectionType:INCLUDED))),` +
+    `(type:LEAD_INTERACTIONS,values:List((id:LIMP,text:Messaged,selectionType:EXCLUDED)))` +
+    `))`
+  );
+  const baseUrl = `https://www.linkedin.com/sales/search/people?query=${query}`;
 
   for (let page = 1; page <= MAX_PAGES; page++) {
-    const url = baseUrl + `&page=${page}`;
+    const url = baseUrl + (page > 1 ? `&page=${page}` : '');
     const pageLeads = await scrapePageInTab(url, bridge);
     if (!pageLeads || pageLeads.length === 0) break;
     leads.push(...pageLeads);
@@ -124,6 +134,7 @@ async function scrapeBridge(bridge) {
 
   return leads;
 }
+
 
 async function scrapePageInTab(url, bridge) {
   return new Promise((resolve, reject) => {
