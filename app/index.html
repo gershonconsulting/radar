@@ -37,221 +37,266 @@ td a:hover { text-decoration: underline; }
 .settings-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
 .settings-card p { color: #64748b; font-size: 0.85rem; margin-bottom: 16px; }
 .field { margin-bottom: 14px; }
-.field label { display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
-.field input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; font-family: monospace; }
-.field input:focus { outline: none; border-color: #1e40af; box-shadow: 0 0 0 2px #bfdbfe; }
-.key-status { font-size: 0.75rem; margin-top: 4px; }
-.key-set { color: #065f46; } .key-missing { color: #991b1b; }
-.btn-save { background: #1e40af; color: white; border: none; padding: 9px 20px; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
-.btn-save:hover { background: #1d3a9e; } .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
-.save-msg { margin-left: 12px; font-size: 0.85rem; }
+label { display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.key-status { font-size: 0.75rem; }
+input:focus { outline: none; box-shadow: 0 0 0 2px #bfdbfe; }
+.btn-save { background: #1e40af; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
+.btn-save:hover { background: #1d3a9e; }
+.log-panel { background: #0f172a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 0.78rem; color: #94a3b8; max-height: 600px; overflow-y: auto; }
+.log-entry { padding: 3px 0; border-bottom: 1px solid #1e293b; display: flex; gap: 10px; flex-wrap: wrap; }
+.log-ts { color: #475569; white-space: nowrap; }
+.log-level-info  { color: #38bdf8; }
+.log-level-warn  { color: #fbbf24; }
+.log-level-error { color: #f87171; }
+.log-msg { color: #e2e8f0; }
+.log-data { color: #94a3b8; word-break: break-all; }
+.btn-sync { background: #dc2626; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
+.btn-sync:hover { background: #b91c1c; }
+.btn-sync:disabled { background: #94a3b8; cursor: not-allowed; }
+.btn-sm { background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+.sync-status { font-size: 0.85rem; color: #64748b; }
+.ext-card { background: #1e293b; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; font-size: 0.85rem; color: #94a3b8; }
+.ext-card input { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 4px; padding: 5px 8px; font-size: 0.85rem; }
 </style>
 </head>
 <body>
 <header>
-<h1>📡 Radar</h1>
-<span class="badge" id="totalBadge">0 leads</span>
+  <span style="font-size:1.5rem">📡</span>
+  <h1>Radar</h1>
+  <span class="badge" id="leadCount">0 leads</span>
 </header>
 <nav>
-<button class="active" onclick="showTab('dashboard')">Dashboard</button>
-<button onclick="showTab('targets')">Targets</button>
-<button onclick="showTab('sources')">Sources</button>
-<button onclick="showTab('settings')">Settings</button>
+  <button onclick="showTab('dashboard')" class="active" id="tab-btn-dashboard">Dashboard</button>
+  <button onclick="showTab('targets')"   id="tab-btn-targets">Targets</button>
+  <button onclick="showTab('sources')"   id="tab-btn-sources">Sources</button>
+  <button onclick="showTab('log')"       id="tab-btn-log">Live Log</button>
+  <button onclick="showTab('settings')"  id="tab-btn-settings">Settings</button>
 </nav>
 <div class="content">
-<div id="configBanner" class="banner" style="display:none">
-⚠️ WEBAPP_URL not configured — open <code>app/index.html</code> and set <code>CONFIG.WEBAPP_URL</code>.
-</div>
 
-<!-- Dashboard tab -->
-<div id="tab-dashboard" class="tab-panel active">
-<div class="stats">
-<div class="stat"><div class="num" id="statTotal">—</div><div class="label">Total leads</div></div>
-<div class="stat"><div class="num" id="statToday">—</div><div class="label">Added today</div></div>
-<div class="stat"><div class="num" id="statPushed">—</div><div class="label">Pushed to Botdog</div></div>
-<div class="stat"><div class="num" id="statBridges">—</div><div class="label">Bridges active</div></div>
-</div>
-<table id="dashTable">
-<thead><tr>
-<th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Date</th><th>LinkedIn</th>
-</tr></thead>
-<tbody id="dashBody"><tr><td colspan="6" style="text-align:center;color:#64748b;padding:32px">Loading…</td></tr></tbody>
-</table>
-</div>
+  <div id="tab-dashboard" class="tab-panel active">
+    <div id="warningBanner" class="banner" style="display:none">
+      WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Total leads</div></div>
+      <div class="stat"><div class="num" id="statToday">0</div><div class="label">Added today</div></div>
+      <div class="stat"><div class="num" id="statPushed">0</div><div class="label">Pushed to Botdog</div></div>
+      <div class="stat"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Date</th><th>LinkedIn</th></tr></thead>
+      <tbody id="leadsBody"><tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:24px">No leads yet</td></tr></tbody>
+    </table>
+  </div>
 
-<!-- Targets tab -->
-<div id="tab-targets" class="tab-panel">
-<table id="targetsTable">
-<thead><tr>
-<th>Name</th><th>Company</th><th>Title</th><th>Bridge</th><th>LinkedIn</th><th>Botdog pushed</th>
-</tr></thead>
-<tbody id="targetsBody"></tbody>
-</table>
-</div>
+  <div id="tab-targets" class="tab-panel"><div id="targetsBody"></div></div>
+  <div id="tab-sources" class="tab-panel"><div id="sourcesBody"></div></div>
 
-<!-- Sources tab -->
-<div id="tab-sources" class="tab-panel">
-<p style="margin-bottom:16px;color:#64748b;font-size:0.875rem">Bridges configured in the Chrome extension (sync-core.js BRIDGES)</p>
-<div id="sourcesBody"></div>
-</div>
+  <div id="tab-log" class="tab-panel">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn-sync" id="btnSync" onclick="triggerSync()">▶ Sync Now</button>
+      <button class="btn-sm" onclick="refreshLog()">↻ Refresh log</button>
+      <button class="btn-sm" onclick="clearExtLog()">✕ Clear log</button>
+      <span class="sync-status" id="syncStatus"></span>
+    </div>
+    <div class="ext-card" id="extIdCard">
+      <strong style="color:#e2e8f0">Extension connection</strong><br>
+      <span id="extIdStatus">Not connected.</span>
+      Paste your extension ID to enable one-click sync from this dashboard:<br>
+      <input id="extIdInput" placeholder="32-char extension ID from chrome://extensions" style="width:340px;margin-top:6px">
+      <button onclick="saveExtId()" style="background:#1e40af;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;margin-left:6px">Connect</button>
+      <br><small style="margin-top:4px;display:block">You can also just use the Sync Now button in the popup — the log will appear here after each run.</small>
+    </div>
+    <div class="log-panel" id="logPanel">
+      <div style="color:#475569;font-style:italic">No log yet. Run a sync from the popup or click Sync Now above (requires extension ID).</div>
+    </div>
+  </div>
 
-<!-- Settings tab -->
-<div id="tab-settings" class="tab-panel">
-<div class="settings-card">
-<h2>API Keys</h2>
-<p>Paste your keys below and click Save. Keys are stored securely in Apps Script Script Properties and never exposed in the UI.</p>
-<div class="field">
-<label>Botdog API Key</label>
-<input type="password" id="inputBotdog" placeholder="Paste Botdog API key">
-<div class="key-status" id="statusBotdog"></div>
-</div>
-<div class="field">
-<label>Resend API Key</label>
-<input type="password" id="inputResend" placeholder="Paste Resend API key">
-<div class="key-status" id="statusResend"></div>
-</div>
-<button class="btn-save" id="btnSave" onclick="saveSettings()">Save Keys</button>
-<span class="save-msg" id="saveMsg"></span>
-</div>
-</div>
+  <div id="tab-settings" class="tab-panel">
+    <div class="settings-card">
+      <h2>API Keys</h2>
+      <p>Stored securely in the Apps Script backend.</p>
+      <div class="field">
+        <label>Botdog API Key</label>
+        <input type="password" id="inputBotdog" placeholder="paste key…" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px">
+      </div>
+      <div class="field">
+        <label>Resend API Key</label>
+        <input type="password" id="inputResend" placeholder="paste key…" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px">
+      </div>
+      <button class="btn-save" onclick="saveSettings()">Save Keys</button>
+      <div id="saveStatus" style="margin-top:8px;font-size:0.85rem"></div>
+    </div>
+    <div class="settings-card">
+      <h2>Key Status</h2>
+      <p>Current backend key status.</p>
+      <div id="keyStatus" class="key-status">Loading…</div>
+    </div>
+  </div>
 
 </div>
-
 <script>
 const CONFIG = {
-WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec',
-BRIDGE_SOURCE: {
-'Elie Cohen': { category: 'partner', description: 'The Triana Group connections' }
-},
-SOURCES: ['The Triana Group', 'Business France NA 2026', 'OSCI 2026', 'Allios 2026', 'CNCCEF']
+  WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec',
+  BRIDGE_SOURCE: {
+    'Elie Cohen':                { category: 'partner', results: 55  },
+    'Jabril Bensedrine':         { category: 'partner', results: 45  },
+    'Phil Jeudy':               { category: 'partner', results: 207 },
+    'Mathias Cohen':             { category: 'partner', results: 30  },
+    'Anne Charlotte Le Bourhis': { category: 'partner', results: 53  },
+    'Marie-Josee Rodi-Andrieu':  { category: 'partner', results: 336 },
+  }
 };
 
-let allRows = [];
+let RADAR_EXT_ID = sessionStorage.getItem('radarExtId') || null;
+if (RADAR_EXT_ID) updateExtStatus(true);
+
+function updateExtStatus(connected) {
+  const el = document.getElementById('extIdStatus');
+  if (connected && RADAR_EXT_ID) {
+    el.innerHTML = '<span style="color:#4ade80">Connected to extension ' + RADAR_EXT_ID.substring(0,8) + '…</span> ';
+  } else {
+    el.textContent = 'Not connected. ';
+  }
+}
+
+function saveExtId() {
+  const id = (document.getElementById('extIdInput').value || '').trim();
+  if (id.length < 20) { alert('ID looks too short. Find it in chrome://extensions.'); return; }
+  RADAR_EXT_ID = id;
+  sessionStorage.setItem('radarExtId', id);
+  updateExtStatus(true);
+  document.getElementById('syncStatus').textContent = 'Extension connected!';
+}
+
+async function sendToExt(msg) {
+  if (!RADAR_EXT_ID || typeof chrome === 'undefined' || !chrome.runtime) return null;
+  return new Promise(resolve => {
+    try {
+      chrome.runtime.sendMessage(RADAR_EXT_ID, msg, resp => {
+        if (chrome.runtime.lastError) resolve(null);
+        else resolve(resp);
+      });
+    } catch(e) { resolve(null); }
+  });
+}
+
+async function triggerSync() {
+  const btn = document.getElementById('btnSync');
+  const status = document.getElementById('syncStatus');
+  btn.disabled = true; btn.textContent = '⏳ Syncing…';
+  if (!RADAR_EXT_ID) {
+    status.textContent = 'Paste extension ID above first, then click Connect.';
+    btn.disabled = false; btn.textContent = '▶ Sync Now'; return;
+  }
+  status.textContent = 'Sending to extension…';
+  const resp = await sendToExt({ action: 'syncNow' });
+  if (resp && resp.ok) {
+    status.textContent = 'Done: ' + JSON.stringify(resp.result).substring(0, 120);
+    await refreshLog(); await load();
+  } else {
+    status.textContent = 'No response from extension. Check it is loaded and enabled.';
+  }
+  btn.disabled = false; btn.textContent = '▶ Sync Now';
+}
+
+async function refreshLog() {
+  const panel = document.getElementById('logPanel');
+  if (!RADAR_EXT_ID) {
+    panel.innerHTML = '<div style="color:#fbbf24">Connect extension above to see live logs. After a popup sync, paste the ID and click Refresh log.</div>';
+    return;
+  }
+  const resp = await sendToExt({ action: 'getLog' });
+  if (!resp || !resp.ok || !resp.log) {
+    panel.innerHTML = '<div style="color:#f87171">Could not reach extension (ID: ' + RADAR_EXT_ID.substring(0,8) + '…). Is it loaded?</div>'; return;
+  }
+  const entries = resp.log;
+  if (!entries.length) { panel.innerHTML = '<div style="color:#475569;font-style:italic">Log is empty. Run a sync first.</div>'; return; }
+  panel.innerHTML = entries.map(e => {
+    const ts = (e.ts||'').replace('T',' ').substring(0,19);
+    const d = e.data ? ' ' + JSON.stringify(e.data) : '';
+    return '<div class="log-entry"><span class="log-ts">' + ts + '</span><span class="log-level-' + e.level + '">[' + (e.level||'info').toUpperCase() + ']</span><span class="log-msg">' + esc(e.msg) + '</span><span class="log-data">' + esc(d) + '</span></div>';
+  }).join('');
+}
+
+async function clearExtLog() {
+  await sendToExt({ action: 'clearLog' });
+  document.getElementById('logPanel').innerHTML = '<div style="color:#475569">Log cleared.</div>';
+}
 
 async function load() {
-if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
-document.getElementById('configBanner').style.display = 'block';
-document.getElementById('dashBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">Configure WEBAPP_URL to load data</td></tr>';
-return;
-}
-try {
-const data = await new Promise((resolve, reject) => {
-const cb = 'radarCb_' + Date.now();
-window[cb] = d => { delete window[cb]; resolve(d); };
-const s = document.createElement('script');
-s.src = CONFIG.WEBAPP_URL + '?callback=' + cb;
-s.onerror = reject;
-document.head.appendChild(s);
-setTimeout(() => reject(new Error('timeout')), 10000);
-});
-allRows = data.rows || [];
-render();
-} catch (err) {
-document.getElementById('dashBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#ef4444;padding:32px">Fetch failed: ' + err.message + '</td></tr>';
-}
+  if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
+    document.getElementById('warningBanner').style.display = 'block'; return;
+  }
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&_=' + Date.now();
+    const resp = await fetch(url);
+    const text = await resp.text();
+    const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (json.success) render(json.rows || []);
+  } catch(e) { console.error('load', e); }
+  await loadKeyStatus();
 }
 
-function render() {
-const total = allRows.length;
-const today = allRows.filter(r => isToday(r.collected_date)).length;
-const pushed = allRows.filter(r => r.botdog_pushed).length;
-const bridges = new Set(allRows.map(r => r.radar_person).filter(Boolean)).size;
-
-document.getElementById('statTotal').textContent = total;
-document.getElementById('statToday').textContent = today;
-document.getElementById('statPushed').textContent = pushed;
-document.getElementById('statBridges').textContent = bridges;
-document.getElementById('totalBadge').textContent = total + ' leads';
-
-const rows = allRows.slice().reverse().slice(0, 50);
-document.getElementById('dashBody').innerHTML = rows.map(r => `
-<tr>
-<td>${esc(r.first_name)} ${esc(r.last_name)}</td>
-<td>${esc(r.title)}</td>
-<td>${esc(r.company)}</td>
-<td>${esc(r.radar_person)}</td>
-<td>${fmtDate(r.collected_date)}</td>
-<td>${r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">View</a>' : '—'}</td>
-</tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">No leads yet</td></tr>';
-
-document.getElementById('targetsBody').innerHTML = allRows.map(r => `
-<tr>
-<td>${esc(r.first_name)} ${esc(r.last_name)}</td>
-<td>${esc(r.company)}</td>
-<td>${esc(r.title)}</td>
-<td>${esc(r.radar_person)}</td>
-<td>${r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—'}</td>
-<td>${r.botdog_pushed ? '✅ ' + fmtDate(r.botdog_pushed) : '—'}</td>
-</tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:32px">No leads yet</td></tr>';
-
-document.getElementById('sourcesBody').innerHTML = CONFIG.SOURCES.map(s => `
-<div class="source-card"><h3>${esc(s)}</h3><p>LinkedIn Sales Navigator bridge source</p></div>`).join('');
+function render(rows) {
+  document.getElementById('statTotal').textContent = rows.length;
+  document.getElementById('statToday').textContent = rows.filter(r => isToday(r.collected_date)).length;
+  document.getElementById('statPushed').textContent = rows.filter(r => r.botdog_pushed).length;
+  document.getElementById('statBridges').textContent = new Set(rows.map(r => r.radar_person)).size;
+  document.getElementById('leadCount').textContent = rows.length + ' leads';
+  const tbody = document.getElementById('leadsBody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:24px">No leads yet</td></tr>'; return; }
+  tbody.innerHTML = rows.slice(0,200).map(r =>
+    '<tr><td>' + esc((r.first_name||'') + ' ' + (r.last_name||'')) + '</td><td>' + esc(r.title||'') + '</td><td>' + esc(r.company||'') + '</td><td>' + esc(r.radar_person||'') + '</td><td>' + fmtDate(r.collected_date) + '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') + '</td></tr>'
+  ).join('');
+  const byBridge = {};
+  rows.forEach(r => { if (!byBridge[r.radar_person]) byBridge[r.radar_person] = []; byBridge[r.radar_person].push(r); });
+  document.getElementById('targetsBody').innerHTML = Object.entries(byBridge).map(([n, l]) =>
+    '<div class="source-card"><h3>' + esc(n) + ' <span class="pill ' + (CONFIG.BRIDGE_SOURCE[n]?.category||'partner') + '">' + (CONFIG.BRIDGE_SOURCE[n]?.category||'partner') + '</span></h3><p>' + l.length + ' leads</p></div>'
+  ).join('');
+  document.getElementById('sourcesBody').innerHTML = Object.entries(CONFIG.BRIDGE_SOURCE).map(([n, s]) =>
+    '<div class="source-card"><h3>' + esc(n) + ' <span class="pill ' + s.category + '">' + s.category + '</span></h3><p>Up to ' + s.results + ' results · ' + (byBridge[n]?.length||0) + ' collected</p></div>'
+  ).join('');
 }
 
 function showTab(name) {
-document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-document.getElementById('tab-' + name).classList.add('active');
-event.target.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tab-btn-' + name).classList.add('active');
+  if (name === 'log') refreshLog();
 }
 
-function isToday(d) {
-if (!d) return false;
-const dt = new Date(d);
-const now = new Date();
-return dt.getDate() === now.getDate() && dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
-}
-function fmtDate(d) { return d ? new Date(d).toLocaleDateString() : '—'; }
-function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function isToday(d) { return d && new Date(d).toDateString() === new Date().toDateString(); }
+function fmtDate(d) { try { return d ? new Date(d).toLocaleDateString() : ''; } catch(e) { return d||''; } }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 async function saveSettings() {
-const botdog = document.getElementById('inputBotdog').value.trim();
-const resend = document.getElementById('inputResend').value.trim();
-if (!botdog && !resend) { document.getElementById('saveMsg').textContent = 'Enter at least one key.'; return; }
-const btn = document.getElementById('btnSave');
-btn.disabled = true; btn.textContent = 'Saving...';
-document.getElementById('saveMsg').textContent = '';
-try {
-const payload = { secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig' };
-if (botdog) payload.botdog_api_key = botdog;
-if (resend) payload.resend_api_key = resend;
-const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', body: JSON.stringify(payload) });
-const data = await resp.json();
-if (data.success) {
-document.getElementById('saveMsg').style.color = '#065f46';
-document.getElementById('saveMsg').textContent = 'Keys saved successfully!';
-document.getElementById('inputBotdog').value = '';
-document.getElementById('inputResend').value = '';
-loadKeyStatus();
-} else { throw new Error(data.error || 'Unknown error'); }
-} catch(err) {
-document.getElementById('saveMsg').style.color = '#991b1b';
-document.getElementById('saveMsg').textContent = 'Error: ' + err.message;
-} finally {
-btn.disabled = false; btn.textContent = 'Save Keys';
-}
+  const botdog = document.getElementById('inputBotdog').value.trim();
+  const resend = document.getElementById('inputResend').value.trim();
+  const status = document.getElementById('saveStatus');
+  if (!botdog && !resend) { status.textContent = 'Enter at least one key.'; return; }
+  status.textContent = 'Saving…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_api_key: botdog, resend_api_key: resend }) });
+    const data = await resp.json();
+    status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
+    if (data.saved) await loadKeyStatus();
+  } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
 
 async function loadKeyStatus() {
-try {
-const data = await new Promise((resolve, reject) => {
-const cb = 'cfgCb_' + Date.now();
-window[cb] = d => { delete window[cb]; resolve(d); };
-const s = document.createElement('script');
-s.src = CONFIG.WEBAPP_URL + '?action=getConfig&callback=' + cb;
-s.onerror = reject; document.head.appendChild(s);
-setTimeout(() => reject(new Error('timeout')), 8000);
-});
-const bEl = document.getElementById('statusBotdog');
-const rEl = document.getElementById('statusResend');
-bEl.className = 'key-status ' + (data.botdog_key_set ? 'key-set' : 'key-missing');
-bEl.textContent = data.botdog_key_set ? 'Key is set' : 'Not set';
-rEl.className = 'key-status ' + (data.resend_key_set ? 'key-set' : 'key-missing');
-rEl.textContent = data.resend_key_set ? 'Key is set' : 'Not set';
-} catch(e) { console.warn('loadKeyStatus failed', e); }
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now();
+    const resp = await fetch(url);
+    const text = await resp.text();
+    const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    document.getElementById('keyStatus').innerHTML = 'Botdog: <strong>' + (json.botdog_key_set ? 'Set' : 'Missing') + '</strong> | Resend: <strong>' + (json.resend_key_set ? 'Set' : 'Missing') + '</strong>';
+  } catch(e) {}
 }
+
 load();
-loadKeyStatus();
 </script>
 </body>
 </html>
