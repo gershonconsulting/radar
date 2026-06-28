@@ -10,13 +10,15 @@ const INGEST_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 const MAX_PAGES     = 25;
 const MAX_RESOLVE_PER_RUN = 100;
 
+// Each bridge belongs to a Source (the organization it represents).
+// Add new bridges from other Sources here: { bridge, source, category, urn, results }.
 const BRIDGES = [
-  { bridge: 'Elie Cohen',                category: 'partner', urn: 'ACwAAAALvckBqvkWA1X60puCvmWbDTndKhJyWdw', results: 55  },
-  { bridge: 'Jabril Bensedrine',         category: 'partner', urn: 'ACwAAAAZ62QBFLpds_ZGdkq4MHkHmJvovRixzkM', results: 45  },
-  { bridge: 'Phil Jeudy',               category: 'partner', urn: 'ACwAAAAbEFEBcIoDyt1Se4852krlmZrdxTryE-I', results: 207 },
-  { bridge: 'Mathias Cohen',             category: 'partner', urn: 'ACwAAAARL38BwmwLt6iIb6vHgLP6Up5fXq3Qoms', results: 30  },
-  { bridge: 'Anne Charlotte Le Bourhis', category: 'partner', urn: 'ACwAAABWZEIB8mgZv6MlSCv22joSKYhvnrBylvU', results: 53  },
-  { bridge: 'Marie-Josee Rodi-Andrieu',  category: 'partner', urn: 'ACwAAABSExEBFWA3dHRNEffTytW-ivqxxt45vDg', results: 336 },
+  { bridge: 'Elie Cohen',                source: 'The Triana Group', category: 'partner', urn: 'ACwAAAALvckBqvkWA1X60puCvmWbDTndKhJyWdw', results: 55  },
+  { bridge: 'Jabril Bensedrine',         source: 'The Triana Group', category: 'partner', urn: 'ACwAAAAZ62QBFLpds_ZGdkq4MHkHmJvovRixzkM', results: 45  },
+  { bridge: 'Phil Jeudy',                source: 'The Triana Group', category: 'partner', urn: 'ACwAAAAbEFEBcIoDyt1Se4852krlmZrdxTryE-I', results: 207 },
+  { bridge: 'Mathias Cohen',             source: 'The Triana Group', category: 'partner', urn: 'ACwAAAARL38BwmwLt6iIb6vHgLP6Up5fXq3Qoms', results: 30  },
+  { bridge: 'Anne Charlotte Le Bourhis', source: 'The Triana Group', category: 'partner', urn: 'ACwAAABWZEIB8mgZv6MlSCv22joSKYhvnrBylvU', results: 53  },
+  { bridge: 'Marie-Josee Rodi-Andrieu',  source: 'The Triana Group', category: 'partner', urn: 'ACwAAABSExEBFWA3dHRNEffTytW-ivqxxt45vDg', results: 336 },
 ];
 
 const SEARCH_FILTERS = {
@@ -126,7 +128,7 @@ async function scrapePageInTab(url, bridge) {
   return new Promise((resolve, reject) => {
     chrome.tabs.create({ url, active: false }, tab => {
       setTimeout(() => {
-        chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractLeadsFromPage, args: [bridge.bridge, bridge.category] }, results => {
+        chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractLeadsFromPage, args: [bridge.bridge, bridge.category, bridge.source] }, results => {
           chrome.tabs.remove(tab.id);
           if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
           resolve(results && results[0] ? results[0].result || [] : []);
@@ -136,21 +138,46 @@ async function scrapePageInTab(url, bridge) {
   });
 }
 
-function extractLeadsFromPage(radarPerson, category) {
+function extractLeadsFromPage(radarPerson, category, source) {
   const results = [];
-  document.querySelectorAll('[data-view-name="profile-entity-lockup"], .artdeco-entity-lockup').forEach(card => {
+  // Anchor on the lead link, then climb to the card that also holds a company link.
+  document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
     try {
-      const nameEl  = card.querySelector('[data-anonymize="person-name"], .artdeco-entity-lockup__title');
-      const titleEl = card.querySelector('[data-anonymize="job-title"], .artdeco-entity-lockup__subtitle');
-      const compEl  = card.querySelector('[data-anonymize="company-name"]');
-      const linkEl  = card.querySelector('a[href*="/sales/lead/"]');
-      const urnMatch = linkEl && linkEl.href.match(//sales/lead/([^,?/]+)/);
-      if (!nameEl) return;
-      const parts = nameEl.textContent.trim().split(' ');
-      results.push({ first_name: parts[0]||'', last_name: parts.slice(1).join(' ')||'', title: titleEl?titleEl.textContent.trim():'', company: compEl?compEl.textContent.trim():'', radar_person: radarPerson, lead_id: urnMatch?urnMatch[1]:(parts[0]+(parts[1]||'')).replace(/s/g,''), collected_date: new Date().toISOString(), linkedin_url: '' });
+      let card = linkEl;
+      for (let i = 0; i < 6 && card && card.parentElement; i++) {
+        card = card.parentElement;
+        if (card.querySelector('a[href*="/sales/company/"]')) break;
+      }
+      if (!card) return;
+      const name = (linkEl.textContent || '').trim();
+      if (!name) return;
+      const urnMatch = linkEl.href.match(/\/sales\/lead\/([^,?\/]+)/);
+      const compEl   = card.querySelector('a[href*="/sales/company/"]');
+      const company  = compEl ? compEl.textContent.trim() : '';
+      // Title = the text leaf sitting just before the company name in the card.
+      let title = '';
+      const txts = Array.from(card.querySelectorAll('span, div'))
+        .map(e => e.childElementCount === 0 ? (e.textContent || '').trim() : '')
+        .filter(Boolean);
+      const ci = txts.indexOf(company);
+      if (ci > 0) title = txts[ci - 1];
+      const parts = name.split(' ');
+      results.push({
+        first_name: parts[0] || '',
+        last_name: parts.slice(1).join(' ') || '',
+        title: title,
+        company: company,
+        radar_person: radarPerson,
+        source: source || '',
+        lead_id: urnMatch ? urnMatch[1] : (parts[0] + (parts[1] || '')).replace(/\s/g, ''),
+        collected_date: new Date().toISOString(),
+        linkedin_url: ''
+      });
     } catch(e) {}
   });
-  return results;
+  // De-dupe by lead_id within the page.
+  const seen = new Set();
+  return results.filter(r => { if (seen.has(r.lead_id)) return false; seen.add(r.lead_id); return true; });
 }
 
 async function resolvePublicUrls(leads) {
