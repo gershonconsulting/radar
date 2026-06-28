@@ -33,6 +33,8 @@ td a:hover { text-decoration: underline; }
 .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
 .pill.competitor { background: #fee2e2; color: #991b1b; }
 .pill.partner { background: #d1fae5; color: #065f46; }
+.pill.organization { background: #dbeafe; color: #1e40af; }
+.check { color: #16a34a; font-weight: 700; }
 .settings-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 16px; max-width: 560px; }
 .settings-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
 .settings-card p { color: #64748b; font-size: 0.85rem; margin-bottom: 16px; }
@@ -88,15 +90,15 @@ input:focus { outline: none; box-shadow: 0 0 0 2px #bfdbfe; }
     </div>
     <h3 style="margin-bottom:10px;font-size:0.95rem;color:#475569">Recent targets</h3>
     <table>
-      <thead><tr><th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Source</th><th>Date</th><th>LinkedIn</th></tr></thead>
-      <tbody id="leadsBody"><tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px">No targets yet</td></tr></tbody>
+      <thead><tr><th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Source</th><th>Date</th><th>LinkedIn</th><th>Botdog</th></tr></thead>
+      <tbody id="leadsBody"><tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px">No targets yet</td></tr></tbody>
     </table>
   </div>
 
   <div id="tab-targets" class="tab-panel">
     <table>
-      <thead><tr><th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Source</th><th>Date</th><th>LinkedIn</th></tr></thead>
-      <tbody id="targetsBody"><tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px">No targets yet</td></tr></tbody>
+      <thead><tr><th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Source</th><th>Date</th><th>LinkedIn</th><th>Botdog</th></tr></thead>
+      <tbody id="targetsBody"><tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px">No targets yet</td></tr></tbody>
     </table>
   </div>
   <div id="tab-bridges" class="tab-panel"><div id="bridgesBody"></div></div>
@@ -110,6 +112,7 @@ input:focus { outline: none; box-shadow: 0 0 0 2px #bfdbfe; }
         <select id="srcCat" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px">
           <option value="partner">Partner</option>
           <option value="competitor">Competitor</option>
+          <option value="organization">Organization</option>
         </select>
       </div>
       <button class="btn-save" onclick="addSource()">+ Add Source</button>
@@ -171,14 +174,17 @@ const CONFIG = {
     'Phil Jeudy':                { source: 'The Triana Group', category: 'partner', results: 207 },
     'Mathias Cohen':             { source: 'The Triana Group', category: 'partner', results: 30  },
     'Anne Charlotte Le Bourhis': { source: 'The Triana Group', category: 'partner', results: 53  },
-    'Marie-Josee Rodi-Andrieu':  { source: 'The Triana Group', category: 'partner', results: 336 },
+    'Marie-Josée Rodi-Andrieu':  { source: 'The Triana Group', category: 'partner', results: 336 },
   }
 };
-function leadSource(r) {
-  return (r && r.source) || (CONFIG.BRIDGE_SOURCE[r && r.radar_person] || {}).source || 'Unassigned';
-}
+function _norm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); }
 function bridgeSource(name) {
-  return (CONFIG.BRIDGE_SOURCE[name] || {}).source || 'Unassigned';
+  for (var k in CONFIG.BRIDGE_SOURCE) { if (_norm(k) === _norm(name)) return CONFIG.BRIDGE_SOURCE[k].source; }
+  return 'Unassigned';
+}
+function leadSource(r) {
+  if (r && r.source) return r.source;
+  return bridgeSource(r && r.radar_person);
 }
 
 let STORED_SOURCES = [];
@@ -198,7 +204,7 @@ async function addSource() {
   if (!name) { st.textContent = 'Enter a source name.'; return; }
   st.textContent = 'Adding…';
   try {
-    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: name, linkedin_url: url, category: cat }) });
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: name, linkedin_url: url, category: cat }) });
     const d = await resp.json();
     if (d.saved) {
       st.textContent = '✓ Added "' + name + '". Now collect its team into Targets.';
@@ -300,11 +306,11 @@ async function load() {
 }
 
 function targetRow(r) {
-  return '<tr><td>' + esc((r.first_name||'') + ' ' + (r.last_name||'')) + '</td><td>' + esc(r.title||'') + '</td><td>' + esc(r.company||'') + '</td><td>' + esc(r.radar_person||'') + '</td><td>' + esc(leadSource(r)) + '</td><td>' + fmtDate(r.collected_date) + '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') + '</td></tr>';
+  return '<tr><td>' + esc((r.first_name||'') + ' ' + (r.last_name||'')) + '</td><td>' + esc(r.title||'') + '</td><td>' + esc(r.company||'') + '</td><td>' + esc(r.radar_person||'') + '</td><td>' + esc(leadSource(r)) + '</td><td>' + fmtDate(r.collected_date) + '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') + '</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
 }
 
 function render(rows) {
-  const emptyRow = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px">No targets yet</td></tr>';
+  const emptyRow = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px">No targets yet</td></tr>';
   const bridges = new Set(rows.map(r => r.radar_person).filter(Boolean));
   const sources = new Set(rows.map(leadSource).filter(Boolean));
 
@@ -372,7 +378,7 @@ async function saveSettings() {
   if (!botdog && !resend) { status.textContent = 'Enter at least one key.'; return; }
   status.textContent = 'Saving…';
   try {
-    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_api_key: botdog, resend_api_key: resend }) });
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_api_key: botdog, resend_api_key: resend }) });
     const data = await resp.json();
     status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
     if (data.saved) await loadKeyStatus();
