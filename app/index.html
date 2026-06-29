@@ -387,11 +387,20 @@ async function saveSettings() {
 
 async function loadKeyStatus() {
   try {
-    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now();
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=keyStatus&_=' + Date.now();
     const resp = await fetch(url);
     const text = await resp.text();
     const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
-    document.getElementById('keyStatus').innerHTML = 'Botdog: <strong>' + (json.botdog_key_set ? 'Set' : 'Missing') + '</strong> | Resend: <strong>' + (json.resend_key_set ? 'Set' : 'Missing') + '</strong>';
+    const fmt = function(set, valid){
+      if (!set) return '<span style="color:#dc2626">Missing</span>';
+      return valid ? '<span style="color:#16a34a;font-weight:600">Set &amp; Valid ✓</span>'
+                   : '<span style="color:#dc2626;font-weight:600">Set but Invalid ✗</span>';
+    };
+    const when = json.tested_at ? 'Last tested: ' + new Date(json.tested_at).toLocaleString() : '';
+    document.getElementById('keyStatus').innerHTML =
+      'Botdog: ' + fmt(json.botdog_set, json.botdog_valid) + '<br>' +
+      'Resend: ' + fmt(json.resend_set, json.resend_valid) + '<br>' +
+      '<small style="color:#94a3b8">' + when + ' · auto-tested daily</small>';
   } catch(e) {}
 }
 
