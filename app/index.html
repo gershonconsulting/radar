@@ -4,166 +4,279 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Radar — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; }
-header { background: #1e40af; color: white; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
-header h1 { font-size: 1.25rem; font-weight: 600; }
-.badge { background: #3b82f6; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; }
-nav { display: flex; gap: 0; border-bottom: 1px solid #e2e8f0; background: white; padding: 0 24px; }
-nav button { padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 0.9rem; color: #64748b; border-bottom: 2px solid transparent; }
-nav button.active { color: #1e40af; border-bottom-color: #1e40af; font-weight: 500; }
-.content { padding: 24px; max-width: 1200px; margin: 0 auto; }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.stat { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
-.stat .num { font-size: 2rem; font-weight: 700; color: #1e40af; }
-.stat .label { color: #64748b; font-size: 0.85rem; margin-top: 4px; }
-table { width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 8px; border-collapse: collapse; overflow: hidden; }
-th { background: #f1f5f9; padding: 10px 12px; text-align: left; font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-td { padding: 10px 12px; border-top: 1px solid #f1f5f9; font-size: 0.875rem; }
-tr:hover td { background: #f8fafc; }
-td a { color: #2563eb; text-decoration: none; }
-td a:hover { text-decoration: underline; }
-.banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.875rem; color: #92400e; }
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
-.source-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-.source-card h3 { font-size: 1rem; margin-bottom: 4px; }
-.source-card p { color: #64748b; font-size: 0.875rem; }
-.pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
-.pill.competitor { background: #fee2e2; color: #991b1b; }
-.pill.partner { background: #d1fae5; color: #065f46; }
-.pill.organization { background: #dbeafe; color: #1e40af; }
-.check { color: #16a34a; font-weight: 700; }
-.settings-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 16px; max-width: 560px; }
-.settings-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
-.settings-card p { color: #64748b; font-size: 0.85rem; margin-bottom: 16px; }
-.field { margin-bottom: 14px; }
-label { display: block; font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
-.key-status { font-size: 0.75rem; }
-input:focus { outline: none; box-shadow: 0 0 0 2px #bfdbfe; }
-.btn-save { background: #1e40af; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
-.btn-save:hover { background: #1d3a9e; }
-.log-panel { background: #0f172a; border-radius: 8px; padding: 16px; font-family: monospace; font-size: 0.78rem; color: #94a3b8; max-height: 600px; overflow-y: auto; }
-.log-entry { padding: 3px 0; border-bottom: 1px solid #1e293b; display: flex; gap: 10px; flex-wrap: wrap; }
-.log-ts { color: #475569; white-space: nowrap; }
-.log-level-info  { color: #38bdf8; }
-.log-level-warn  { color: #fbbf24; }
-.log-level-error { color: #f87171; }
-.log-msg { color: #e2e8f0; }
-.log-data { color: #94a3b8; word-break: break-all; }
-.btn-sync { background: #dc2626; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
-.btn-sync:hover { background: #b91c1c; }
-.btn-sync:disabled { background: #94a3b8; cursor: not-allowed; }
-.btn-sm { background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
-.sync-status { font-size: 0.85rem; color: #64748b; }
-.ext-card { background: #1e293b; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; font-size: 0.85rem; color: #94a3b8; }
-.ext-card input { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 4px; padding: 5px 8px; font-size: 0.85rem; }
+:root{
+  --primary:#1e40af; --accent:#3b82f6; --bg:#f8fafc; --ink:#1e293b; --muted:#64748b;
+  --line:#e2e8f0; --card:#ffffff; --sidebar:#0f1e3d;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; }
+body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--ink); }
+
+/* ---------- Layout ---------- */
+.app{ display:flex; min-height:100vh; }
+.sidebar{
+  width:220px; flex:0 0 220px; background:var(--sidebar); color:#cbd5e1;
+  display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
+}
+.sidebar .brand{ display:flex; align-items:center; gap:10px; padding:20px 18px; border-bottom:1px solid rgba(255,255,255,0.08); }
+.sidebar .brand .logo{ font-size:1.5rem; }
+.sidebar .brand h1{ font-size:1.2rem; font-weight:700; color:#fff; letter-spacing:0.02em; }
+.sidebar .brand .badge{ margin-left:auto; background:var(--accent); color:#fff; padding:2px 8px; border-radius:12px; font-size:0.68rem; font-weight:600; }
+.nav-items{ padding:12px 10px; display:flex; flex-direction:column; gap:2px; flex:1; }
+.nav-item{ display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:8px; border:none; background:none;
+  color:#cbd5e1; cursor:pointer; font-size:0.9rem; text-align:left; width:100%; transition:background .15s,color .15s; }
+.nav-item:hover{ background:rgba(255,255,255,0.07); color:#fff; }
+.nav-item.active{ background:var(--accent); color:#fff; font-weight:600; }
+.nav-item .ico{ width:18px; text-align:center; font-size:1rem; }
+.sidebar .foot{ padding:14px 18px; font-size:0.68rem; color:#64748b; border-top:1px solid rgba(255,255,255,0.08); }
+.main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.topbar{ display:none; }
+.content{ padding:28px 32px; max-width:1280px; width:100%; margin:0 auto; }
+
+/* ---------- Mobile ---------- */
+@media (max-width:880px){
+  .app{ flex-direction:column; }
+  .sidebar{ width:100%; flex:none; height:auto; position:relative; flex-direction:column; }
+  .nav-items{ flex-direction:row; flex-wrap:wrap; padding:8px; }
+  .nav-item{ width:auto; flex:1 1 auto; justify-content:center; padding:8px 10px; font-size:0.82rem; }
+  .sidebar .foot{ display:none; }
+  .content{ padding:18px 14px; }
+}
+
+/* ---------- Page head ---------- */
+.page-head{ margin-bottom:22px; }
+.page-head h2{ font-size:1.5rem; font-weight:700; color:#0f172a; }
+.page-head p{ color:var(--muted); font-size:0.9rem; margin-top:3px; }
+
+/* ---------- Cards / stats ---------- */
+.stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; margin-bottom:24px; }
+.stat{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.stat .num{ font-size:2rem; font-weight:700; color:var(--primary); line-height:1.1; }
+.stat .label{ color:var(--muted); font-size:0.82rem; margin-top:6px; }
+.stat .sub{ color:#94a3b8; font-size:0.72rem; margin-top:2px; }
+
+.panel{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.panel h3{ font-size:0.95rem; font-weight:600; color:#334155; margin-bottom:14px; }
+.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
+.grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:18px; }
+@media (max-width:880px){ .grid-2,.grid-3{ grid-template-columns:1fr; } }
+.chart-wrap{ position:relative; height:260px; }
+
+/* ---------- Table ---------- */
+.table-controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+.table-controls input, .table-controls select{ padding:8px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:0.85rem; background:#fff; }
+.table-controls input[type=text]{ flex:1; min-width:180px; }
+.result-count{ margin-left:auto; color:var(--muted); font-size:0.82rem; }
+.table-wrap{ background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+table{ width:100%; border-collapse:collapse; }
+th{ background:#f1f5f9; padding:10px 12px; text-align:left; font-size:0.74rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; user-select:none; }
+th.sortable{ cursor:pointer; white-space:nowrap; }
+th.sortable:hover{ color:var(--primary); }
+th .arrow{ font-size:0.65rem; opacity:0.5; }
+th.sorted .arrow{ opacity:1; color:var(--primary); }
+td{ padding:10px 12px; border-top:1px solid #f1f5f9; font-size:0.86rem; }
+tr:hover td{ background:#f8fafc; }
+td a{ color:#2563eb; text-decoration:none; }
+td a:hover{ text-decoration:underline; }
+.check{ color:#16a34a; font-weight:700; }
+
+/* ---------- Banner ---------- */
+.banner{ background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.875rem; color:#92400e; }
+
+/* ---------- Views ---------- */
+.view{ display:none; }
+.view.active{ display:block; }
+
+/* ---------- Bridge / Source cards ---------- */
+.card-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+.entity-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.entity-card .top{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.entity-card h3{ font-size:1rem; font-weight:600; margin-bottom:4px; }
+.entity-card p{ color:var(--muted); font-size:0.84rem; line-height:1.5; }
+.entity-card .big{ font-size:1.6rem; font-weight:700; color:var(--primary); }
+.entity-card .big small{ font-size:0.72rem; font-weight:500; color:var(--muted); }
+.pill{ display:inline-block; padding:2px 9px; border-radius:12px; font-size:0.7rem; font-weight:600; }
+.pill.competitor{ background:#fee2e2; color:#991b1b; }
+.pill.partner{ background:#d1fae5; color:#065f46; }
+.pill.organization{ background:#dbeafe; color:#1e40af; }
+
+/* ---------- Settings ---------- */
+.settings-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:18px; max-width:560px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.settings-card h2{ font-size:1.05rem; font-weight:600; margin-bottom:4px; }
+.settings-card p{ color:var(--muted); font-size:0.85rem; margin-bottom:16px; }
+.field{ margin-bottom:14px; }
+label{ display:block; font-size:0.78rem; font-weight:600; color:#374151; margin-bottom:5px; text-transform:uppercase; letter-spacing:0.04em; }
+.field input, .field select{ width:100%; padding:9px; border:1px solid #d1d5db; border-radius:8px; font-size:0.9rem; }
+input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
+.key-status{ font-size:0.85rem; line-height:1.7; }
+.btn-save{ background:var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:0.9rem; cursor:pointer; font-weight:500; }
+.btn-save:hover{ background:#1d3a9e; }
+
+/* ---------- Flow diagram ---------- */
+.flow{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; align-items:start; }
+.flow-col{ padding:0 6px; }
+.flow-col .colhead{ font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); font-weight:600; margin-bottom:10px; text-align:center; }
+.flow-node{ background:#f1f5f9; border:1px solid var(--line); border-radius:8px; padding:9px 11px; margin-bottom:8px; cursor:pointer; font-size:0.82rem; transition:all .12s; }
+.flow-node:hover{ border-color:var(--accent); background:#eff6ff; }
+.flow-node.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+.flow-node.dim{ opacity:0.35; }
+.flow-node .nm{ font-weight:600; }
+.flow-node .ct{ float:right; font-size:0.78rem; opacity:0.8; }
+.flow-node.target{ background:#fff; cursor:default; }
+.flow-node.target:hover{ border-color:var(--line); background:#fff; }
+.flow-hint{ font-size:0.76rem; color:#94a3b8; margin-top:8px; text-align:center; }
+.empty{ text-align:center; color:#94a3b8; padding:24px; }
+
+/* ---------- Collections ---------- */
+.collection-day{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:12px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.collection-day .date{ font-weight:700; font-size:1rem; color:#0f172a; }
+.collection-day .summary{ color:var(--primary); font-weight:600; font-size:0.9rem; margin:4px 0 8px; }
+.collection-day .bridges{ color:var(--muted); font-size:0.84rem; line-height:1.6; }
+.collection-day .bchip{ display:inline-block; background:#f1f5f9; border-radius:6px; padding:2px 8px; margin:2px 4px 2px 0; font-size:0.78rem; }
+.timeline-rail{ border-left:2px solid var(--line); padding-left:18px; margin-left:6px; }
 </style>
 </head>
 <body>
-<header>
-  <span style="font-size:1.5rem">📡</span>
-  <h1>Radar</h1>
-  <span class="badge" id="leadCount">0 leads</span>
-</header>
-<nav>
-  <button onclick="showTab('dashboard')" class="active" id="tab-btn-dashboard">Dashboard</button>
-  <button onclick="showTab('targets')"   id="tab-btn-targets">Targets</button>
-  <button onclick="showTab('bridges')"   id="tab-btn-bridges">Bridges</button>
-  <button onclick="showTab('sources')"   id="tab-btn-sources">Sources</button>
-  <button onclick="showTab('log')"       id="tab-btn-log">Live Log</button>
-  <button onclick="showTab('settings')"  id="tab-btn-settings">Settings</button>
-</nav>
-<div class="content">
+<div class="app">
 
-  <div id="tab-dashboard" class="tab-panel active">
-    <div id="warningBanner" class="banner" style="display:none">
-      WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="logo">📡</span>
+      <h1>Radar</h1>
+      <span class="badge" id="leadCount">0</span>
     </div>
-    <div class="stats">
-      <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
-      <div class="stat"><div class="num" id="statToday">0</div><div class="label">Added today</div></div>
-      <div class="stat"><div class="num" id="statPushed">0</div><div class="label">Pushed to Botdog</div></div>
-      <div class="stat"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
-      <div class="stat"><div class="num" id="statSources">0</div><div class="label">Sources active</div></div>
-    </div>
-    <h3 style="margin-bottom:10px;font-size:0.95rem;color:#475569">Recent targets</h3>
-    <table>
-      <thead><tr><th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Source</th><th>Date</th><th>LinkedIn</th><th>Botdog</th></tr></thead>
-      <tbody id="leadsBody"><tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px">No targets yet</td></tr></tbody>
-    </table>
-  </div>
+    <nav class="nav-items">
+      <button class="nav-item active" id="nav-dashboard"   onclick="showView('dashboard')"><span class="ico">📊</span> Dashboard</button>
+      <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico">🎯</span> Targets</button>
+      <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico">🤝</span> Bridges</button>
+      <button class="nav-item"        id="nav-sources"     onclick="showView('sources')"><span class="ico">🏢</span> Sources</button>
+      <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico">📥</span> Collections</button>
+      <button class="nav-item"        id="nav-settings"    onclick="showView('settings')"><span class="ico">⚙️</span> Settings</button>
+    </nav>
+    <div class="foot">Source → Bridge → Target<br>Radar · gershonCRM</div>
+  </aside>
 
-  <div id="tab-targets" class="tab-panel">
-    <table>
-      <thead><tr><th>Name</th><th>Title</th><th>Company</th><th>Bridge</th><th>Source</th><th>Date</th><th>LinkedIn</th><th>Botdog</th></tr></thead>
-      <tbody id="targetsBody"><tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px">No targets yet</td></tr></tbody>
-    </table>
-  </div>
-  <div id="tab-bridges" class="tab-panel"><div id="bridgesBody"></div></div>
-  <div id="tab-sources" class="tab-panel">
-    <div class="settings-card" style="max-width:620px">
-      <h2>Add a Source</h2>
-      <p>Add an organization to watch. Paste its LinkedIn company URL — collect its team into Targets next.</p>
-      <div class="field"><label>Source name</label><input id="srcName" placeholder="e.g. Krymkier Law" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px"></div>
-      <div class="field"><label>LinkedIn company URL</label><input id="srcUrl" placeholder="https://www.linkedin.com/company/..." style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px"></div>
-      <div class="field"><label>Type</label>
-        <select id="srcCat" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px">
-          <option value="partner">Partner</option>
-          <option value="competitor">Competitor</option>
-          <option value="organization">Organization</option>
-        </select>
+  <!-- ===== Main ===== -->
+  <div class="main">
+  <div class="content">
+
+    <!-- ===== Dashboard ===== -->
+    <section id="view-dashboard" class="view active">
+      <div class="page-head"><h2>Dashboard</h2><p>Your Source → Bridge → Target pipeline at a glance.</p></div>
+      <div id="warningBanner" class="banner" style="display:none">
+        WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
       </div>
-      <button class="btn-save" onclick="addSource()">+ Add Source</button>
-      <div id="srcStatus" style="margin-top:8px;font-size:0.85rem"></div>
-    </div>
-    <div id="sourcesBody"></div>
-  </div>
-
-  <div id="tab-log" class="tab-panel">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <button class="btn-sync" id="btnSync" onclick="triggerSync()">▶ Sync Now</button>
-      <button class="btn-sm" onclick="refreshLog()">↻ Refresh log</button>
-      <button class="btn-sm" onclick="clearExtLog()">✕ Clear log</button>
-      <span class="sync-status" id="syncStatus"></span>
-    </div>
-    <div class="ext-card" id="extIdCard">
-      <strong style="color:#e2e8f0">Extension connection</strong><br>
-      <span id="extIdStatus">Not connected.</span>
-      Paste your extension ID to enable one-click sync from this dashboard:<br>
-      <input id="extIdInput" placeholder="32-char extension ID from chrome://extensions" style="width:340px;margin-top:6px">
-      <button onclick="saveExtId()" style="background:#1e40af;color:white;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;margin-left:6px">Connect</button>
-      <br><small style="margin-top:4px;display:block">You can also just use the Sync Now button in the popup — the log will appear here after each run.</small>
-    </div>
-    <div class="log-panel" id="logPanel">
-      <div style="color:#475569;font-style:italic">No log yet. Run a sync from the popup or click Sync Now above (requires extension ID).</div>
-    </div>
-  </div>
-
-  <div id="tab-settings" class="tab-panel">
-    <div class="settings-card">
-      <h2>API Keys</h2>
-      <p>Stored securely in the Apps Script backend.</p>
-      <div class="field">
-        <label>Botdog API Key</label>
-        <input type="password" id="inputBotdog" placeholder="paste key…" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px">
+      <div class="stats">
+        <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
+        <div class="stat"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
+        <div class="stat"><div class="num" id="statPushed">0</div><div class="label">Pushed to Botdog</div><div class="sub" id="statPushedPct">0%</div></div>
+        <div class="stat"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
+        <div class="stat"><div class="num" id="statSources">0</div><div class="label">Sources active</div></div>
       </div>
-      <div class="field">
-        <label>Resend API Key</label>
-        <input type="password" id="inputResend" placeholder="paste key…" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px">
-      </div>
-      <button class="btn-save" onclick="saveSettings()">Save Keys</button>
-      <div id="saveStatus" style="margin-top:8px;font-size:0.85rem"></div>
-    </div>
-    <div class="settings-card">
-      <h2>Key Status</h2>
-      <p>Current backend key status.</p>
-      <div id="keyStatus" class="key-status">Loading…</div>
-    </div>
-  </div>
 
+      <div class="grid-2">
+        <div class="panel"><h3>Targets per Bridge</h3><div class="chart-wrap"><canvas id="chartBridges"></canvas></div></div>
+        <div class="panel"><h3>Targets per Source</h3><div class="chart-wrap"><canvas id="chartSources"></canvas></div></div>
+      </div>
+      <div class="panel" style="margin-bottom:18px"><h3>Daily collection trend</h3><div class="chart-wrap"><canvas id="chartTrend"></canvas></div></div>
+
+      <div class="panel">
+        <h3>Source → Bridge → Target flow <span style="font-weight:400;color:#94a3b8;font-size:0.8rem">(click a node to filter)</span></h3>
+        <div class="flow" id="flowDiagram"></div>
+        <div class="flow-hint" id="flowHint">Click a Source or Bridge to highlight its path.</div>
+      </div>
+    </section>
+
+    <!-- ===== Targets ===== -->
+    <section id="view-targets" class="view">
+      <div class="page-head"><h2>Targets</h2><p>Every connection collected through your bridges.</p></div>
+      <div class="table-controls">
+        <input type="text" id="tSearch" placeholder="Search name, title, company…" oninput="renderTargets()">
+        <select id="tBridge" onchange="renderTargets()"><option value="">All bridges</option></select>
+        <select id="tSource" onchange="renderTargets()"><option value="">All sources</option></select>
+        <span class="result-count" id="tCount">0 targets</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="tHead">
+            <th class="sortable" data-key="name">Name <span class="arrow"></span></th>
+            <th class="sortable" data-key="title">Title <span class="arrow"></span></th>
+            <th class="sortable" data-key="company">Company <span class="arrow"></span></th>
+            <th class="sortable" data-key="bridge">Bridge <span class="arrow"></span></th>
+            <th class="sortable" data-key="source">Source <span class="arrow"></span></th>
+            <th class="sortable" data-key="date">Date <span class="arrow"></span></th>
+            <th>LinkedIn</th>
+            <th class="sortable" data-key="botdog">Botdog <span class="arrow"></span></th>
+          </tr></thead>
+          <tbody id="targetsBody"><tr><td colspan="8" class="empty">No targets yet</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Bridges ===== -->
+    <section id="view-bridges" class="view">
+      <div class="page-head"><h2>Bridges</h2><p>Well-connected people who introduce you to targets.</p></div>
+      <div class="card-grid" id="bridgesBody"></div>
+    </section>
+
+    <!-- ===== Sources ===== -->
+    <section id="view-sources" class="view">
+      <div class="page-head"><h2>Sources</h2><p>Organizations you watch and collect connections from.</p></div>
+      <div class="settings-card" style="max-width:620px">
+        <h2>Add a Source</h2>
+        <p>Add an organization to watch. Paste its LinkedIn company URL — collect its team into Targets next.</p>
+        <div class="field"><label>Source name</label><input id="srcName" placeholder="e.g. Krymkier Law"></div>
+        <div class="field"><label>LinkedIn company URL</label><input id="srcUrl" placeholder="https://www.linkedin.com/company/..."></div>
+        <div class="field"><label>Type</label>
+          <select id="srcCat">
+            <option value="partner">Partner</option>
+            <option value="competitor">Competitor</option>
+            <option value="organization">Organization</option>
+          </select>
+        </div>
+        <button class="btn-save" onclick="addSource()">+ Add Source</button>
+        <div id="srcStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="card-grid" id="sourcesBody"></div>
+    </section>
+
+    <!-- ===== Collections ===== -->
+    <section id="view-collections" class="view">
+      <div class="page-head"><h2>Collections</h2><p>When new targets were retrieved from Sales Navigator, by day.</p></div>
+      <div class="timeline-rail" id="collectionsBody"><div class="empty">No collections yet</div></div>
+    </section>
+
+    <!-- ===== Settings ===== -->
+    <section id="view-settings" class="view">
+      <div class="page-head"><h2>Settings</h2><p>Backend API keys and their live status.</p></div>
+      <div class="settings-card">
+        <h2>API Keys</h2>
+        <p>Stored securely in the Apps Script backend.</p>
+        <div class="field">
+          <label>Botdog API Key</label>
+          <input type="password" id="inputBotdog" placeholder="paste key…">
+        </div>
+        <div class="field">
+          <label>Resend API Key</label>
+          <input type="password" id="inputResend" placeholder="paste key…">
+        </div>
+        <button class="btn-save" onclick="saveSettings()">Save Keys</button>
+        <div id="saveStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
+        <h2>Key Status</h2>
+        <p>Current backend key status.</p>
+        <div id="keyStatus" class="key-status">Loading…</div>
+      </div>
+    </section>
+
+  </div>
+  </div>
 </div>
+
 <script>
 const CONFIG = {
   WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec',
@@ -187,7 +300,14 @@ function leadSource(r) {
   return bridgeSource(r && r.radar_person);
 }
 
+// ===== Global state =====
+let ROWS = [];
 let STORED_SOURCES = [];
+let CHARTS = {};
+let SORT = { key: 'date', dir: -1 };       // default: newest first
+let FLOW_FILTER = null;                      // {type:'source'|'bridge', value:''}
+
+// ===== Backend: Sources =====
 async function loadSources() {
   try {
     const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=getSources&_=' + Date.now();
@@ -214,82 +334,7 @@ async function addSource() {
   } catch(e) { st.textContent = 'Error: ' + e.message; }
 }
 
-let RADAR_EXT_ID = sessionStorage.getItem('radarExtId') || null;
-if (RADAR_EXT_ID) updateExtStatus(true);
-
-function updateExtStatus(connected) {
-  const el = document.getElementById('extIdStatus');
-  if (connected && RADAR_EXT_ID) {
-    el.innerHTML = '<span style="color:#4ade80">Connected to extension ' + RADAR_EXT_ID.substring(0,8) + '…</span> ';
-  } else {
-    el.textContent = 'Not connected. ';
-  }
-}
-
-function saveExtId() {
-  const id = (document.getElementById('extIdInput').value || '').trim();
-  if (id.length < 20) { alert('ID looks too short. Find it in chrome://extensions.'); return; }
-  RADAR_EXT_ID = id;
-  sessionStorage.setItem('radarExtId', id);
-  updateExtStatus(true);
-  document.getElementById('syncStatus').textContent = 'Extension connected!';
-}
-
-async function sendToExt(msg) {
-  if (!RADAR_EXT_ID || typeof chrome === 'undefined' || !chrome.runtime) return null;
-  return new Promise(resolve => {
-    try {
-      chrome.runtime.sendMessage(RADAR_EXT_ID, msg, resp => {
-        if (chrome.runtime.lastError) resolve(null);
-        else resolve(resp);
-      });
-    } catch(e) { resolve(null); }
-  });
-}
-
-async function triggerSync() {
-  const btn = document.getElementById('btnSync');
-  const status = document.getElementById('syncStatus');
-  btn.disabled = true; btn.textContent = '⏳ Syncing…';
-  if (!RADAR_EXT_ID) {
-    status.textContent = 'Paste extension ID above first, then click Connect.';
-    btn.disabled = false; btn.textContent = '▶ Sync Now'; return;
-  }
-  status.textContent = 'Sending to extension…';
-  const resp = await sendToExt({ action: 'syncNow' });
-  if (resp && resp.ok) {
-    status.textContent = 'Done: ' + JSON.stringify(resp.result).substring(0, 120);
-    await refreshLog(); await load();
-  } else {
-    status.textContent = 'No response from extension. Check it is loaded and enabled.';
-  }
-  btn.disabled = false; btn.textContent = '▶ Sync Now';
-}
-
-async function refreshLog() {
-  const panel = document.getElementById('logPanel');
-  if (!RADAR_EXT_ID) {
-    panel.innerHTML = '<div style="color:#fbbf24">Connect extension above to see live logs. After a popup sync, paste the ID and click Refresh log.</div>';
-    return;
-  }
-  const resp = await sendToExt({ action: 'getLog' });
-  if (!resp || !resp.ok || !resp.log) {
-    panel.innerHTML = '<div style="color:#f87171">Could not reach extension (ID: ' + RADAR_EXT_ID.substring(0,8) + '…). Is it loaded?</div>'; return;
-  }
-  const entries = resp.log;
-  if (!entries.length) { panel.innerHTML = '<div style="color:#475569;font-style:italic">Log is empty. Run a sync first.</div>'; return; }
-  panel.innerHTML = entries.map(e => {
-    const ts = (e.ts||'').replace('T',' ').substring(0,19);
-    const d = e.data ? ' ' + JSON.stringify(e.data) : '';
-    return '<div class="log-entry"><span class="log-ts">' + ts + '</span><span class="log-level-' + e.level + '">[' + (e.level||'info').toUpperCase() + ']</span><span class="log-msg">' + esc(e.msg) + '</span><span class="log-data">' + esc(d) + '</span></div>';
-  }).join('');
-}
-
-async function clearExtLog() {
-  await sendToExt({ action: 'clearLog' });
-  document.getElementById('logPanel').innerHTML = '<div style="color:#475569">Log cleared.</div>';
-}
-
+// ===== Backend: main data load =====
 async function load() {
   if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
     document.getElementById('warningBanner').style.display = 'block'; return;
@@ -300,77 +345,310 @@ async function load() {
     const resp = await fetch(url);
     const text = await resp.text();
     const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
-    if (json.success) render(json.rows || []);
+    if (json.success) { ROWS = json.rows || []; renderAll(); }
   } catch(e) { console.error('load', e); }
   await loadKeyStatus();
 }
 
-function targetRow(r) {
-  return '<tr><td>' + esc((r.first_name||'') + ' ' + (r.last_name||'')) + '</td><td>' + esc(r.title||'') + '</td><td>' + esc(r.company||'') + '</td><td>' + esc(r.radar_person||'') + '</td><td>' + esc(leadSource(r)) + '</td><td>' + fmtDate(r.collected_date) + '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') + '</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
+// ===== Helpers =====
+function isThisWeek(d){
+  if(!d) return false;
+  const dt = new Date(d); if(isNaN(dt)) return false;
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7*24*60*60*1000);
+  return dt >= weekAgo && dt <= now;
+}
+function dayKey(d){ try{ const dt=new Date(d); if(isNaN(dt)) return ''; return dt.toISOString().slice(0,10); }catch(e){ return ''; } }
+function fmtDate(d){ try{ return d ? new Date(d).toLocaleDateString() : ''; }catch(e){ return d||''; } }
+function fmtDayLabel(key){ try{ return new Date(key+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }catch(e){ return key; } }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fullName(r){ return ((r.first_name||'')+' '+(r.last_name||'')).trim(); }
+
+// ===== Render orchestration =====
+function renderAll(){
+  renderStats();
+  populateFilters();
+  renderTargets();
+  renderBridges();
+  renderSources();
+  renderCollections();
+  renderCharts();
+  renderFlow();
 }
 
-function render(rows) {
-  const emptyRow = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px">No targets yet</td></tr>';
+function renderStats(){
+  const rows = ROWS;
   const bridges = new Set(rows.map(r => r.radar_person).filter(Boolean));
   const sources = new Set(rows.map(leadSource).filter(Boolean));
+  const pushed  = rows.filter(r => r.botdog_pushed).length;
+  document.getElementById('statTotal').textContent     = rows.length;
+  document.getElementById('statWeek').textContent      = rows.filter(r => isThisWeek(r.collected_date)).length;
+  document.getElementById('statPushed').textContent    = pushed;
+  document.getElementById('statPushedPct').textContent = rows.length ? Math.round(pushed/rows.length*100) + '% of targets' : '0%';
+  document.getElementById('statBridges').textContent   = bridges.size;
+  document.getElementById('statSources').textContent   = sources.size;
+  document.getElementById('leadCount').textContent     = rows.length;
+}
 
-  document.getElementById('statTotal').textContent   = rows.length;
-  document.getElementById('statToday').textContent   = rows.filter(r => isToday(r.collected_date)).length;
-  document.getElementById('statPushed').textContent  = rows.filter(r => r.botdog_pushed).length;
-  document.getElementById('statBridges').textContent = bridges.size;
-  document.getElementById('statSources').textContent = sources.size;
-  document.getElementById('leadCount').textContent   = rows.length + ' targets';
+// ----- Targets view -----
+function populateFilters(){
+  const bridges = Array.from(new Set(ROWS.map(r => r.radar_person).filter(Boolean))).sort();
+  const sources = Array.from(new Set(ROWS.map(leadSource).filter(Boolean))).sort();
+  const bSel = document.getElementById('tBridge'), sSel = document.getElementById('tSource');
+  const bVal = bSel.value, sVal = sSel.value;
+  bSel.innerHTML = '<option value="">All bridges</option>' + bridges.map(b => '<option>' + esc(b) + '</option>').join('');
+  sSel.innerHTML = '<option value="">All sources</option>' + sources.map(s => '<option>' + esc(s) + '</option>').join('');
+  bSel.value = bVal; sSel.value = sVal;
+}
 
-  const recent = rows.slice().sort((a,b) => new Date(b.collected_date||0) - new Date(a.collected_date||0));
+function rowFields(r){
+  return {
+    name: fullName(r), title: r.title||'', company: r.company||'',
+    bridge: r.radar_person||'', source: leadSource(r)||'',
+    date: r.collected_date ? new Date(r.collected_date).getTime() : 0,
+    botdog: r.botdog_pushed ? 1 : 0, _r: r
+  };
+}
 
-  // Dashboard — most recent targets
-  document.getElementById('leadsBody').innerHTML   = rows.length ? recent.slice(0,50).map(targetRow).join('') : emptyRow;
-  // Targets — full list
-  document.getElementById('targetsBody').innerHTML = rows.length ? recent.map(targetRow).join('') : emptyRow;
+function renderTargets(){
+  const q = (document.getElementById('tSearch').value||'').toLowerCase().trim();
+  const fb = document.getElementById('tBridge').value;
+  const fs = document.getElementById('tSource').value;
+  let list = ROWS.map(rowFields);
+  if (fb) list = list.filter(x => x.bridge === fb);
+  if (fs) list = list.filter(x => x.source === fs);
+  if (q)  list = list.filter(x => (x.name+' '+x.title+' '+x.company).toLowerCase().includes(q));
 
-  // Bridges — people, grouped (include configured bridges even with 0 targets)
+  const k = SORT.key, dir = SORT.dir;
+  list.sort((a,b) => {
+    let va = a[k], vb = b[k];
+    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return -1*dir; if (va > vb) return 1*dir; return 0;
+  });
+
+  const body = document.getElementById('targetsBody');
+  body.innerHTML = list.length ? list.map(x => {
+    const r = x._r;
+    return '<tr><td>' + esc(x.name) + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.company) +
+      '</td><td>' + esc(x.bridge) + '</td><td>' + esc(x.source) + '</td><td>' + fmtDate(r.collected_date) +
+      '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') +
+      '</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="empty">No targets match</td></tr>';
+  document.getElementById('tCount').textContent = list.length + ' target' + (list.length===1?'':'s');
+
+  // update header arrows
+  document.querySelectorAll('#tHead th.sortable').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.key === SORT.key);
+    const a = th.querySelector('.arrow');
+    a.textContent = th.dataset.key === SORT.key ? (SORT.dir === 1 ? '▲' : '▼') : '';
+  });
+}
+
+function initSorting(){
+  document.querySelectorAll('#tHead th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (SORT.key === key) SORT.dir *= -1;
+      else { SORT.key = key; SORT.dir = (key === 'date' || key === 'botdog') ? -1 : 1; }
+      renderTargets();
+    });
+  });
+}
+
+// ----- Bridges view -----
+function bridgeCounts(){
   const byBridge = {};
-  rows.forEach(r => { const k = r.radar_person || '—'; (byBridge[k] = byBridge[k] || []).push(r); });
+  ROWS.forEach(r => { const k = r.radar_person || '—'; (byBridge[k] = byBridge[k] || []).push(r); });
   Object.keys(CONFIG.BRIDGE_SOURCE).forEach(k => { if (!byBridge[k]) byBridge[k] = []; });
+  return byBridge;
+}
+function renderBridges(){
+  const byBridge = bridgeCounts();
   document.getElementById('bridgesBody').innerHTML = Object.entries(byBridge)
+    .filter(([n]) => n && n !== '—')
     .sort((a,b) => b[1].length - a[1].length)
     .map(([n, l]) => {
       const meta = CONFIG.BRIDGE_SOURCE[n] || {};
       const cat  = meta.category || 'partner';
-      return '<div class="source-card"><h3>' + esc(n) + ' <span class="pill ' + cat + '">' + cat + '</span></h3><p><strong>Source:</strong> ' + esc(bridgeSource(n)) + ' · ' + l.length + ' targets collected' + (meta.results ? ' · up to ' + meta.results + ' available' : '') + '</p></div>';
-    }).join('');
+      const avail = meta.results ? '<p style="margin-top:4px">up to ' + meta.results + ' available to collect</p>' : '';
+      return '<div class="entity-card"><div class="top"><div><h3>' + esc(n) + '</h3>' +
+        '<p><strong>Source:</strong> ' + esc(bridgeSource(n)) + '</p></div>' +
+        '<span class="pill ' + cat + '">' + cat + '</span></div>' +
+        '<p style="margin-top:10px"><span class="big">' + l.length + '</span> <small>targets collected</small></p>' + avail + '</div>';
+    }).join('') || '<div class="empty">No bridges yet</div>';
+}
 
-  // Sources — organizations, grouped (bridges + targets under each)
+// ----- Sources view -----
+function sourceAgg(){
+  const byBridge = bridgeCounts();
   const bySource = {};
   const ensureSrc = s => (bySource[s] = bySource[s] || { bridges: [], leads: 0, url: '', category: 'partner' });
-  // Seed with manually-added Sources (may have no targets yet)
   STORED_SOURCES.forEach(s => { const o = ensureSrc(s.name); o.url = s.linkedin_url || o.url; o.category = s.category || o.category; });
-  // Count every target under its actual source (direct company targets included)
-  rows.forEach(r => { ensureSrc(leadSource(r)).leads++; });
-  // List the bridges that feed each source
+  ROWS.forEach(r => { ensureSrc(leadSource(r)).leads++; });
   Object.keys(byBridge).forEach(b => { if (b && b !== '—') ensureSrc(bridgeSource(b)).bridges.push(b); });
+  return bySource;
+}
+function renderSources(){
+  const bySource = sourceAgg();
   const sBody = document.getElementById('sourcesBody');
-  const sEntries = Object.entries(bySource).filter(([s, info]) => s && (s !== 'Unassigned' || info.leads > 0)).sort((a,b) => b[1].leads - a[1].leads);
+  const sEntries = Object.entries(bySource)
+    .filter(([s, info]) => s && (s !== 'Unassigned' || info.leads > 0))
+    .sort((a,b) => b[1].leads - a[1].leads);
   sBody.innerHTML = sEntries.length ? sEntries.map(([s, info]) => {
     const cat = info.category || 'partner';
-    const link = info.url ? ' <a href="' + esc(info.url) + '" target="_blank" style="font-size:0.8rem">↗ company</a>' : '';
-    const via = info.bridges.length ? ' via ' + info.bridges.length + ' bridge' + (info.bridges.length===1?'':'s') + ': ' + esc(info.bridges.join(', ')) : (info.leads ? ' (leadership collected directly)' : ' — no targets collected yet');
-    return '<div class="source-card"><h3>📍 ' + esc(s) + ' <span class="pill ' + cat + '">' + cat + '</span>' + link + '</h3><p><strong>' + info.leads + ' targets</strong>' + via + '</p></div>';
-  }).join('') : '<div class="source-card"><p style="color:#94a3b8">No sources yet — add one above.</p></div>';
+    const link = info.url ? '<a href="' + esc(info.url) + '" target="_blank" style="font-size:0.8rem">↗ company</a>' : '';
+    const via = info.bridges.length
+      ? 'via ' + info.bridges.length + ' bridge' + (info.bridges.length===1?'':'s') + ': ' + esc(info.bridges.join(', '))
+      : (info.leads ? 'leadership collected directly' : 'no targets collected yet');
+    return '<div class="entity-card"><div class="top"><div><h3>📍 ' + esc(s) + '</h3>' + (link?('<p>'+link+'</p>'):'') +
+      '</div><span class="pill ' + cat + '">' + cat + '</span></div>' +
+      '<p style="margin-top:10px"><span class="big">' + info.leads + '</span> <small>targets</small></p>' +
+      '<p style="margin-top:6px">' + via + '</p></div>';
+  }).join('') : '<div class="empty">No sources yet — add one above.</div>';
 }
 
-function showTab(name) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  document.getElementById('tab-btn-' + name).classList.add('active');
-  if (name === 'log') refreshLog();
+// ----- Collections view -----
+function renderCollections(){
+  const byDay = {};
+  ROWS.forEach(r => {
+    const k = dayKey(r.collected_date); if (!k) return;
+    (byDay[k] = byDay[k] || []).push(r);
+  });
+  const days = Object.keys(byDay).sort().reverse();
+  const body = document.getElementById('collectionsBody');
+  if (!days.length) { body.innerHTML = '<div class="empty">No collections yet</div>'; return; }
+  body.innerHTML = days.map(k => {
+    const rows = byDay[k];
+    const byBridge = {};
+    rows.forEach(r => { const b = r.radar_person || 'Unassigned'; byBridge[b] = (byBridge[b]||0)+1; });
+    const chips = Object.entries(byBridge).sort((a,b)=>b[1]-a[1])
+      .map(([b,c]) => '<span class="bchip">' + esc(b) + ' (' + c + ')</span>').join('');
+    return '<div class="collection-day"><div class="date">' + esc(fmtDayLabel(k)) + '</div>' +
+      '<div class="summary">' + rows.length + ' new target' + (rows.length===1?'':'s') + ' collected</div>' +
+      '<div class="bridges">bridges: ' + chips + '</div></div>';
+  }).join('');
 }
 
-function isToday(d) { return d && new Date(d).toDateString() === new Date().toDateString(); }
-function fmtDate(d) { try { return d ? new Date(d).toLocaleDateString() : ''; } catch(e) { return d||''; } }
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// ----- Charts -----
+function destroyChart(id){ if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+function renderCharts(){
+  if (typeof Chart === 'undefined') return;
+  const PRIMARY='#1e40af', ACCENT='#3b82f6';
+  const palette=['#1e40af','#3b82f6','#60a5fa','#93c5fd','#2563eb','#1d4ed8','#0ea5e9','#38bdf8','#818cf8','#a5b4fc'];
 
+  // Targets per Bridge
+  const byBridge = bridgeCounts();
+  const bEntries = Object.entries(byBridge).filter(([n])=>n&&n!=='—').sort((a,b)=>b[1].length-a[1].length);
+  destroyChart('chartBridges');
+  CHARTS.chartBridges = new Chart(document.getElementById('chartBridges'), {
+    type:'bar',
+    data:{ labels:bEntries.map(e=>e[0]), datasets:[{ label:'Targets', data:bEntries.map(e=>e[1].length), backgroundColor:ACCENT, borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+  });
+
+  // Targets per Source
+  const bySource = sourceAgg();
+  const sEntries = Object.entries(bySource).filter(([s,i])=>s&&(s!=='Unassigned'||i.leads>0)).sort((a,b)=>b[1].leads-a[1].leads);
+  destroyChart('chartSources');
+  CHARTS.chartSources = new Chart(document.getElementById('chartSources'), {
+    type:'doughnut',
+    data:{ labels:sEntries.map(e=>e[0]), datasets:[{ data:sEntries.map(e=>e[1].leads), backgroundColor:palette, borderWidth:2, borderColor:'#fff' }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:12, font:{size:11}}}} }
+  });
+
+  // Daily trend
+  const byDay = {};
+  ROWS.forEach(r => { const k = dayKey(r.collected_date); if (k) byDay[k] = (byDay[k]||0)+1; });
+  const dKeys = Object.keys(byDay).sort();
+  destroyChart('chartTrend');
+  CHARTS.chartTrend = new Chart(document.getElementById('chartTrend'), {
+    type:'line',
+    data:{ labels:dKeys.map(fmtDayLabel), datasets:[{ label:'New targets', data:dKeys.map(k=>byDay[k]),
+      borderColor:PRIMARY, backgroundColor:'rgba(59,130,246,0.12)', fill:true, tension:0.3, pointRadius:3, pointBackgroundColor:PRIMARY }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+  });
+}
+
+// ----- Flow diagram -----
+function renderFlow(){
+  const bySource = sourceAgg();
+  const byBridge = bridgeCounts();
+
+  // map source -> bridges, bridge -> count
+  const sources = Object.entries(bySource)
+    .filter(([s,i]) => s && (s!=='Unassigned' || i.leads>0))
+    .sort((a,b)=>b[1].leads-a[1].leads);
+  const bridges = Object.entries(byBridge)
+    .filter(([n]) => n && n!=='—')
+    .sort((a,b)=>b[1].length-a[1].length);
+
+  const f = FLOW_FILTER;
+  const bridgeMatchesFilter = (name) => {
+    if (!f) return true;
+    if (f.type==='bridge') return name===f.value;
+    if (f.type==='source') return bridgeSource(name)===f.value;
+    return true;
+  };
+  const sourceMatchesFilter = (name) => {
+    if (!f) return true;
+    if (f.type==='source') return name===f.value;
+    if (f.type==='bridge') return bridgeSource(f.value)===name;
+    return true;
+  };
+
+  const srcCol = sources.map(([s,info]) => {
+    const dim = !sourceMatchesFilter(s) ? ' dim' : '';
+    const act = (f && f.type==='source' && f.value===s) ? ' active' : '';
+    return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'source\',\'' + jsq(s) + '\')">' +
+      '<span class="nm">' + esc(s) + '</span><span class="ct">' + info.leads + '</span></div>';
+  }).join('') || '<div class="flow-node target">No sources</div>';
+
+  const brCol = bridges.map(([n,l]) => {
+    const dim = !bridgeMatchesFilter(n) ? ' dim' : '';
+    const act = (f && f.type==='bridge' && f.value===n) ? ' active' : '';
+    return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'bridge\',\'' + jsq(n) + '\')">' +
+      '<span class="nm">' + esc(n) + '</span><span class="ct">' + l.length + '</span></div>';
+  }).join('') || '<div class="flow-node target">No bridges</div>';
+
+  // Targets column: count under current filter
+  let tCount, tLabel;
+  if (f && f.type==='bridge') {
+    tCount = (byBridge[f.value]||[]).length; tLabel = 'targets via ' + f.value;
+  } else if (f && f.type==='source') {
+    tCount = (bySource[f.value]||{leads:0}).leads; tLabel = 'targets from ' + f.value;
+  } else {
+    tCount = ROWS.length; tLabel = 'total targets';
+  }
+  const tgtCol = '<div class="flow-node target"><span class="big" style="font-size:1.4rem;font-weight:700;color:#1e40af">' + tCount + '</span><br>' +
+    '<span style="font-size:0.78rem;color:#64748b">' + esc(tLabel) + '</span></div>';
+
+  document.getElementById('flowDiagram').innerHTML =
+    '<div class="flow-col"><div class="colhead">Sources</div>' + srcCol + '</div>' +
+    '<div class="flow-col"><div class="colhead">Bridges</div>' + brCol + '</div>' +
+    '<div class="flow-col"><div class="colhead">Targets</div>' + tgtCol + '</div>';
+
+  document.getElementById('flowHint').textContent = f
+    ? 'Filtering by ' + f.type + ': ' + f.value + ' — click again to clear.'
+    : 'Click a Source or Bridge to highlight its path.';
+}
+function jsq(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function setFlowFilter(type, value){
+  if (FLOW_FILTER && FLOW_FILTER.type===type && FLOW_FILTER.value===value) FLOW_FILTER = null;
+  else FLOW_FILTER = { type:type, value:value };
+  renderFlow();
+}
+
+// ===== Navigation =====
+function showView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  // charts need a resize nudge when their container becomes visible
+  if (name === 'dashboard') Object.values(CHARTS).forEach(c => { try{ c.resize(); }catch(e){} });
+}
+
+// ===== Settings =====
 async function saveSettings() {
   const botdog = document.getElementById('inputBotdog').value.trim();
   const resend = document.getElementById('inputResend').value.trim();
@@ -404,6 +682,7 @@ async function loadKeyStatus() {
   } catch(e) {}
 }
 
+initSorting();
 load();
 </script>
 </body>
