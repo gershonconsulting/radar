@@ -83,7 +83,7 @@ async function runSync() {
   await log('info', 'run:start');
   const loggedIn = await checkLogin();
   await log('info', 'login-check', { loggedIn });
-  if (!loggedIn) { await log('warn', 'Not logged into Sales Navigator - open a Sales Nav tab first'); return { status: 'not-logged-in' }; }
+  if (!loggedIn) { await log('warn', 'No Sales Nav tab detected - proceeding anyway (opened tabs use your logged-in session)'); }
 
   // Step 1: discover new candidate bridges from Sources (best-effort, never blocks collection).
   try { await discoverBridges(); }
@@ -206,7 +206,7 @@ async function discoverBridges() {
     if (!orgId) { continue; }
     try {
       await log('info', 'discover:source', { source: src.name, org_id: orgId });
-      const query = '(filters:List((type:CURRENT_COMPANY,values:List((id:urn:li:organization:' + orgId + ',selectionType:INCLUDED))),(type:SENIORITY_LEVEL,values:List(' +
+      const query = '(filters:List((type:CURRENT_COMPANY,values:List((id:urn%3Ali%3Aorganization%3A' + orgId + ',selectionType:INCLUDED))),(type:SENIORITY_LEVEL,values:List(' +
         DISCOVER_SENIORITY_IDS.map(id => '(id:' + id + ',selectionType:INCLUDED)').join(',') +
         '))))';
       const url = 'https://www.linkedin.com/sales/search/people?query=' + encodeURIComponent(query);
