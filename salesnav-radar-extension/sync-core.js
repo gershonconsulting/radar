@@ -351,7 +351,14 @@ async function scrapePageInTab(url, bridge) {
   });
 }
 
-function extractLeadsFromPage(radarPerson, category, source) {
+async function extractLeadsFromPage(radarPerson, category, source) {
+  // Sales Nav lazy-renders results; poll (and scroll) until the lead links appear.
+  for (let _p = 0; _p < 15; _p++) {
+    if (document.querySelectorAll('a[href*="/sales/lead/"]').length > 0) break;
+    try { window.scrollTo(0, document.body.scrollHeight); } catch (e) {}
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  await new Promise(r => setTimeout(r, 400));
   const results = [];
   // Anchor on the lead link, then climb to the card that also holds a company link.
   document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
