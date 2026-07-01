@@ -63,11 +63,11 @@ chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'dailySync') run
 // --- Messages ---
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'syncNow') {
-    runSync().then(r => sendResponse({ ok: true, result: r })).catch(e => sendResponse({ ok: false, error: String(e) }));
+    runSync().then(async r => { await pushLog(); sendResponse({ ok: true, result: r }); }).catch(async e => { await pushLog(); sendResponse({ ok: false, error: String(e) }); });
     return true;
   }
   if (msg.action === 'discoverNow') {
-    discoverBridges().then(r => sendResponse({ ok: true, result: r })).catch(e => sendResponse({ ok: false, error: String(e) }));
+    discoverBridges().then(async r => { await pushLog(); sendResponse({ ok: true, result: r }); }).catch(async e => { await pushLog(); sendResponse({ ok: false, error: String(e) }); });
     return true;
   }
   if (msg.action === 'getLog') {
@@ -76,6 +76,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg.action === 'clearLog') { clearLog().then(() => sendResponse({ ok: true })); return true; }
 });
+
+// Forward the run log to the hub so it's visible server-side (for debugging).
+async function pushLog() {
+  try {
+    const stored = await chrome.storage.local.get('radarLog');
+    const arr = stored.radarLog || [];
+    await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: INGEST_SECRET, action: 'pushLog', log: arr.slice(0, 150) }) });
+  } catch (e) {}
+}
 
 // --- Main sync ---
 async function runSync() {
@@ -246,7 +255,14 @@ async function scrapeDiscoveryInTab(url) {
 // Injected into the discovery search page. Anchors on the /sales/lead/ links, climbs to
 // the card, reads name, urn, title, and connection degree. Returns candidate bridge objects
 // shaped for addBridges: { name, title, urn, linkedin_url, connection }.
-function extractCandidatesFromPage() {
+async function extractCandidatesFromPage() {
+  // Sales Nav lazy-renders search results; poll (and scroll) until the lead links appear.
+  for (let _p = 0; _p < 15; _p++) {
+    if (document.querySelectorAll('a[href*="/sales/lead/"]').length > 0) break;
+    try { window.scrollTo(0, document.body.scrollHeight); } catch (e) {}
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  await new Promise(r => setTimeout(r, 400));
   const results = [];
   document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
     try {

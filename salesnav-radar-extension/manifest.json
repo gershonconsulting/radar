@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Radar — Sales Nav Collector",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Collects Sales Navigator connections and syncs to Radar sheet",
   "permissions": ["alarms", "storage", "scripting", "tabs"],
   "host_permissions": [
