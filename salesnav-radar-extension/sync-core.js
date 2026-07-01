@@ -274,34 +274,41 @@ async function extractCandidatesFromPage() {
   const results = [];
   document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
     try {
-      const name = (linkEl.textContent || '').trim();
+      let name = (linkEl.textContent || '').replace(/\s+/g, ' ').trim();
+      // Strip LinkedIn status phrases appended to the name link ("… is reachable", etc.).
+      name = name.replace(/\s+is\s+(reachable|open to work|hiring|a group member|out of office).*$/i, '').trim();
       if (!name) return;
       const urnMatch = linkEl.href.match(/\/sales\/lead\/([^,?\/]+)/);
       if (!urnMatch) return;
       const urn = urnMatch[1];
+      const linkedin_url = linkEl.href.split('?')[0];  // Sales Nav profile link (open to connect)
 
-      // Climb to the card (the ancestor that also holds a company link, if present).
+      // Climb to the card.
       let card = linkEl;
-      for (let i = 0; i < 6 && card && card.parentElement; i++) {
+      for (let i = 0; i < 7 && card && card.parentElement; i++) {
         card = card.parentElement;
-        if (card.querySelector('a[href*="/sales/company/"]')) break;
+        if (card.querySelector('a[href*="/sales/company/"]') || (card.textContent || '').length > 60) break;
       }
       if (!card) card = linkEl.parentElement || linkEl;
 
-      // Collect the text leaves in the card, in document order.
+      // Text leaves in the card.
       const txts = Array.from(card.querySelectorAll('span, div'))
-        .map(e => e.childElementCount === 0 ? (e.textContent || '').trim() : '')
+        .map(e => e.childElementCount === 0 ? (e.textContent || '').replace(/\s+/g, ' ').trim() : '')
         .filter(Boolean);
-
-      // Title = text leaf near the company name; else the leaf right after the name.
-      let title = '';
       const compEl  = card.querySelector('a[href*="/sales/company/"]');
       const company = compEl ? compEl.textContent.trim() : '';
-      const ci = company ? txts.indexOf(company) : -1;
-      if (ci > 0) title = txts[ci - 1];
-      if (!title) {
-        const ni = txts.indexOf(name);
-        if (ni !== -1 && ni + 1 < txts.length) title = txts[ni + 1];
+
+      // Title = first substantial leaf that isn't the name / a status / a degree / the company.
+      let title = '';
+      const nlow = name.toLowerCase();
+      for (const t of txts) {
+        const tl = t.toLowerCase();
+        if (!t || t.length < 3) continue;
+        if (tl === nlow || tl.indexOf(nlow) === 0) continue;
+        if (/^(1st|2nd|3rd)$/.test(tl)) continue;
+        if (/is reachable|is open to work|·|view .* profile|^message/i.test(t)) continue;
+        if (company && t === company) continue;
+        title = t; break;
       }
 
       // Connection degree - look for a 1st/2nd/3rd token in the card text.
@@ -309,7 +316,7 @@ async function extractCandidatesFromPage() {
       const degMatch = (card.textContent || '').match(/\b(1st|2nd|3rd)\b/);
       if (degMatch) connection = degMatch[1];
 
-      results.push({ name, title: title || '', urn, linkedin_url: '', connection });
+      results.push({ name, title: title || '', urn, linkedin_url: linkedin_url, connection });
     } catch (e) {}
   });
   // De-dupe by urn within the page.
