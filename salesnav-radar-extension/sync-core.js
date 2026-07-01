@@ -90,6 +90,7 @@ async function pushLog() {
 async function runSync() {
   await clearLog();
   await log('info', 'run:start');
+  notify('Sync started', 'Scanning Sales Navigator slowly to stay under the radar…');
   const loggedIn = await checkLogin();
   await log('info', 'login-check', { loggedIn });
   if (!loggedIn) { await log('warn', 'No Sales Nav tab detected - proceeding anyway (opened tabs use your logged-in session)'); }
@@ -109,8 +110,10 @@ async function runSync() {
       await log('info', 'scrape:start', { bridge: bridge.bridge });
       const leads = await scrapeBridge(bridge);
       await log('info', 'scrape:done', { bridge: bridge.bridge, leadCount: leads.length });
+      if (leads.length) notify('New targets', leads.length + ' new connections via ' + bridge.bridge);
       allLeads.push(...leads);
     } catch (err) { await log('error', 'scrape:error', { bridge: bridge.bridge, error: String(err) }); }
+    await humanDelay(12000, 28000);
   }
   await log('info', 'scrape:total', { totalLeads: allLeads.length });
 
@@ -124,6 +127,7 @@ async function runSync() {
     await log('info', 'ingest:start', { leads: resolved.length });
     const result = await postToHub(resolved);
     await log('info', 'run:done', { written: result.written, status: result.status || 'ok' });
+    notify('Sync complete', ((result && result.written) || 0) + ' new targets added.');
     return result;
   } catch(err) { await log('error', 'ingest:error', { error: String(err) }); return { status: 'ingest-error', error: String(err) }; }
 }
@@ -224,11 +228,12 @@ async function discoverBridges() {
       if (trimmed.length > 0) {
         const res = await addBridges(src.name, trimmed);
         await log('info', 'discover:pushed', { source: src.name, count: trimmed.length, ok: !!(res && res.success) });
+        notify('New bridge candidates', trimmed.length + ' people found at ' + src.name + ' — review in the Bridges tab.');
       } else {
         await log('info', 'discover:empty', { source: src.name });
       }
       totalCandidates += trimmed.length;
-      await sleep(1500);
+      await humanDelay(12000, 28000);
     } catch (err) {
       await log('error', 'discover:source-error', { source: src.name, error: String(err) });
     }
@@ -243,11 +248,14 @@ async function scrapeDiscoveryInTab(url) {
     chrome.tabs.create({ url, active: true }, tab => {
       setTimeout(() => {
         chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractCandidatesFromPage }, results => {
-          chrome.tabs.remove(tab.id);
-          if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
-          resolve(results && results[0] ? results[0].result || [] : []);
+          const out = (results && results[0]) ? (results[0].result || []) : [];
+          const err = chrome.runtime.lastError;
+          // Linger like a human reading the page, then close the tab.
+          setTimeout(() => { try { chrome.tabs.remove(tab.id); } catch (e) {} }, 3500 + Math.floor(Math.random() * 5000));
+          if (err) { reject(new Error(err.message)); return; }
+          resolve(out);
         });
-      }, 5000);
+      }, 6000 + Math.floor(Math.random() * 3500));
     });
   });
 }
@@ -332,7 +340,7 @@ async function scrapeBridge(bridge) {
     leads.push(...pageLeads);
     await log('info', 'scrape:page-done', { bridge: bridge.bridge, page, count: pageLeads.length });
     if (pageLeads.length < 25) break;
-    await sleep(1500);
+    await humanDelay(6000, 14000);
   }
   return leads;
 }
@@ -342,11 +350,14 @@ async function scrapePageInTab(url, bridge) {
     chrome.tabs.create({ url, active: true }, tab => {
       setTimeout(() => {
         chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractLeadsFromPage, args: [bridge.bridge, bridge.category, bridge.source] }, results => {
-          chrome.tabs.remove(tab.id);
-          if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
-          resolve(results && results[0] ? results[0].result || [] : []);
+          const out = (results && results[0]) ? (results[0].result || []) : [];
+          const err = chrome.runtime.lastError;
+          // Linger like a human reading the page, then close the tab.
+          setTimeout(() => { try { chrome.tabs.remove(tab.id); } catch (e) {} }, 3500 + Math.floor(Math.random() * 5000));
+          if (err) { reject(new Error(err.message)); return; }
+          resolve(out);
         });
-      }, 5000);
+      }, 6000 + Math.floor(Math.random() * 3500));
     });
   });
 }
@@ -428,3 +439,19 @@ async function postToHub(leads) {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Randomized human-like delay (ms) to avoid looking automated to LinkedIn.
+function humanDelay(minMs, maxMs) { return sleep(minMs + Math.floor(Math.random() * Math.max(0, maxMs - minMs))); }
+
+// Desktop notification from Radar. Fails silently if the permission isn't granted.
+function notify(title, message) {
+  try {
+    chrome.notifications.create('radar_' + Date.now(), {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icons/icon128.png'),
+      title: 'Radar — ' + title,
+      message: String(message || ''),
+      priority: 1
+    });
+  } catch (e) {}
+}
