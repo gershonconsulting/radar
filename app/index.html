@@ -101,6 +101,40 @@ td a:hover{ text-decoration:underline; }
 .pill.competitor{ background:#fee2e2; color:#991b1b; }
 .pill.partner{ background:#d1fae5; color:#065f46; }
 .pill.organization{ background:#dbeafe; color:#1e40af; }
+.pill.conn{ background:#dcfce7; color:#166534; }
+
+/* ---------- Bridges candidate management ---------- */
+.bridges-note{ background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.86rem; color:#1e40af; line-height:1.5; }
+.bridges-controls{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+.seg{ display:inline-flex; background:#f1f5f9; border:1px solid var(--line); border-radius:8px; padding:2px; }
+.seg button{ border:none; background:none; padding:6px 14px; border-radius:6px; font-size:0.82rem; color:var(--muted); cursor:pointer; font-weight:500; transition:all .12s; }
+.seg button.active{ background:#fff; color:var(--primary); font-weight:600; box-shadow:0 1px 2px rgba(15,23,42,0.08); }
+.bridge-src-section{ margin-bottom:24px; }
+.bridge-src-head{ display:flex; align-items:baseline; gap:10px; padding:0 2px 10px; border-bottom:2px solid var(--line); margin-bottom:12px; }
+.bridge-src-head .nm{ font-size:1rem; font-weight:700; color:#0f172a; letter-spacing:0.02em; }
+.bridge-src-head .meta{ font-size:0.8rem; color:var(--muted); }
+.bridge-src-head .actives{ margin-left:auto; font-size:0.76rem; font-weight:600; color:var(--accent); background:#eff6ff; padding:2px 10px; border-radius:12px; }
+.bridge-list{ display:flex; flex-direction:column; gap:8px; }
+.bridge-row{ display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--line); border-left:3px solid transparent; border-radius:10px; padding:12px 16px; box-shadow:0 1px 2px rgba(15,23,42,0.04); transition:background .15s,border-color .15s; }
+.bridge-row.on{ border-left-color:var(--accent); background:#f5f9ff; }
+.bridge-row .info{ min-width:0; flex:1; }
+.bridge-row .info .nm{ font-size:0.94rem; font-weight:600; color:#1e293b; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.bridge-row .info .ttl{ font-size:0.82rem; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bridge-row .tgtcount{ font-size:0.82rem; color:var(--muted); white-space:nowrap; text-align:right; }
+.bridge-row .tgtcount b{ color:var(--primary); font-weight:700; font-size:0.95rem; }
+.bridge-row .save-status{ font-size:0.74rem; color:#94a3b8; min-width:44px; text-align:right; }
+.bridge-row .save-status.ok{ color:#16a34a; }
+.bridge-row a.li{ font-size:0.78rem; color:#2563eb; text-decoration:none; }
+.bridge-row a.li:hover{ text-decoration:underline; }
+
+/* Toggle switch */
+.switch{ position:relative; display:inline-block; width:42px; height:24px; flex:0 0 42px; }
+.switch input{ opacity:0; width:0; height:0; }
+.switch .track{ position:absolute; cursor:pointer; inset:0; background:#cbd5e1; border-radius:24px; transition:background .18s; }
+.switch .track:before{ content:''; position:absolute; height:18px; width:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .18s; box-shadow:0 1px 2px rgba(0,0,0,0.2); }
+.switch input:checked + .track{ background:var(--accent); }
+.switch input:checked + .track:before{ transform:translateX(18px); }
+.switch input:disabled + .track{ opacity:0.55; cursor:default; }
 
 /* ---------- Settings ---------- */
 .settings-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:18px; max-width:560px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
@@ -219,7 +253,17 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     <!-- ===== Bridges ===== -->
     <section id="view-bridges" class="view">
       <div class="page-head"><h2>Bridges</h2><p>Well-connected people who introduce you to targets.</p></div>
-      <div class="card-grid" id="bridgesBody"></div>
+      <div class="bridges-note">
+        Toggle a candidate <strong>Active</strong> to have the extension collect that person's ICP connections as Targets.
+      </div>
+      <div class="bridges-controls">
+        <div class="seg" id="bridgeFilterSeg">
+          <button class="active" data-filter="all" onclick="setBridgeFilter('all')">All</button>
+          <button data-filter="active" onclick="setBridgeFilter('active')">Active only</button>
+        </div>
+        <span class="result-count" id="bridgeCount"></span>
+      </div>
+      <div id="bridgesBody"></div>
     </section>
 
     <!-- ===== Sources ===== -->
@@ -306,6 +350,9 @@ let STORED_SOURCES = [];
 let CHARTS = {};
 let SORT = { key: 'date', dir: -1 };       // default: newest first
 let FLOW_FILTER = null;                      // {type:'source'|'bridge', value:''}
+let BRIDGES = [];                            // candidate bridges from getBridges
+let BRIDGE_FILTER = 'all';                   // 'all' | 'active'
+let BRIDGES_LOADED = false;
 
 // ===== Backend: Sources =====
 async function loadSources() {
@@ -334,12 +381,42 @@ async function addSource() {
   } catch(e) { st.textContent = 'Error: ' + e.message; }
 }
 
+// ===== Backend: Bridge candidates =====
+async function loadBridges() {
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=getBridges&_=' + Date.now();
+    const r = await fetch(url); const t = await r.text();
+    const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (j.success) { BRIDGES = j.bridges || []; BRIDGES_LOADED = true; }
+  } catch(e) { console.error('loadBridges', e); }
+}
+async function setBridgeActive(urn, active, statusEl) {
+  if (statusEl) { statusEl.textContent = 'saving…'; statusEl.classList.remove('ok'); }
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setBridgeActive', urn: urn, active: active })
+    });
+    const d = await resp.json();
+    if (d && (d.saved || d.success)) {
+      if (statusEl) { statusEl.textContent = '✓'; statusEl.classList.add('ok'); setTimeout(() => { if (statusEl.textContent === '✓') statusEl.textContent = ''; }, 1600); }
+      return true;
+    }
+    if (statusEl) { statusEl.textContent = 'error'; }
+    return false;
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'error';
+    return false;
+  }
+}
+
 // ===== Backend: main data load =====
 async function load() {
   if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
     document.getElementById('warningBanner').style.display = 'block'; return;
   }
   await loadSources();
+  await loadBridges();
   try {
     const url = CONFIG.WEBAPP_URL + '?callback=_cb&_=' + Date.now();
     const resp = await fetch(url);
@@ -462,20 +539,114 @@ function bridgeCounts(){
   Object.keys(CONFIG.BRIDGE_SOURCE).forEach(k => { if (!byBridge[k]) byBridge[k] = []; });
   return byBridge;
 }
+// # of targets already collected via a bridge (match row.radar_person to bridge.name)
+function targetsForBridge(name){
+  const n = _norm(name);
+  let c = 0;
+  ROWS.forEach(r => { if (_norm(r.radar_person) === n) c++; });
+  return c;
+}
+function setBridgeFilter(f){
+  BRIDGE_FILTER = f;
+  document.querySelectorAll('#bridgeFilterSeg button').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  renderBridges();
+}
 function renderBridges(){
-  const byBridge = bridgeCounts();
-  document.getElementById('bridgesBody').innerHTML = Object.entries(byBridge)
-    .filter(([n]) => n && n !== '—')
-    .sort((a,b) => b[1].length - a[1].length)
-    .map(([n, l]) => {
-      const meta = CONFIG.BRIDGE_SOURCE[n] || {};
-      const cat  = meta.category || 'partner';
-      const avail = meta.results ? '<p style="margin-top:4px">up to ' + meta.results + ' available to collect</p>' : '';
-      return '<div class="entity-card"><div class="top"><div><h3>' + esc(n) + '</h3>' +
-        '<p><strong>Source:</strong> ' + esc(bridgeSource(n)) + '</p></div>' +
-        '<span class="pill ' + cat + '">' + cat + '</span></div>' +
-        '<p style="margin-top:10px"><span class="big">' + l.length + '</span> <small>targets collected</small></p>' + avail + '</div>';
-    }).join('') || '<div class="empty">No bridges yet</div>';
+  const body = document.getElementById('bridgesBody');
+  const countEl = document.getElementById('bridgeCount');
+
+  // Not fetched yet
+  if (!BRIDGES_LOADED) {
+    body.innerHTML = '<div class="empty">Loading bridge candidates…</div>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  // Empty state
+  if (!BRIDGES.length) {
+    body.innerHTML = '<div class="empty">No bridge candidates yet — add a Source and the extension will discover its people.</div>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+
+  // Group by source (organization)
+  const bySource = {};
+  BRIDGES.forEach(b => {
+    const s = b.source || 'Unassigned';
+    (bySource[s] = bySource[s] || []).push(b);
+  });
+
+  // Sort sources by candidate count desc
+  const sourceEntries = Object.entries(bySource).sort((a,b) => b[1].length - a[1].length);
+  const showActiveOnly = BRIDGE_FILTER === 'active';
+
+  let totalShown = 0, totalActive = 0;
+  BRIDGES.forEach(b => { if (b.active) totalActive++; });
+
+  const html = sourceEntries.map(([src, list]) => {
+    const activeCount = list.filter(b => b.active).length;
+    const visible = showActiveOnly ? list.filter(b => b.active) : list;
+    if (!visible.length) return '';
+    totalShown += visible.length;
+
+    // sort within source: active first, then by target count desc, then name
+    visible.sort((a,b) => {
+      if (!!b.active !== !!a.active) return (b.active?1:0) - (a.active?1:0);
+      const tb = targetsForBridge(b.name), ta = targetsForBridge(a.name);
+      if (tb !== ta) return tb - ta;
+      return _norm(a.name).localeCompare(_norm(b.name));
+    });
+
+    const rows = visible.map(b => {
+      const tgt = targetsForBridge(b.name);
+      const on  = !!b.active;
+      const urnAttr = esc(b.urn);
+      const conn = b.connection ? '<span class="pill conn">' + esc(b.connection) + '</span>' : '';
+      const li   = b.linkedin_url ? '<a class="li" href="' + esc(b.linkedin_url) + '" target="_blank">↗</a>' : '';
+      const ttl  = b.title ? '<div class="ttl">' + esc(b.title) + '</div>' : '';
+      return '<div class="bridge-row' + (on ? ' on' : '') + '" data-urn="' + urnAttr + '">' +
+        '<label class="switch"><input type="checkbox"' + (on ? ' checked' : '') +
+          ' onchange="onBridgeToggle(this,\'' + jsq(b.urn) + '\')"><span class="track"></span></label>' +
+        '<div class="info"><div class="nm">' + esc(b.name) + ' ' + conn + ' ' + li + '</div>' + ttl + '</div>' +
+        '<div class="tgtcount"><b>' + tgt + '</b><br><span style="font-size:0.72rem">targets</span></div>' +
+        '<div class="save-status"></div>' +
+        '</div>';
+    }).join('');
+
+    return '<div class="bridge-src-section">' +
+      '<div class="bridge-src-head"><span class="nm">' + esc(src.toUpperCase()) + '</span>' +
+        '<span class="meta">' + list.length + ' candidate' + (list.length===1?'':'s') + '</span>' +
+        '<span class="actives">' + activeCount + ' active</span></div>' +
+      '<div class="bridge-list">' + rows + '</div></div>';
+  }).join('');
+
+  body.innerHTML = html || '<div class="empty">No active bridges yet — toggle a candidate on above.</div>';
+  if (countEl) countEl.textContent = totalActive + ' of ' + BRIDGES.length + ' active';
+}
+
+// Toggle handler: optimistic UI + POST
+async function onBridgeToggle(inputEl, urn){
+  const newState = inputEl.checked;
+  const rowEl = inputEl.closest('.bridge-row');
+  const statusEl = rowEl ? rowEl.querySelector('.save-status') : null;
+
+  // optimistic UI
+  if (rowEl) rowEl.classList.toggle('on', newState);
+  inputEl.disabled = true;
+  const rec = BRIDGES.find(b => String(b.urn) === String(urn));
+  const prev = rec ? rec.active : undefined;
+  if (rec) rec.active = newState;
+
+  const ok = await setBridgeActive(urn, newState, statusEl);
+  inputEl.disabled = false;
+
+  if (!ok) {
+    // revert on failure
+    if (rec) rec.active = prev;
+    inputEl.checked = !newState;
+    if (rowEl) rowEl.classList.toggle('on', !newState);
+  }
+  // refresh the per-source active count + header badge (cheap re-render)
+  renderBridges();
 }
 
 // ----- Sources view -----
@@ -646,6 +817,8 @@ function showView(name){
   document.getElementById('nav-' + name).classList.add('active');
   // charts need a resize nudge when their container becomes visible
   if (name === 'dashboard') Object.values(CHARTS).forEach(c => { try{ c.resize(); }catch(e){} });
+  // refresh bridge candidates each time the Bridges view is opened
+  if (name === 'bridges') { loadBridges().then(renderBridges); }
 }
 
 // ===== Settings =====
