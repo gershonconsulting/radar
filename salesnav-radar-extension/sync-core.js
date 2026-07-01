@@ -240,7 +240,7 @@ async function discoverBridges() {
 // Open the discovery search in a background tab and scrape candidate bridge cards.
 async function scrapeDiscoveryInTab(url) {
   return new Promise((resolve, reject) => {
-    chrome.tabs.create({ url, active: false }, tab => {
+    chrome.tabs.create({ url, active: true }, tab => {
       setTimeout(() => {
         chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractCandidatesFromPage }, results => {
           chrome.tabs.remove(tab.id);
@@ -339,7 +339,7 @@ async function scrapeBridge(bridge) {
 
 async function scrapePageInTab(url, bridge) {
   return new Promise((resolve, reject) => {
-    chrome.tabs.create({ url, active: false }, tab => {
+    chrome.tabs.create({ url, active: true }, tab => {
       setTimeout(() => {
         chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractLeadsFromPage, args: [bridge.bridge, bridge.category, bridge.source] }, results => {
           chrome.tabs.remove(tab.id);
