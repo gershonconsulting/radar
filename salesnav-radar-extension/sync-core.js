@@ -37,7 +37,7 @@ const SEARCH_FILTERS = {
 // Bridge discovery: for each Source with an org_id, find senior people AT that org
 // (Owner/Partner 320, CXO 310, VP 300) to propose as candidate bridges.
 const DISCOVER_SENIORITY_IDS = ['320', '310', '300'];
-const MAX_CANDIDATES_PER_SOURCE = 25;
+const MAX_CANDIDATES_PER_SOURCE = 40;
 
 // --- Logging ---
 const MAX_LOG_ENTRIES = 200;
@@ -264,64 +264,87 @@ async function scrapeDiscoveryInTab(url) {
 // the card, reads name, urn, title, and connection degree. Returns candidate bridge objects
 // shaped for addBridges: { name, title, urn, linkedin_url, connection }.
 async function extractCandidatesFromPage() {
-  // Sales Nav lazy-renders search results; poll (and scroll) until the lead links appear.
+  // Sales Nav renders results as a VIRTUALIZED list: only cards near the viewport exist
+  // in the DOM at any moment. So we scroll-accumulate — extract every rendered card into
+  // a Map keyed by urn (so each person is captured once even as cards recycle), scroll one
+  // viewport, let the next batch render, and repeat.
+  const byUrn = new Map();
+  const CAP = 60;
+
+  // Extract every currently-rendered lead card into the Map (defensive per-card).
+  const harvest = () => {
+    document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
+      try {
+        let name = (linkEl.textContent || '').replace(/\s+/g, ' ').trim();
+        // Strip LinkedIn status phrases appended to the name link ("… is reachable", etc.).
+        name = name.replace(/\s+is\s+(reachable|open to work|hiring|a group member|out of office).*$/i, '').trim();
+        if (!name) return;
+        const urnMatch = linkEl.href.match(/\/sales\/lead\/([^,?\/]+)/);
+        if (!urnMatch) return;
+        const urn = urnMatch[1];
+        if (byUrn.has(urn)) return;  // already captured this person
+        const linkedin_url = linkEl.href.split('?')[0];  // Sales Nav profile link (open to connect)
+
+        // Climb to the card.
+        let card = linkEl;
+        for (let i = 0; i < 7 && card && card.parentElement; i++) {
+          card = card.parentElement;
+          if (card.querySelector('a[href*="/sales/company/"]') || (card.textContent || '').length > 60) break;
+        }
+        if (!card) card = linkEl.parentElement || linkEl;
+
+        // Text leaves in the card.
+        const txts = Array.from(card.querySelectorAll('span, div'))
+          .map(e => e.childElementCount === 0 ? (e.textContent || '').replace(/\s+/g, ' ').trim() : '')
+          .filter(Boolean);
+        const compEl  = card.querySelector('a[href*="/sales/company/"]');
+        const company = compEl ? compEl.textContent.trim() : '';
+
+        // Title = first substantial leaf that isn't the name / a status / a degree / the company.
+        let title = '';
+        const nlow = name.toLowerCase();
+        for (const t of txts) {
+          const tl = t.toLowerCase();
+          if (!t || t.length < 3) continue;
+          if (tl === nlow || tl.indexOf(nlow) === 0) continue;
+          if (/^(1st|2nd|3rd)$/.test(tl)) continue;
+          if (/is reachable|is open to work|·|view .* profile|^message/i.test(t)) continue;
+          if (company && t === company) continue;
+          title = t; break;
+        }
+
+        // Connection degree - look for a 1st/2nd/3rd token in the card text.
+        let connection = '';
+        const degMatch = (card.textContent || '').match(/\b(1st|2nd|3rd)\b/);
+        if (degMatch) connection = degMatch[1];
+
+        byUrn.set(urn, { name, title: title || '', urn, linkedin_url: linkedin_url, connection });
+      } catch (e) {}
+    });
+  };
+
+  // 1) Wait for the first lead link to appear (poll up to ~15s, scrolling to bottom each pass).
   for (let _p = 0; _p < 15; _p++) {
     if (document.querySelectorAll('a[href*="/sales/lead/"]').length > 0) break;
     try { window.scrollTo(0, document.body.scrollHeight); } catch (e) {}
     await new Promise(r => setTimeout(r, 1000));
   }
   await new Promise(r => setTimeout(r, 400));
-  const results = [];
-  document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
-    try {
-      let name = (linkEl.textContent || '').replace(/\s+/g, ' ').trim();
-      // Strip LinkedIn status phrases appended to the name link ("… is reachable", etc.).
-      name = name.replace(/\s+is\s+(reachable|open to work|hiring|a group member|out of office).*$/i, '').trim();
-      if (!name) return;
-      const urnMatch = linkEl.href.match(/\/sales\/lead\/([^,?\/]+)/);
-      if (!urnMatch) return;
-      const urn = urnMatch[1];
-      const linkedin_url = linkEl.href.split('?')[0];  // Sales Nav profile link (open to connect)
 
-      // Climb to the card.
-      let card = linkEl;
-      for (let i = 0; i < 7 && card && card.parentElement; i++) {
-        card = card.parentElement;
-        if (card.querySelector('a[href*="/sales/company/"]') || (card.textContent || '').length > 60) break;
-      }
-      if (!card) card = linkEl.parentElement || linkEl;
+  // 2) Scroll-accumulate: harvest, scroll ~one viewport, let next batch render. Stop early
+  // if no NEW urns are seen for 3 consecutive iterations, or once we hit the cap.
+  let stale = 0;
+  for (let iter = 0; iter < 18 && byUrn.size < CAP; iter++) {
+    const before = byUrn.size;
+    harvest();
+    if (byUrn.size === before) { stale++; if (stale >= 3) break; } else { stale = 0; }
+    try { window.scrollBy(0, Math.round(window.innerHeight * 0.8)); } catch (e) {}
+    await new Promise(r => setTimeout(r, 1200 + Math.floor(Math.random() * 600)));
+  }
+  harvest();  // final pass after the last scroll
 
-      // Text leaves in the card.
-      const txts = Array.from(card.querySelectorAll('span, div'))
-        .map(e => e.childElementCount === 0 ? (e.textContent || '').replace(/\s+/g, ' ').trim() : '')
-        .filter(Boolean);
-      const compEl  = card.querySelector('a[href*="/sales/company/"]');
-      const company = compEl ? compEl.textContent.trim() : '';
-
-      // Title = first substantial leaf that isn't the name / a status / a degree / the company.
-      let title = '';
-      const nlow = name.toLowerCase();
-      for (const t of txts) {
-        const tl = t.toLowerCase();
-        if (!t || t.length < 3) continue;
-        if (tl === nlow || tl.indexOf(nlow) === 0) continue;
-        if (/^(1st|2nd|3rd)$/.test(tl)) continue;
-        if (/is reachable|is open to work|·|view .* profile|^message/i.test(t)) continue;
-        if (company && t === company) continue;
-        title = t; break;
-      }
-
-      // Connection degree - look for a 1st/2nd/3rd token in the card text.
-      let connection = '';
-      const degMatch = (card.textContent || '').match(/\b(1st|2nd|3rd)\b/);
-      if (degMatch) connection = degMatch[1];
-
-      results.push({ name, title: title || '', urn, linkedin_url: linkedin_url, connection });
-    } catch (e) {}
-  });
-  // De-dupe by urn within the page.
-  const seen = new Set();
-  return results.filter(r => { if (seen.has(r.urn)) return false; seen.add(r.urn); return true; });
+  // Return accumulated values (deduped by urn), capped for safety.
+  return Array.from(byUrn.values()).slice(0, CAP);
 }
 
 async function checkLogin() {
@@ -370,52 +393,77 @@ async function scrapePageInTab(url, bridge) {
 }
 
 async function extractLeadsFromPage(radarPerson, category, source) {
-  // Sales Nav lazy-renders results; poll (and scroll) until the lead links appear.
+  // Sales Nav renders results as a VIRTUALIZED list: only cards near the viewport exist
+  // in the DOM at any moment. So we scroll-accumulate — extract every rendered card into
+  // a Map keyed by the URN (lead_id), scroll one viewport, let the next batch render, and
+  // repeat, so each person is captured once even as cards recycle.
+  const byUrn = new Map();
+  const CAP = 60;
+
+  // Extract every currently-rendered lead card into the Map (defensive per-card).
+  const harvest = () => {
+    // Anchor on the lead link, then climb to the card that also holds a company link.
+    document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
+      try {
+        const name = (linkEl.textContent || '').trim();
+        if (!name) return;
+        const urnMatch = linkEl.href.match(/\/sales\/lead\/([^,?\/]+)/);
+        const parts = name.split(' ');
+        const lead_id = urnMatch ? urnMatch[1] : (parts[0] + (parts[1] || '')).replace(/\s/g, '');
+        if (byUrn.has(lead_id)) return;  // already captured this person
+
+        let card = linkEl;
+        for (let i = 0; i < 6 && card && card.parentElement; i++) {
+          card = card.parentElement;
+          if (card.querySelector('a[href*="/sales/company/"]')) break;
+        }
+        if (!card) return;
+        const compEl   = card.querySelector('a[href*="/sales/company/"]');
+        const company  = compEl ? compEl.textContent.trim() : '';
+        // Title = the text leaf sitting just before the company name in the card.
+        let title = '';
+        const txts = Array.from(card.querySelectorAll('span, div'))
+          .map(e => e.childElementCount === 0 ? (e.textContent || '').trim() : '')
+          .filter(Boolean);
+        const ci = txts.indexOf(company);
+        if (ci > 0) title = txts[ci - 1];
+        byUrn.set(lead_id, {
+          first_name: parts[0] || '',
+          last_name: parts.slice(1).join(' ') || '',
+          title: title,
+          company: company,
+          radar_person: radarPerson,
+          source: source || '',
+          lead_id: lead_id,
+          collected_date: new Date().toISOString(),
+          linkedin_url: ''
+        });
+      } catch(e) {}
+    });
+  };
+
+  // 1) Wait for the first lead link to appear (poll up to ~15s, scrolling to bottom each pass).
   for (let _p = 0; _p < 15; _p++) {
     if (document.querySelectorAll('a[href*="/sales/lead/"]').length > 0) break;
     try { window.scrollTo(0, document.body.scrollHeight); } catch (e) {}
     await new Promise(r => setTimeout(r, 1000));
   }
   await new Promise(r => setTimeout(r, 400));
-  const results = [];
-  // Anchor on the lead link, then climb to the card that also holds a company link.
-  document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
-    try {
-      let card = linkEl;
-      for (let i = 0; i < 6 && card && card.parentElement; i++) {
-        card = card.parentElement;
-        if (card.querySelector('a[href*="/sales/company/"]')) break;
-      }
-      if (!card) return;
-      const name = (linkEl.textContent || '').trim();
-      if (!name) return;
-      const urnMatch = linkEl.href.match(/\/sales\/lead\/([^,?\/]+)/);
-      const compEl   = card.querySelector('a[href*="/sales/company/"]');
-      const company  = compEl ? compEl.textContent.trim() : '';
-      // Title = the text leaf sitting just before the company name in the card.
-      let title = '';
-      const txts = Array.from(card.querySelectorAll('span, div'))
-        .map(e => e.childElementCount === 0 ? (e.textContent || '').trim() : '')
-        .filter(Boolean);
-      const ci = txts.indexOf(company);
-      if (ci > 0) title = txts[ci - 1];
-      const parts = name.split(' ');
-      results.push({
-        first_name: parts[0] || '',
-        last_name: parts.slice(1).join(' ') || '',
-        title: title,
-        company: company,
-        radar_person: radarPerson,
-        source: source || '',
-        lead_id: urnMatch ? urnMatch[1] : (parts[0] + (parts[1] || '')).replace(/\s/g, ''),
-        collected_date: new Date().toISOString(),
-        linkedin_url: ''
-      });
-    } catch(e) {}
-  });
-  // De-dupe by lead_id within the page.
-  const seen = new Set();
-  return results.filter(r => { if (seen.has(r.lead_id)) return false; seen.add(r.lead_id); return true; });
+
+  // 2) Scroll-accumulate: harvest, scroll ~one viewport, let next batch render. Stop early
+  // if no NEW urns are seen for 3 consecutive iterations, or once we hit the cap.
+  let stale = 0;
+  for (let iter = 0; iter < 18 && byUrn.size < CAP; iter++) {
+    const before = byUrn.size;
+    harvest();
+    if (byUrn.size === before) { stale++; if (stale >= 3) break; } else { stale = 0; }
+    try { window.scrollBy(0, Math.round(window.innerHeight * 0.8)); } catch (e) {}
+    await new Promise(r => setTimeout(r, 1200 + Math.floor(Math.random() * 600)));
+  }
+  harvest();  // final pass after the last scroll
+
+  // Return accumulated values (deduped by lead_id/urn), capped for safety.
+  return Array.from(byUrn.values()).slice(0, CAP);
 }
 
 async function resolvePublicUrls(leads) {
