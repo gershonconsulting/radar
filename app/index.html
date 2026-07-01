@@ -126,6 +126,18 @@ td a:hover{ text-decoration:underline; }
 .bridge-row .save-status.ok{ color:#16a34a; }
 .bridge-row a.li{ font-size:0.78rem; color:#2563eb; text-decoration:none; }
 .bridge-row a.li:hover{ text-decoration:underline; }
+/* Open profile / Connect pill link */
+.bridge-row a.connect{ display:inline-flex; align-items:center; gap:3px; font-size:0.72rem; font-weight:600;
+  color:var(--accent); background:#eff6ff; border:1px solid #bfdbfe; padding:2px 9px; border-radius:12px; text-decoration:none; white-space:nowrap; }
+.bridge-row a.connect:hover{ background:var(--accent); color:#fff; border-color:var(--accent); text-decoration:none; }
+/* "connect first" hint */
+.bridge-row .conn-hint{ font-size:0.7rem; color:var(--muted); font-style:italic; white-space:nowrap; }
+/* Remove (✕) button */
+.bridge-row .remove{ flex:0 0 auto; border:none; background:none; color:#cbd5e1; font-size:0.95rem; line-height:1;
+  cursor:pointer; padding:4px 6px; border-radius:6px; transition:color .12s,background .12s; }
+.bridge-row .remove:hover{ color:#dc2626; background:#fee2e2; }
+.bridge-row .remove:disabled{ opacity:0.4; cursor:default; }
+.bridge-row.removing{ opacity:0.45; }
 
 /* Toggle switch */
 .switch{ position:relative; display:inline-block; width:42px; height:24px; flex:0 0 42px; }
@@ -409,6 +421,18 @@ async function setBridgeActive(urn, active, statusEl) {
     return false;
   }
 }
+async function deleteBridge(urn){
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'deleteBridge', urn: urn })
+    });
+    const d = await resp.json();
+    return !!(d && (d.saved || d.success || d.deleted));
+  } catch(e) {
+    return false;
+  }
+}
 
 // ===== Backend: main data load =====
 async function load() {
@@ -601,14 +625,19 @@ function renderBridges(){
       const on  = !!b.active;
       const urnAttr = esc(b.urn);
       const conn = b.connection ? '<span class="pill conn">' + esc(b.connection) + '</span>' : '';
-      const li   = b.linkedin_url ? '<a class="li" href="' + esc(b.linkedin_url) + '" target="_blank">↗</a>' : '';
+      const is1st = _norm(b.connection) === '1st';
+      const hint = is1st ? '' : '<span class="conn-hint">connect first</span>';
+      const connect = b.linkedin_url
+        ? '<a class="connect" href="' + esc(b.linkedin_url) + '" target="_blank" rel="noopener">Open profile ↗</a>'
+        : '';
       const ttl  = b.title ? '<div class="ttl">' + esc(b.title) + '</div>' : '';
       return '<div class="bridge-row' + (on ? ' on' : '') + '" data-urn="' + urnAttr + '">' +
         '<label class="switch"><input type="checkbox"' + (on ? ' checked' : '') +
           ' onchange="onBridgeToggle(this,\'' + jsq(b.urn) + '\')"><span class="track"></span></label>' +
-        '<div class="info"><div class="nm">' + esc(b.name) + ' ' + conn + ' ' + li + '</div>' + ttl + '</div>' +
+        '<div class="info"><div class="nm">' + esc(b.name) + ' ' + conn + ' ' + hint + ' ' + connect + '</div>' + ttl + '</div>' +
         '<div class="tgtcount"><b>' + tgt + '</b><br><span style="font-size:0.72rem">targets</span></div>' +
         '<div class="save-status"></div>' +
+        '<button class="remove" title="Remove candidate" onclick="onBridgeRemove(this,\'' + jsq(b.urn) + '\')">✕</button>' +
         '</div>';
     }).join('');
 
@@ -647,6 +676,28 @@ async function onBridgeToggle(inputEl, urn){
   }
   // refresh the per-source active count + header badge (cheap re-render)
   renderBridges();
+}
+
+// Remove handler: optimistic DOM removal + POST deleteBridge
+async function onBridgeRemove(btnEl, urn){
+  const rowEl = btnEl.closest('.bridge-row');
+  const statusEl = rowEl ? rowEl.querySelector('.save-status') : null;
+
+  // optimistic UI
+  btnEl.disabled = true;
+  if (rowEl) rowEl.classList.add('removing');
+  if (statusEl) { statusEl.textContent = 'removing…'; statusEl.classList.remove('ok'); }
+
+  const ok = await deleteBridge(urn);
+  if (ok) {
+    // drop from state and re-render (keeps counts/grouping consistent)
+    BRIDGES = BRIDGES.filter(b => String(b.urn) !== String(urn));
+    renderBridges();
+  } else {
+    if (rowEl) rowEl.classList.remove('removing');
+    btnEl.disabled = false;
+    if (statusEl) statusEl.textContent = 'error';
+  }
 }
 
 // ----- Sources view -----
