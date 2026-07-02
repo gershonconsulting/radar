@@ -1,5 +1,6 @@
 // =============================================================
 // Radar - Sales Navigator Collector (sync-core.js / service worker)
+// v1.4.8: captures prospect connection level
 // Scrapes connections from Sales Navigator, resolves public /in/ URLs,
 // POSTs to Apps Script hub. Logs every step to chrome.storage.local
 // so the Radar dashboard can display them in real time.
@@ -436,7 +437,8 @@ async function extractLeadsFromPage(radarPerson, category, source) {
           source: source || '',
           lead_id: lead_id,
           collected_date: new Date().toISOString(),
-          linkedin_url: ''
+          linkedin_url: '',
+          connection_level: (function() { const m = (card.textContent || '').match(/\b(1st|2nd|3rd)\b/); return m ? m[1] : ''; })()
         });
       } catch(e) {}
     });
