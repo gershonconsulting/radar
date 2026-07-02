@@ -14,6 +14,31 @@
 html,body{ height:100%; }
 body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--ink); }
 
+/* ---------- Sign-in overlay ---------- */
+#signinOverlay{
+position:fixed; inset:0; z-index:9999;
+background:linear-gradient(135deg,#0f1e3d 0%,#1e3a5f 100%);
+display:flex; align-items:center; justify-content:center;
+}
+#signinOverlay.hidden{ display:none; }
+.signin-box{
+background:#fff; border-radius:16px; padding:48px 40px; max-width:400px; width:90%;
+text-align:center; box-shadow:0 24px 64px rgba(0,0,0,0.35);
+}
+.signin-box .logo{ font-size:2.5rem; margin-bottom:8px; }
+.signin-box h1{ font-size:1.5rem; font-weight:700; color:#0f172a; margin-bottom:6px; }
+.signin-box p{ color:#64748b; font-size:0.9rem; margin-bottom:28px; }
+.btn-linkedin{
+display:inline-flex; align-items:center; gap:10px;
+background:#0077b5; color:#fff; font-size:0.95rem; font-weight:600;
+padding:13px 28px; border-radius:8px; text-decoration:none;
+transition:background .15s; border:none; cursor:pointer;
+}
+.btn-linkedin:hover{ background:#005e94; }
+.btn-linkedin svg{ width:20px; height:20px; fill:#fff; flex:0 0 20px; }
+.signin-denied{ margin-top:18px; background:#fee2e2; color:#991b1b; border-radius:8px; padding:10px 14px; font-size:0.85rem; display:none; }
+.signin-denied.show{ display:block; }
+
 /* ---------- Layout ---------- */
 .app{ display:flex; min-height:100vh; }
 .sidebar{
@@ -21,7 +46,7 @@ width:240px; flex:0 0 240px; background:var(--sidebar); color:#cbd5e1;
 display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
 }
 
-/* ---------- New Sidebar: brand block ---------- */
+/* ---------- Sidebar: brand block ---------- */
 .sidebar .brand{
 padding:20px 18px 16px; border-bottom:1px solid rgba(255,255,255,0.08);
 }
@@ -37,7 +62,19 @@ font-size:0.7rem; color:#94a3b8; margin-top:2px;
 font-size:0.65rem; color:#64748b; margin-top:1px;
 }
 
-/* ---------- New Sidebar: nav sections ---------- */
+/* ---------- Sidebar: user chip ---------- */
+.user-chip{
+display:flex; align-items:center; gap:8px;
+padding:10px 18px 0; font-size:0.78rem; color:#94a3b8;
+}
+.user-chip .avatar{
+width:26px; height:26px; border-radius:50%;
+background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center;
+font-size:0.7rem; font-weight:700; flex:0 0 26px;
+}
+.user-chip .uname{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ---------- Sidebar: nav sections ---------- */
 .nav-section{ padding:10px 10px 4px; }
 .nav-section-label{
 font-size:0.62rem; text-transform:uppercase; letter-spacing:0.08em; color:#475569;
@@ -50,7 +87,7 @@ color:#cbd5e1; cursor:pointer; font-size:0.88rem; text-align:left; width:100%; t
 .nav-item.active{ background:var(--accent); color:#fff; font-weight:600; }
 .nav-item .ico{ width:18px; text-align:center; font-size:1rem; }
 
-/* ---------- New Sidebar: footer buttons ---------- */
+/* ---------- Sidebar: footer buttons ---------- */
 .sidebar .foot{
 padding:12px 18px; border-top:1px solid rgba(255,255,255,0.08);
 display:flex; flex-direction:column; gap:6px;
@@ -61,6 +98,8 @@ color:#94a3b8; font-size:0.78rem; padding:7px 12px; border-radius:7px;
 cursor:pointer; text-align:left; width:100%; transition:background .15s,color .15s;
 }
 .foot-btn:hover{ background:rgba(255,255,255,0.12); color:#fff; }
+.foot-btn.logout{ color:#f87171; }
+.foot-btn.logout:hover{ background:rgba(248,113,113,0.12); color:#fca5a5; }
 .foot-copy{ font-size:0.6rem; color:#475569; text-align:center; padding-top:4px; }
 
 .main{ flex:1; min-width:0; display:flex; flex-direction:column; }
@@ -230,7 +269,25 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- ===== Sign-in overlay (hidden once authenticated) ===== -->
+<div id="signinOverlay">
+  <div class="signin-box">
+    <div class="logo">📡</div>
+    <h1>Gershon.AI Radar</h1>
+    <p>Your Source → Bridge → Target intelligence platform.<br>Sign in to continue.</p>
+    <a href="/api/auth/linkedin/login" class="btn-linkedin">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+      Sign in with LinkedIn
+    </a>
+    <div class="signin-denied" id="signinDenied">
+      Access denied. Your account is not on the approved list.<br>
+      Contact the administrator to request access.
+    </div>
+  </div>
+</div>
+<!-- ===== App (hidden until authenticated) ===== -->
+<div class="app" id="appShell" style="display:none">
 
 <!-- ===== Sidebar ===== -->
 <aside class="sidebar">
@@ -241,6 +298,12 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 </div>
 <div class="ver">Radar v1.5.0</div>
 <div class="ts" id="sideTs">—</div>
+</div>
+
+<!-- User chip (populated after /api/me) -->
+<div class="user-chip" id="userChip" style="display:none">
+  <div class="avatar" id="userAvatar">?</div>
+  <span class="uname" id="userName">—</span>
 </div>
 
 <div class="nav-section">
@@ -267,6 +330,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 <div class="foot">
 <button class="foot-btn" onclick="load()"><span>🔄</span> Refresh data</button>
 <button class="foot-btn" onclick="window.open('https://radar.gershoncrm.com','_blank')"><span>↗</span> Open live site</button>
+<a href="/api/auth/logout" class="foot-btn logout" style="text-decoration:none"><span>⎋</span> Sign out</a>
 <div class="foot-copy">© 2026 Gershon Consulting · Source → Bridge → Target</div>
 </div>
 </aside>
@@ -279,7 +343,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 <section id="view-dashboard" class="view active">
 <div class="page-head"><h2>Dashboard</h2><p>Your Source → Bridge → Target pipeline at a glance.</p></div>
 <div id="warningBanner" class="banner" style="display:none">
-WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
+Hub connection error — check that HUB_SECRET is set in Cloudflare Pages env vars.
 </div>
 <div class="stats">
 <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
@@ -422,25 +486,63 @@ Grade: <strong>A+</strong> = helps foreign companies enter/expand into US · <st
 // ===== Version =====
 const sideVer = 'v1.5.0';
 
+// ===== Hub proxy URL (all backend calls go through this — never directly to Apps Script) =====
+// The proxy validates the session cookie server-side and injects the verified owner + HUB_SECRET.
+const HUB = '/api/hub';
+
 const CONFIG = {
-WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec',
-BRIDGE_SOURCE: {
-'Elie Cohen': { source: 'The Triana Group', category: 'partner', results: 55 },
-'Jabril Bensedrine': { source: 'The Triana Group', category: 'partner', results: 45 },
-'Phil Jeudy': { source: 'The Triana Group', category: 'partner', results: 207 },
-'Mathias Cohen': { source: 'The Triana Group', category: 'partner', results: 30 },
-'Anne Charlotte Le Bourhis': { source: 'The Triana Group', category: 'partner', results: 53 },
-'Marie-Josée Rodi-Andrieu': { source: 'The Triana Group', category: 'partner', results: 336 },
-}
+  BRIDGE_SOURCE: {
+    'Elie Cohen': { source: 'The Triana Group', category: 'partner', results: 55 },
+    'Jabril Bensedrine': { source: 'The Triana Group', category: 'partner', results: 45 },
+    'Phil Jeudy': { source: 'The Triana Group', category: 'partner', results: 207 },
+    'Mathias Cohen': { source: 'The Triana Group', category: 'partner', results: 30 },
+    'Anne Charlotte Le Bourhis': { source: 'The Triana Group', category: 'partner', results: 53 },
+    'Marie-Jos\u00e9e Rodi-Andrieu': { source: 'The Triana Group', category: 'partner', results: 336 },
+  }
 };
+
+// ===== Auth gate =====
+// Called on page load. Shows the sign-in overlay or reveals the app.
+async function initAuth() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('denied') === '1') {
+    document.getElementById('signinDenied').classList.add('show');
+    document.getElementById('signinOverlay').classList.remove('hidden');
+    return;
+  }
+
+  let me;
+  try {
+    const resp = await fetch('/api/me', { credentials: 'same-origin' });
+    me = await resp.json();
+  } catch (e) {
+    me = { ok: false };
+  }
+
+  if (!me.ok) {
+    // Not authenticated — show sign-in screen
+    document.getElementById('signinOverlay').classList.remove('hidden');
+    return;
+  }
+
+  // Authenticated — wire up user chip and reveal app
+  const user = me.user;
+  document.getElementById('userChip').style.display = 'flex';
+  document.getElementById('userName').textContent = user.name || user.email;
+  document.getElementById('userAvatar').textContent = (user.name || user.email || '?')[0].toUpperCase();
+  document.getElementById('signinOverlay').classList.add('hidden');
+  document.getElementById('appShell').style.display = 'flex';
+
+  // Boot the app
+  initSorting();
+  load();
+}
 
 // ===== Sidebar timestamp =====
 function updateSidebarTs() {
 const el = document.getElementById('sideTs');
 if (el) el.textContent = new Date().toLocaleString();
 }
-updateSidebarTs();
-setInterval(updateSidebarTs, 60000);
 
 function _norm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
 function bridgeSource(name) {
@@ -453,19 +555,12 @@ return bridgeSource(r && r.radar_person);
 }
 
 // ===== ICP-fit grade =====
-// A+ = foreign company entry/expansion into US
-// A  = international expansion
-// B  = commercial/BD
-// C  = senior leadership
-// D  = none
 function icpGrade(title) {
 const t = _norm(title || '');
 if (!t) return 'D';
-// A+ patterns: US market entry / foreign companies expand into US
 if (/us market|usa market|north america|american market|us expansion|expand.*us|enter.*us|us entry|us go.to.market|go.to.market.*us/.test(t)) return 'A+';
 if (/foreign.*compan|international.*compan|compan.*foreign|global.*us|us.*global/.test(t)) return 'A+';
 if (/market entry|market access|market expansion/.test(t) && /us|america/.test(t)) return 'A+';
-// A patterns: international expansion (not specifically US)
 if (/international expansion|global expansion|international development|global development/.test(t)) return 'A';
 if (/international business|global business|cross.border|cross border/.test(t)) return 'A';
 if (/international trade|global trade|export|import/.test(t)) return 'A';
@@ -473,13 +568,11 @@ if (/international.*director|director.*international|global.*director|director.*
 if (/international.*manager|manager.*international|global.*manager|manager.*global/.test(t)) return 'A';
 if (/international.*head|head.*international|global.*head|head.*global/.test(t)) return 'A';
 if (/international.*vp|vp.*international|global.*vp|vp.*global/.test(t)) return 'A';
-// B patterns: commercial/BD
 if (/business development|biz dev|bd director|bd manager|bd head/.test(t)) return 'B';
 if (/commercial director|commercial manager|commercial head|commercial vp|chief commercial/.test(t)) return 'B';
 if (/sales director|sales manager|sales head|chief sales|vp sales|head of sales/.test(t)) return 'B';
 if (/revenue|growth/.test(t) && /director|vp|head|chief|manager/.test(t)) return 'B';
 if (/partnership|alliances/.test(t)) return 'B';
-// C patterns: senior leadership
 if (/ceo|coo|cfo|cto|cmo|cpo|chief exec|chief operating|chief financial|chief technolog/.test(t)) return 'C';
 if (/president|vice president|managing director|general manager|executive director/.test(t)) return 'C';
 if (/founder|co-founder|cofounder|owner|partner/.test(t)) return 'C';
@@ -507,12 +600,32 @@ let BRIDGES = [];
 let BRIDGE_FILTER = 'all';
 let BRIDGES_LOADED = false;
 
+// ===== Hub helpers =====
+// All calls go to /api/hub (the Cloudflare Pages proxy).
+// The proxy injects the verified owner + HUB_SECRET server-side.
+// The browser never holds HUB_SECRET and cannot forge the owner.
+
+async function hubGet(params) {
+  const url = HUB + '?' + new URLSearchParams({ callback: '_cb', ...params, _: Date.now() });
+  const r = await fetch(url, { credentials: 'same-origin' });
+  const t = await r.text();
+  return JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+}
+
+async function hubPost(body) {
+  const resp = await fetch(HUB, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body),
+  });
+  return resp.json();
+}
+
 // ===== Backend: Sources =====
 async function loadSources() {
 try {
-const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=getSources&_=' + Date.now();
-const r = await fetch(url); const t = await r.text();
-const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+const j = await hubGet({ action: 'getSources' });
 if (j.success) STORED_SOURCES = j.sources || [];
 } catch(e) { console.error('loadSources', e); }
 }
@@ -524,10 +637,9 @@ const st = document.getElementById('srcStatus');
 if (!name) { st.textContent = 'Enter a source name.'; return; }
 st.textContent = 'Adding…';
 try {
-const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: name, linkedin_url: url, category: cat }) });
-const d = await resp.json();
+const d = await hubPost({ action: 'addSource', name, linkedin_url: url, category: cat });
 if (d.saved) {
-st.textContent = '✓ Added "' + name + '". Now collect its team into Targets.';
+st.textContent = '\u2713 Added "' + name + '". Now collect its team into Targets.';
 document.getElementById('srcName').value = ''; document.getElementById('srcUrl').value = '';
 await loadSources(); await load();
 } else { st.textContent = 'Error: ' + JSON.stringify(d); }
@@ -537,22 +649,16 @@ await loadSources(); await load();
 // ===== Backend: Bridge candidates =====
 async function loadBridges() {
 try {
-const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=getBridges&_=' + Date.now();
-const r = await fetch(url); const t = await r.text();
-const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+const j = await hubGet({ action: 'getBridges' });
 if (j.success) { BRIDGES = j.bridges || []; BRIDGES_LOADED = true; }
 } catch(e) { console.error('loadBridges', e); }
 }
 async function setBridgeActive(urn, active, statusEl) {
 if (statusEl) { statusEl.textContent = 'saving…'; statusEl.classList.remove('ok'); }
 try {
-const resp = await fetch(CONFIG.WEBAPP_URL, {
-method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setBridgeActive', urn: urn, active: active })
-});
-const d = await resp.json();
+const d = await hubPost({ action: 'setBridgeActive', urn, active });
 if (d && (d.saved || d.success)) {
-if (statusEl) { statusEl.textContent = '✓'; statusEl.classList.add('ok'); setTimeout(() => { if (statusEl.textContent === '✓') statusEl.textContent = ''; }, 1600); }
+if (statusEl) { statusEl.textContent = '\u2713'; statusEl.classList.add('ok'); setTimeout(() => { if (statusEl.textContent === '\u2713') statusEl.textContent = ''; }, 1600); }
 return true;
 }
 if (statusEl) { statusEl.textContent = 'error'; }
@@ -564,29 +670,20 @@ return false;
 }
 async function deleteBridge(urn){
 try {
-const resp = await fetch(CONFIG.WEBAPP_URL, {
-method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'deleteBridge', urn: urn })
-});
-const d = await resp.json();
+const d = await hubPost({ action: 'deleteBridge', urn });
 return !!(d && (d.saved || d.success || d.deleted));
 } catch(e) { return false; }
 }
 
 // ===== Backend: main data load =====
 async function load() {
-if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
-document.getElementById('warningBanner').style.display = 'block'; return;
-}
+try {
+const json = await hubGet({});
+if (json.success) { ROWS = json.rows || []; renderAll(); }
+else { document.getElementById('warningBanner').style.display = 'block'; }
+} catch(e) { console.error('load', e); document.getElementById('warningBanner').style.display = 'block'; }
 await loadSources();
 await loadBridges();
-try {
-const url = CONFIG.WEBAPP_URL + '?callback=_cb&_=' + Date.now();
-const resp = await fetch(url);
-const text = await resp.text();
-const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
-if (json.success) { ROWS = json.rows || []; renderAll(); }
-} catch(e) { console.error('load', e); }
 await loadKeyStatus();
 }
 
@@ -629,10 +726,8 @@ document.getElementById('statPushed').textContent = pushed;
 document.getElementById('statPushedPct').textContent = rows.length ? Math.round(pushed/rows.length*100) + '% of targets' : '0%';
 document.getElementById('statBridges').textContent = bridges.size;
 document.getElementById('statSources').textContent = sources.size;
-document.getElementById('leadCount') && (document.getElementById('leadCount').textContent = rows.length);
 }
 
-// ----- Targets view -----
 function populateFilters(){
 const bridges = Array.from(new Set(ROWS.map(r => r.radar_person).filter(Boolean))).sort();
 const sources = Array.from(new Set(ROWS.map(leadSource).filter(Boolean))).sort();
@@ -673,15 +768,15 @@ body.innerHTML = list.length ? list.map(x => {
 const r = x._r;
 return '<tr><td>' + esc(x.name) + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.company) +
 '</td><td>' + esc(x.bridge) + '</td><td>' + esc(x.source) + '</td><td>' + fmtDate(r.collected_date) +
-'</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') +
-'</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
+'</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">&#8599;</a>' : '&mdash;') +
+'</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">&#10003;</span>' : '') + '</td></tr>';
 }).join('') : '<tr><td colspan="8" class="empty">No targets match</td></tr>';
 document.getElementById('tCount').textContent = list.length + ' target' + (list.length===1?'':'s');
 
 document.querySelectorAll('#tHead th.sortable').forEach(th => {
 th.classList.toggle('sorted', th.dataset.key === SORT.key);
 const a = th.querySelector('.arrow');
-a.textContent = th.dataset.key === SORT.key ? (SORT.dir === 1 ? '▲' : '▼') : '';
+a.textContent = th.dataset.key === SORT.key ? (SORT.dir === 1 ? '\u25b2' : '\u25bc') : '';
 });
 }
 
@@ -696,58 +791,47 @@ renderTargets();
 });
 }
 
-// ----- Log view -----
 function renderLog(){
 const q = (document.getElementById('logSearch').value||'').toLowerCase().trim();
 const lf = document.getElementById('logLevel').value;
-
-// Sort rows newest first
 const sorted = ROWS.slice().sort((a,b) => {
 const da = a.collected_date ? new Date(a.collected_date).getTime() : 0;
 const db = b.collected_date ? new Date(b.collected_date).getTime() : 0;
 return db - da;
 });
-
 let rows = sorted.filter(r => {
-const level = r.connection_level || '—';
+const level = r.connection_level || '\u2014';
 if (lf && level !== lf) return false;
 const name = fullName(r);
 const src = leadSource(r);
-const bridge = r.radar_person || '—';
+const bridge = r.radar_person || '\u2014';
 const line = (fmtDateTime(r.collected_date) + ' ' + src + ' ' + bridge + ' ' + name + ' ' + level).toLowerCase();
 if (q && !line.includes(q)) return false;
 return true;
 });
-
 const body = document.getElementById('logBody');
 const countEl = document.getElementById('logCount');
 countEl.textContent = rows.length + ' entr' + (rows.length===1?'y':'ies');
-
-if (!rows.length) {
-body.innerHTML = '<div class="empty">No matching entries</div>';
-return;
-}
-
+if (!rows.length) { body.innerHTML = '<div class="empty">No matching entries</div>'; return; }
 body.innerHTML = rows.map(r => {
 const name = fullName(r);
 const src = esc(leadSource(r));
-const bridge = esc(r.radar_person || '—');
-const level = r.connection_level || '—';
+const bridge = esc(r.radar_person || '\u2014');
+const level = r.connection_level || '\u2014';
 const lvlClass = level === '1st' ? 'l1' : level === '2nd' ? 'l2' : level === '3rd' ? 'l3' : 'lunk';
 const dt = r.collected_date ? new Date(r.collected_date) : null;
-const dateStr = dt ? dt.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '—';
+const dateStr = dt ? dt.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '\u2014';
 return '<div class="log-row">' +
 '<span class="log-date">' + esc(dateStr) + '</span>' +
-'<span class="log-path">' + src + ' › ' + bridge + ' › <strong>' + esc(name) + '</strong></span>' +
+'<span class="log-path">' + src + ' \u203a ' + bridge + ' \u203a <strong>' + esc(name) + '</strong></span>' +
 '<span class="log-level ' + lvlClass + '">' + esc(level) + '</span>' +
 '</div>';
 }).join('');
 }
 
-// ----- Bridges view (with Level + Title + Grade) -----
 function bridgeCounts(){
 const byBridge = {};
-ROWS.forEach(r => { const k = r.radar_person || '—'; (byBridge[k] = byBridge[k] || []).push(r); });
+ROWS.forEach(r => { const k = r.radar_person || '\u2014'; (byBridge[k] = byBridge[k] || []).push(r); });
 Object.keys(CONFIG.BRIDGE_SOURCE).forEach(k => { if (!byBridge[k]) byBridge[k] = []; });
 return byBridge;
 }
@@ -765,37 +849,18 @@ renderBridges();
 function renderBridges(){
 const body = document.getElementById('bridgesBody');
 const countEl = document.getElementById('bridgeCount');
-
-if (!BRIDGES_LOADED) {
-body.innerHTML = '<div class="empty">Loading bridge candidates…</div>';
-if (countEl) countEl.textContent = '';
-return;
-}
-if (!BRIDGES.length) {
-body.innerHTML = '<div class="empty">No bridge candidates yet — add a Source and the extension will discover its people.</div>';
-if (countEl) countEl.textContent = '';
-return;
-}
-
-// Group by source
+if (!BRIDGES_LOADED) { body.innerHTML = '<div class="empty">Loading bridge candidates\u2026</div>'; if (countEl) countEl.textContent = ''; return; }
+if (!BRIDGES.length) { body.innerHTML = '<div class="empty">No bridge candidates yet \u2014 add a Source and the extension will discover its people.</div>'; if (countEl) countEl.textContent = ''; return; }
 const bySource = {};
-BRIDGES.forEach(b => {
-const s = b.source || 'Unassigned';
-(bySource[s] = bySource[s] || []).push(b);
-});
-
+BRIDGES.forEach(b => { const s = b.source || 'Unassigned'; (bySource[s] = bySource[s] || []).push(b); });
 const sourceEntries = Object.entries(bySource).sort((a,b) => b[1].length - a[1].length);
 const showActiveOnly = BRIDGE_FILTER === 'active';
-
 let totalActive = 0;
 BRIDGES.forEach(b => { if (b.active) totalActive++; });
-
 const html = sourceEntries.map(([src, list]) => {
 const activeCount = list.filter(b => b.active).length;
 const visible = showActiveOnly ? list.filter(b => b.active) : list;
 if (!visible.length) return '';
-
-// Sort by grade first (A+ → D), then active, then target count
 visible.sort((a,b) => {
 const ga = GRADE_ORDER[icpGrade(a.title)] || 4;
 const gb = GRADE_ORDER[icpGrade(b.title)] || 4;
@@ -803,7 +868,6 @@ if (ga !== gb) return ga - gb;
 if (!!b.active !== !!a.active) return (b.active?1:0) - (a.active?1:0);
 return targetsForBridge(b.name) - targetsForBridge(a.name);
 });
-
 const rows = visible.map(b => {
 const tgt = targetsForBridge(b.name);
 const on = !!b.active;
@@ -813,9 +877,7 @@ const gradePill = '<span class="pill ' + gradeClass(grade) + '">' + esc(grade) +
 const conn = b.connection ? '<span class="pill conn">' + esc(b.connection) + '</span>' : '';
 const is1st = _norm(b.connection) === '1st';
 const hint = is1st ? '' : '<span class="conn-hint">connect first</span>';
-const connect = b.linkedin_url
-? '<a class="connect" href="' + esc(b.linkedin_url) + '" target="_blank" rel="noopener">Open profile ↗</a>'
-: '';
+const connect = b.linkedin_url ? '<a class="connect" href="' + esc(b.linkedin_url) + '" target="_blank" rel="noopener">Open profile &#8599;</a>' : '';
 const ttl = b.title ? '<div class="ttl">' + esc(b.title) + '</div>' : '';
 return '<div class="bridge-row' + (on ? ' on' : '') + '" data-urn="' + urnAttr + '">' +
 '<label class="switch"><input type="checkbox"' + (on ? ' checked' : '') +
@@ -823,18 +885,16 @@ return '<div class="bridge-row' + (on ? ' on' : '') + '" data-urn="' + urnAttr +
 '<div class="info"><div class="nm">' + esc(b.name) + ' ' + conn + ' ' + gradePill + ' ' + hint + ' ' + connect + '</div>' + ttl + '</div>' +
 '<div class="tgtcount"><b>' + tgt + '</b><br><span style="font-size:0.72rem">targets</span></div>' +
 '<div class="save-status"></div>' +
-'<button class="remove" title="Remove candidate" onclick="onBridgeRemove(this,\'' + jsq(b.urn) + '\')">✕</button>' +
+'<button class="remove" title="Remove candidate" onclick="onBridgeRemove(this,\'' + jsq(b.urn) + '\')">\u2715</button>' +
 '</div>';
 }).join('');
-
 return '<div class="bridge-src-section">' +
 '<div class="bridge-src-head"><span class="nm">' + esc(src.toUpperCase()) + '</span>' +
 '<span class="meta">' + list.length + ' candidate' + (list.length===1?'':'s') + '</span>' +
 '<span class="actives">' + activeCount + ' active</span></div>' +
 '<div class="bridge-list">' + rows + '</div></div>';
 }).join('');
-
-body.innerHTML = html || '<div class="empty">No active bridges yet — toggle a candidate on above.</div>';
+body.innerHTML = html || '<div class="empty">No active bridges yet \u2014 toggle a candidate on above.</div>';
 if (countEl) countEl.textContent = totalActive + ' of ' + BRIDGES.length + ' active';
 }
 
@@ -849,11 +909,7 @@ const prev = rec ? rec.active : undefined;
 if (rec) rec.active = newState;
 const ok = await setBridgeActive(urn, newState, statusEl);
 inputEl.disabled = false;
-if (!ok) {
-if (rec) rec.active = prev;
-inputEl.checked = !newState;
-if (rowEl) rowEl.classList.toggle('on', !newState);
-}
+if (!ok) { if (rec) rec.active = prev; inputEl.checked = !newState; if (rowEl) rowEl.classList.toggle('on', !newState); }
 renderBridges();
 }
 
@@ -862,54 +918,36 @@ const rowEl = btnEl.closest('.bridge-row');
 const statusEl = rowEl ? rowEl.querySelector('.save-status') : null;
 btnEl.disabled = true;
 if (rowEl) rowEl.classList.add('removing');
-if (statusEl) { statusEl.textContent = 'removing…'; statusEl.classList.remove('ok'); }
+if (statusEl) { statusEl.textContent = 'removing\u2026'; statusEl.classList.remove('ok'); }
 const ok = await deleteBridge(urn);
-if (ok) {
-BRIDGES = BRIDGES.filter(b => String(b.urn) !== String(urn));
-renderBridges();
-} else {
-if (rowEl) rowEl.classList.remove('removing');
-btnEl.disabled = false;
-if (statusEl) statusEl.textContent = 'error';
-}
+if (ok) { BRIDGES = BRIDGES.filter(b => String(b.urn) !== String(urn)); renderBridges(); }
+else { if (rowEl) rowEl.classList.remove('removing'); btnEl.disabled = false; if (statusEl) statusEl.textContent = 'error'; }
 }
 
-// ----- Sources view -----
 function sourceAgg(){
 const byBridge = bridgeCounts();
 const bySource = {};
 const ensureSrc = s => (bySource[s] = bySource[s] || { bridges: [], leads: 0, url: '', category: 'partner' });
 STORED_SOURCES.forEach(s => { const o = ensureSrc(s.name); o.url = s.linkedin_url || o.url; o.category = s.category || o.category; });
 ROWS.forEach(r => { ensureSrc(leadSource(r)).leads++; });
-Object.keys(byBridge).forEach(b => { if (b && b !== '—') ensureSrc(bridgeSource(b)).bridges.push(b); });
+Object.keys(byBridge).forEach(b => { if (b && b !== '\u2014') ensureSrc(bridgeSource(b)).bridges.push(b); });
 return bySource;
 }
 function renderSources(){
 const bySource = sourceAgg();
 const sBody = document.getElementById('sourcesBody');
-const sEntries = Object.entries(bySource)
-.filter(([s, info]) => s && (s !== 'Unassigned' || info.leads > 0))
-.sort((a,b) => b[1].leads - a[1].leads);
+const sEntries = Object.entries(bySource).filter(([s,info]) => s && (s !== 'Unassigned' || info.leads > 0)).sort((a,b) => b[1].leads - a[1].leads);
 sBody.innerHTML = sEntries.length ? sEntries.map(([s, info]) => {
 const cat = info.category || 'partner';
-const link = info.url ? '<a href="' + esc(info.url) + '" target="_blank" style="font-size:0.8rem">↗ company</a>' : '';
-const via = info.bridges.length
-? 'via ' + info.bridges.length + ' bridge' + (info.bridges.length===1?'':'s') + ': ' + esc(info.bridges.join(', '))
-: (info.leads ? 'leadership collected directly' : 'no targets collected yet');
-return '<div class="entity-card"><div class="top"><div><h3>📍 ' + esc(s) + '</h3>' + (link?('<p>'+link+'</p>'):'') +
-'</div><span class="pill ' + cat + '">' + cat + '</span></div>' +
-'<p style="margin-top:10px"><span class="big">' + info.leads + '</span> <small>targets</small></p>' +
-'<p style="margin-top:6px">' + via + '</p></div>';
-}).join('') : '<div class="empty">No sources yet — add one above.</div>';
+const link = info.url ? '<a href="' + esc(info.url) + '" target="_blank" style="font-size:0.8rem">&#8599; company</a>' : '';
+const via = info.bridges.length ? 'via ' + info.bridges.length + ' bridge' + (info.bridges.length===1?'':'s') + ': ' + esc(info.bridges.join(', ')) : (info.leads ? 'leadership collected directly' : 'no targets collected yet');
+return '<div class="entity-card"><div class="top"><div><h3>&#128205; ' + esc(s) + '</h3>' + (link?('<p>'+link+'</p>'):'') + '</div><span class="pill ' + cat + '">' + cat + '</span></div>' + '<p style="margin-top:10px"><span class="big">' + info.leads + '</span> <small>targets</small></p>' + '<p style="margin-top:6px">' + via + '</p></div>';
+}).join('') : '<div class="empty">No sources yet \u2014 add one above.</div>';
 }
 
-// ----- Collections view -----
 function renderCollections(){
 const byDay = {};
-ROWS.forEach(r => {
-const k = dayKey(r.collected_date); if (!k) return;
-(byDay[k] = byDay[k] || []).push(r);
-});
+ROWS.forEach(r => { const k = dayKey(r.collected_date); if (!k) return; (byDay[k] = byDay[k] || []).push(r); });
 const days = Object.keys(byDay).sort().reverse();
 const body = document.getElementById('collectionsBody');
 if (!days.length) { body.innerHTML = '<div class="empty">No collections yet</div>'; return; }
@@ -917,119 +955,69 @@ body.innerHTML = days.map(k => {
 const rows = byDay[k];
 const byBridge = {};
 rows.forEach(r => { const b = r.radar_person || 'Unassigned'; byBridge[b] = (byBridge[b]||0)+1; });
-const chips = Object.entries(byBridge).sort((a,b)=>b[1]-a[1])
-.map(([b,c]) => '<span class="bchip">' + esc(b) + ' (' + c + ')</span>').join('');
-return '<div class="collection-day"><div class="date">' + esc(fmtDayLabel(k)) + '</div>' +
-'<div class="summary">' + rows.length + ' new target' + (rows.length===1?'':'s') + ' collected</div>' +
-'<div class="bridges">bridges: ' + chips + '</div></div>';
+const chips = Object.entries(byBridge).sort((a,b)=>b[1]-a[1]).map(([b,c]) => '<span class="bchip">' + esc(b) + ' (' + c + ')</span>').join('');
+return '<div class="collection-day"><div class="date">' + esc(fmtDayLabel(k)) + '</div><div class="summary">' + rows.length + ' new target' + (rows.length===1?'':'s') + ' collected</div><div class="bridges">bridges: ' + chips + '</div></div>';
 }).join('');
 }
 
-// ----- Charts -----
 function destroyChart(id){ if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
 function renderCharts(){
 if (typeof Chart === 'undefined') return;
 const PRIMARY='#1e40af', ACCENT='#3b82f6';
 const palette=['#1e40af','#3b82f6','#60a5fa','#93c5fd','#2563eb','#1d4ed8','#0ea5e9','#38bdf8','#818cf8','#a5b4fc'];
-
 const byBridge = bridgeCounts();
-const bEntries = Object.entries(byBridge).filter(([n])=>n&&n!=='—').sort((a,b)=>b[1].length-a[1].length);
+const bEntries = Object.entries(byBridge).filter(([n])=>n&&n!=='\u2014').sort((a,b)=>b[1].length-a[1].length);
 destroyChart('chartBridges');
 CHARTS.chartBridges = new Chart(document.getElementById('chartBridges'), {
-type:'bar',
-data:{ labels:bEntries.map(e=>e[0]), datasets:[{ label:'Targets', data:bEntries.map(e=>e[1].length), backgroundColor:ACCENT, borderRadius:4 }] },
+type:'bar', data:{ labels:bEntries.map(e=>e[0]), datasets:[{ label:'Targets', data:bEntries.map(e=>e[1].length), backgroundColor:ACCENT, borderRadius:4 }] },
 options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
 });
-
 const bySource = sourceAgg();
 const sEntries = Object.entries(bySource).filter(([s,i])=>s&&(s!=='Unassigned'||i.leads>0)).sort((a,b)=>b[1].leads-a[1].leads);
 destroyChart('chartSources');
 CHARTS.chartSources = new Chart(document.getElementById('chartSources'), {
-type:'doughnut',
-data:{ labels:sEntries.map(e=>e[0]), datasets:[{ data:sEntries.map(e=>e[1].leads), backgroundColor:palette, borderWidth:2, borderColor:'#fff' }] },
+type:'doughnut', data:{ labels:sEntries.map(e=>e[0]), datasets:[{ data:sEntries.map(e=>e[1].leads), backgroundColor:palette, borderWidth:2, borderColor:'#fff' }] },
 options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:12, font:{size:11}}}} }
 });
-
 const byDay = {};
 ROWS.forEach(r => { const k = dayKey(r.collected_date); if (k) byDay[k] = (byDay[k]||0)+1; });
 const dKeys = Object.keys(byDay).sort();
 destroyChart('chartTrend');
 CHARTS.chartTrend = new Chart(document.getElementById('chartTrend'), {
-type:'line',
-data:{ labels:dKeys.map(fmtDayLabel), datasets:[{ label:'New targets', data:dKeys.map(k=>byDay[k]),
-borderColor:PRIMARY, backgroundColor:'rgba(59,130,246,0.12)', fill:true, tension:0.3, pointRadius:3, pointBackgroundColor:PRIMARY }] },
+type:'line', data:{ labels:dKeys.map(fmtDayLabel), datasets:[{ label:'New targets', data:dKeys.map(k=>byDay[k]), borderColor:PRIMARY, backgroundColor:'rgba(59,130,246,0.12)', fill:true, tension:0.3, pointRadius:3, pointBackgroundColor:PRIMARY }] },
 options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
 });
 }
 
-// ----- Flow diagram -----
 function renderFlow(){
 const bySource = sourceAgg();
 const byBridge = bridgeCounts();
-
-const sources = Object.entries(bySource)
-.filter(([s,i]) => s && (s!=='Unassigned' || i.leads>0))
-.sort((a,b)=>b[1].leads-a[1].leads);
-const bridges = Object.entries(byBridge)
-.filter(([n]) => n && n!=='—')
-.sort((a,b)=>b[1].length-a[1].length);
-
+const sources = Object.entries(bySource).filter(([s,i]) => s && (s!=='Unassigned' || i.leads>0)).sort((a,b)=>b[1].leads-a[1].leads);
+const bridges = Object.entries(byBridge).filter(([n]) => n && n!=='\u2014').sort((a,b)=>b[1].length-a[1].length);
 const f = FLOW_FILTER;
-const bridgeMatchesFilter = (name) => {
-if (!f) return true;
-if (f.type==='bridge') return name===f.value;
-if (f.type==='source') return bridgeSource(name)===f.value;
-return true;
-};
-const sourceMatchesFilter = (name) => {
-if (!f) return true;
-if (f.type==='source') return name===f.value;
-if (f.type==='bridge') return bridgeSource(f.value)===name;
-return true;
-};
-
+const bridgeMatchesFilter = (name) => { if (!f) return true; if (f.type==='bridge') return name===f.value; if (f.type==='source') return bridgeSource(name)===f.value; return true; };
+const sourceMatchesFilter = (name) => { if (!f) return true; if (f.type==='source') return name===f.value; if (f.type==='bridge') return bridgeSource(f.value)===name; return true; };
 const srcCol = sources.map(([s,info]) => {
 const dim = !sourceMatchesFilter(s) ? ' dim' : '';
 const act = (f && f.type==='source' && f.value===s) ? ' active' : '';
-return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'source\',\'' + jsq(s) + '\')">' +
-'<span class="nm">' + esc(s) + '</span><span class="ct">' + info.leads + '</span></div>';
+return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'source\',\'' + jsq(s) + '\')">' + '<span class="nm">' + esc(s) + '</span><span class="ct">' + info.leads + '</span></div>';
 }).join('') || '<div class="flow-node target">No sources</div>';
-
 const brCol = bridges.map(([n,l]) => {
 const dim = !bridgeMatchesFilter(n) ? ' dim' : '';
 const act = (f && f.type==='bridge' && f.value===n) ? ' active' : '';
-return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'bridge\',\'' + jsq(n) + '\')">' +
-'<span class="nm">' + esc(n) + '</span><span class="ct">' + l.length + '</span></div>';
+return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'bridge\',\'' + jsq(n) + '\')">' + '<span class="nm">' + esc(n) + '</span><span class="ct">' + l.length + '</span></div>';
 }).join('') || '<div class="flow-node target">No bridges</div>';
-
 let tCount, tLabel;
-if (f && f.type==='bridge') {
-tCount = (byBridge[f.value]||[]).length; tLabel = 'targets via ' + f.value;
-} else if (f && f.type==='source') {
-tCount = (bySource[f.value]||{leads:0}).leads; tLabel = 'targets from ' + f.value;
-} else {
-tCount = ROWS.length; tLabel = 'total targets';
-}
-const tgtCol = '<div class="flow-node target"><span class="big" style="font-size:1.4rem;font-weight:700;color:#1e40af">' + tCount + '</span><br>' +
-'<span style="font-size:0.78rem;color:#64748b">' + esc(tLabel) + '</span></div>';
-
-document.getElementById('flowDiagram').innerHTML =
-'<div class="flow-col"><div class="colhead">Sources</div>' + srcCol + '</div>' +
-'<div class="flow-col"><div class="colhead">Bridges</div>' + brCol + '</div>' +
-'<div class="flow-col"><div class="colhead">Targets</div>' + tgtCol + '</div>';
-
-document.getElementById('flowHint').textContent = f
-? 'Filtering by ' + f.type + ': ' + f.value + ' — click again to clear.'
-: 'Click a Source or Bridge to highlight its path.';
+if (f && f.type==='bridge') { tCount = (byBridge[f.value]||[]).length; tLabel = 'targets via ' + f.value; }
+else if (f && f.type==='source') { tCount = (bySource[f.value]||{leads:0}).leads; tLabel = 'targets from ' + f.value; }
+else { tCount = ROWS.length; tLabel = 'total targets'; }
+const tgtCol = '<div class="flow-node target"><span class="big" style="font-size:1.4rem;font-weight:700;color:#1e40af">' + tCount + '</span><br><span style="font-size:0.78rem;color:#64748b">' + esc(tLabel) + '</span></div>';
+document.getElementById('flowDiagram').innerHTML = '<div class="flow-col"><div class="colhead">Sources</div>' + srcCol + '</div>' + '<div class="flow-col"><div class="colhead">Bridges</div>' + brCol + '</div>' + '<div class="flow-col"><div class="colhead">Targets</div>' + tgtCol + '</div>';
+document.getElementById('flowHint').textContent = f ? 'Filtering by ' + f.type + ': ' + f.value + ' \u2014 click again to clear.' : 'Click a Source or Bridge to highlight its path.';
 }
 function jsq(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
-function setFlowFilter(type, value){
-if (FLOW_FILTER && FLOW_FILTER.type===type && FLOW_FILTER.value===value) FLOW_FILTER = null;
-else FLOW_FILTER = { type:type, value:value };
-renderFlow();
-}
+function setFlowFilter(type, value){ if (FLOW_FILTER && FLOW_FILTER.type===type && FLOW_FILTER.value===value) FLOW_FILTER = null; else FLOW_FILTER = { type, value }; renderFlow(); }
 
-// ===== Navigation =====
 function showView(name){
 document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
 document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -1040,16 +1028,14 @@ if (name === 'bridges') { loadBridges().then(renderBridges); }
 if (name === 'log') renderLog();
 }
 
-// ===== Settings =====
 async function saveSettings() {
 const botdog = document.getElementById('inputBotdog').value.trim();
 const resend = document.getElementById('inputResend').value.trim();
 const status = document.getElementById('saveStatus');
 if (!botdog && !resend) { status.textContent = 'Enter at least one key.'; return; }
-status.textContent = 'Saving…';
+status.textContent = 'Saving\u2026';
 try {
-const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_api_key: botdog, resend_api_key: resend }) });
-const data = await resp.json();
+const data = await hubPost({ action: 'setConfig', botdog_api_key: botdog, resend_api_key: resend });
 status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
 if (data.saved) await loadKeyStatus();
 } catch(e) { status.textContent = 'Error: ' + e.message; }
@@ -1057,25 +1043,22 @@ if (data.saved) await loadKeyStatus();
 
 async function loadKeyStatus() {
 try {
-const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=keyStatus&_=' + Date.now();
-const resp = await fetch(url);
-const text = await resp.text();
-const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
+const json = await hubGet({ action: 'keyStatus' });
 const fmt = function(set, valid){
 if (!set) return '<span style="color:#dc2626">Missing</span>';
-return valid ? '<span style="color:#16a34a;font-weight:600">Set &amp; Valid ✓</span>'
-: '<span style="color:#dc2626;font-weight:600">Set but Invalid ✗</span>';
+return valid ? '<span style="color:#16a34a;font-weight:600">Set &amp; Valid \u2713</span>' : '<span style="color:#dc2626;font-weight:600">Set but Invalid \u2717</span>';
 };
 const when = json.tested_at ? 'Last tested: ' + new Date(json.tested_at).toLocaleString() : '';
-document.getElementById('keyStatus').innerHTML =
-'Botdog: ' + fmt(json.botdog_set, json.botdog_valid) + '<br>' +
-'Resend: ' + fmt(json.resend_set, json.resend_valid) + '<br>' +
-'<small style="color:#94a3b8">' + when + ' · auto-tested daily</small>';
+document.getElementById('keyStatus').innerHTML = 'Botdog: ' + fmt(json.botdog_set, json.botdog_valid) + '<br>Resend: ' + fmt(json.resend_set, json.resend_valid) + '<br><small style="color:#94a3b8">' + when + ' \u00b7 auto-tested daily</small>';
 } catch(e) {}
 }
 
-initSorting();
-load();
+// Update sidebar timestamp every minute
+updateSidebarTs();
+setInterval(updateSidebarTs, 60000);
+
+// ===== Boot =====
+initAuth();
 </script>
 </body>
 </html>
