@@ -7,113 +7,63 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{
---primary:#1e40af; --accent:#3b82f6; --bg:#f8fafc; --ink:#1e293b; --muted:#64748b;
---line:#e2e8f0; --card:#ffffff; --sidebar:#0f1e3d;
+  --primary:#1e40af; --accent:#3b82f6; --bg:#f8fafc; --ink:#1e293b; --muted:#64748b;
+  --line:#e2e8f0; --card:#ffffff; --sidebar:#0f1e3d;
+  --brand:#6366f1; --brand-ink:#4f46e5; --brand-soft:#eef0fe; --side-line:#eef0f4;
 }
 *{ box-sizing:border-box; margin:0; padding:0; }
 html,body{ height:100%; }
 body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--ink); }
 
-/* ---------- Sign-in overlay ---------- */
-#signinOverlay{
-position:fixed; inset:0; z-index:9999;
-background:linear-gradient(135deg,#0f1e3d 0%,#1e3a5f 100%);
-display:flex; align-items:center; justify-content:center;
-}
-#signinOverlay.hidden{ display:none; }
-.signin-box{
-background:#fff; border-radius:16px; padding:48px 40px; max-width:400px; width:90%;
-text-align:center; box-shadow:0 24px 64px rgba(0,0,0,0.35);
-}
-.signin-box .logo{ font-size:2.5rem; margin-bottom:8px; }
-.signin-box h1{ font-size:1.5rem; font-weight:700; color:#0f172a; margin-bottom:6px; }
-.signin-box p{ color:#64748b; font-size:0.9rem; margin-bottom:28px; }
-.btn-linkedin{
-display:inline-flex; align-items:center; gap:10px;
-background:#0077b5; color:#fff; font-size:0.95rem; font-weight:600;
-padding:13px 28px; border-radius:8px; text-decoration:none;
-transition:background .15s; border:none; cursor:pointer;
-}
-.btn-linkedin:hover{ background:#005e94; }
-.btn-linkedin svg{ width:20px; height:20px; fill:#fff; flex:0 0 20px; }
-.signin-denied{ margin-top:18px; background:#fee2e2; color:#991b1b; border-radius:8px; padding:10px 14px; font-size:0.85rem; display:none; }
-.signin-denied.show{ display:block; }
-
 /* ---------- Layout ---------- */
 .app{ display:flex; min-height:100vh; }
 .sidebar{
-width:240px; flex:0 0 240px; background:var(--sidebar); color:#cbd5e1;
-display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
+  width:250px; flex:0 0 250px; background:#fff; color:#475569;
+  border-right:1px solid var(--side-line);
+  display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
 }
-
-/* ---------- Sidebar: brand block ---------- */
-.sidebar .brand{
-padding:20px 18px 16px; border-bottom:1px solid rgba(255,255,255,0.08);
-}
-.sidebar .brand .logo-line{
-display:flex; align-items:center; gap:10px; margin-bottom:6px;
-}
-.sidebar .brand .logo{ font-size:1.5rem; }
-.sidebar .brand h1{ font-size:1.15rem; font-weight:700; color:#fff; letter-spacing:0.02em; }
-.sidebar .brand .ver{
-font-size:0.7rem; color:#94a3b8; margin-top:2px;
-}
-.sidebar .brand .ts{
-font-size:0.65rem; color:#64748b; margin-top:1px;
-}
-
-/* ---------- Sidebar: user chip ---------- */
-.user-chip{
-display:flex; align-items:center; gap:8px;
-padding:10px 18px 0; font-size:0.78rem; color:#94a3b8;
-}
-.user-chip .avatar{
-width:26px; height:26px; border-radius:50%;
-background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center;
-font-size:0.7rem; font-weight:700; flex:0 0 26px;
-}
-.user-chip .uname{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
-/* ---------- Sidebar: nav sections ---------- */
-.nav-section{ padding:10px 10px 4px; }
-.nav-section-label{
-font-size:0.62rem; text-transform:uppercase; letter-spacing:0.08em; color:#475569;
-font-weight:700; padding:0 12px; margin-bottom:4px;
-}
-.nav-items{ display:flex; flex-direction:column; gap:2px; flex:1; padding:0 10px; }
-.nav-item{ display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:8px; border:none; background:none;
-color:#cbd5e1; cursor:pointer; font-size:0.88rem; text-align:left; width:100%; transition:background .15s,color .15s; }
-.nav-item:hover{ background:rgba(255,255,255,0.07); color:#fff; }
-.nav-item.active{ background:var(--accent); color:#fff; font-weight:600; }
-.nav-item .ico{ width:18px; text-align:center; font-size:1rem; }
-
-/* ---------- Sidebar: footer buttons ---------- */
-.sidebar .foot{
-padding:12px 18px; border-top:1px solid rgba(255,255,255,0.08);
-display:flex; flex-direction:column; gap:6px;
-}
-.foot-btn{
-display:flex; align-items:center; gap:8px; border:none; background:rgba(255,255,255,0.06);
-color:#94a3b8; font-size:0.78rem; padding:7px 12px; border-radius:7px;
-cursor:pointer; text-align:left; width:100%; transition:background .15s,color .15s;
-}
-.foot-btn:hover{ background:rgba(255,255,255,0.12); color:#fff; }
-.foot-btn.logout{ color:#f87171; }
-.foot-btn.logout:hover{ background:rgba(248,113,113,0.12); color:#fca5a5; }
-.foot-copy{ font-size:0.6rem; color:#475569; text-align:center; padding-top:4px; }
-
+.sidebar .brand{ display:flex; align-items:center; gap:9px; padding:22px 20px 4px; }
+.sidebar .brand .logo{ display:flex; color:var(--brand); }
+.sidebar .brand .logo svg{ width:24px; height:24px; }
+.sidebar .brand h1{ font-size:1.35rem; font-weight:800; color:var(--brand); letter-spacing:-0.01em; }
+.brand-meta{ padding:6px 20px 16px; margin-bottom:4px; border-bottom:1px solid var(--side-line); }
+.brand-meta .eyebrow{ font-size:0.66rem; font-weight:700; letter-spacing:0.13em; color:#94a3b8; text-transform:uppercase; }
+.brand-meta .ver{ font-size:0.9rem; font-weight:700; color:#334155; margin-top:8px; }
+.brand-meta .ts{ font-size:0.74rem; color:#94a3b8; margin-top:2px; }
+.nav-items{ padding:6px 12px; display:flex; flex-direction:column; gap:2px; flex:1; overflow-y:auto; }
+.nav-sec{ font-size:0.66rem; font-weight:700; letter-spacing:0.13em; color:#94a3b8; text-transform:uppercase; padding:16px 12px 6px; }
+.nav-item{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:9px; border:none; background:none;
+  color:#475569; cursor:pointer; font-size:0.92rem; font-weight:600; text-align:left; width:100%; font-family:inherit; transition:background .15s,color .15s; }
+.nav-item:hover{ background:#f5f6fb; color:#1e293b; }
+.nav-item.active{ background:var(--brand-soft); color:var(--brand-ink); }
+.nav-item .ico{ width:20px; flex:0 0 20px; display:flex; align-items:center; justify-content:center; color:currentColor; }
+.nav-item .ico svg{ width:18px; height:18px; }
+.nav-count{ margin-left:auto; background:#eef2ff; color:var(--brand-ink); font-size:0.66rem; font-weight:700; padding:2px 8px; border-radius:10px; }
+.nav-item.active .nav-count{ background:#fff; }
+.sidebar .foot{ padding:14px 16px 8px; border-top:1px solid var(--side-line); display:flex; flex-direction:column; gap:10px; }
+.foot-btn{ display:flex; align-items:center; justify-content:center; gap:8px; padding:11px 14px; border-radius:11px;
+  font-size:0.9rem; font-weight:700; cursor:pointer; border:1px solid transparent; font-family:inherit; transition:background .15s; }
+.foot-btn .fico{ display:flex; } .foot-btn .fico svg{ width:17px; height:17px; }
+.foot-btn.primary{ background:var(--brand-soft); color:var(--brand-ink); }
+.foot-btn.primary:hover{ background:#e3e6fd; }
+.foot-btn.ghost{ background:#fff; color:#334155; border-color:#e2e8f0; }
+.foot-btn.ghost:hover{ background:#f8fafc; }
+.foot-domain{ text-align:center; font-size:0.72rem; color:#94a3b8; padding:6px 0 8px; }
 .main{ flex:1; min-width:0; display:flex; flex-direction:column; }
 .topbar{ display:none; }
 .content{ padding:28px 32px; max-width:1280px; width:100%; margin:0 auto; }
 
 /* ---------- Mobile ---------- */
 @media (max-width:880px){
-.app{ flex-direction:column; }
-.sidebar{ width:100%; flex:none; height:auto; position:relative; flex-direction:column; }
-.nav-items{ flex-direction:row; flex-wrap:wrap; padding:8px; }
-.nav-item{ width:auto; flex:1 1 auto; justify-content:center; padding:8px 10px; font-size:0.82rem; }
-.sidebar .foot{ display:none; }
-.content{ padding:18px 14px; }
+  .app{ flex-direction:column; }
+  .sidebar{ width:100%; flex:none; height:auto; position:relative; flex-direction:column; border-right:none; border-bottom:1px solid var(--side-line); }
+  .brand-meta{ display:none; }
+  .nav-items{ flex-direction:row; flex-wrap:wrap; padding:8px; }
+  .nav-sec{ display:none; }
+  .nav-item{ width:auto; flex:1 1 auto; justify-content:center; padding:8px 10px; font-size:0.82rem; }
+  .nav-count{ display:none; }
+  .sidebar .foot{ display:none; }
+  .content{ padding:18px 14px; }
 }
 
 /* ---------- Page head ---------- */
@@ -153,6 +103,24 @@ td a{ color:#2563eb; text-decoration:none; }
 td a:hover{ text-decoration:underline; }
 .check{ color:#16a34a; font-weight:700; }
 
+/* ---------- Collection Log ---------- */
+.log-rail{ background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.log-line{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:9px 14px; border-top:1px solid #f1f5f9; font-size:0.85rem; line-height:1.4; }
+.log-line:first-child{ border-top:none; }
+.log-line:hover{ background:#f8fafc; }
+.log-line .lg-date{ color:var(--muted); font-variant-numeric:tabular-nums; font-size:0.78rem; min-width:82px; }
+.log-line .lg-sep{ color:#cbd5e1; }
+.log-line .lg-arrow{ color:#94a3b8; font-weight:700; }
+.log-line .lg-source{ color:var(--primary); font-weight:600; }
+.log-line .lg-bridge{ color:#0f172a; font-weight:500; }
+.log-line .lg-prospect{ color:var(--ink); font-weight:700; }
+.log-line .lg-lvl{ margin-left:auto; padding:1px 9px; border-radius:12px; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+.log-line .lg-lvl.l1{ background:#dcfce7; color:#166534; }
+.log-line .lg-lvl.l2{ background:#fef3c7; color:#92400e; }
+.log-line .lg-lvl.l3{ background:#e2e8f0; color:#475569; }
+.log-line .lg-lvl.l0{ background:#f1f5f9; color:#94a3b8; }
+.log-day{ padding:7px 14px; background:#f1f5f9; font-size:0.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; }
+
 /* ---------- Banner ---------- */
 .banner{ background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.875rem; color:#92400e; }
 
@@ -173,11 +141,6 @@ td a:hover{ text-decoration:underline; }
 .pill.partner{ background:#d1fae5; color:#065f46; }
 .pill.organization{ background:#dbeafe; color:#1e40af; }
 .pill.conn{ background:#dcfce7; color:#166534; }
-.pill.grade-aplus{ background:#14532d; color:#fff; }
-.pill.grade-a{ background:#166534; color:#fff; }
-.pill.grade-b{ background:#1e40af; color:#fff; }
-.pill.grade-c{ background:#92400e; color:#fff; }
-.pill.grade-d{ background:#94a3b8; color:#fff; }
 
 /* ---------- Bridges candidate management ---------- */
 .bridges-note{ background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.86rem; color:#1e40af; line-height:1.5; }
@@ -202,12 +165,29 @@ td a:hover{ text-decoration:underline; }
 .bridge-row .save-status.ok{ color:#16a34a; }
 .bridge-row a.li{ font-size:0.78rem; color:#2563eb; text-decoration:none; }
 .bridge-row a.li:hover{ text-decoration:underline; }
+/* Open profile / Connect pill link */
 .bridge-row a.connect{ display:inline-flex; align-items:center; gap:3px; font-size:0.72rem; font-weight:600;
-color:var(--accent); background:#eff6ff; border:1px solid #bfdbfe; padding:2px 9px; border-radius:12px; text-decoration:none; white-space:nowrap; }
+  color:var(--accent); background:#eff6ff; border:1px solid #bfdbfe; padding:2px 9px; border-radius:12px; text-decoration:none; white-space:nowrap; }
 .bridge-row a.connect:hover{ background:var(--accent); color:#fff; border-color:var(--accent); text-decoration:none; }
+/* "connect first" hint */
 .bridge-row .conn-hint{ font-size:0.7rem; color:var(--muted); font-style:italic; white-space:nowrap; }
+/* Connection-level badge */
+.lvl-badge{ display:inline-block; padding:2px 9px; border-radius:12px; font-size:0.7rem; font-weight:600; white-space:nowrap; }
+.lvl-badge.lvl-1{ background:#dcfce7; color:#166534; }
+.lvl-badge.lvl-2{ background:#fef3c7; color:#92400e; }
+.lvl-badge.lvl-3{ background:#e2e8f0; color:#475569; }
+.lvl-badge.lvl-0{ background:#e2e8f0; color:#64748b; }
+/* ICP-fit grade pill */
+.bridge-row .icp-grade{ flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  min-width:34px; height:26px; padding:0 8px; border-radius:8px; font-size:0.82rem; font-weight:700;
+  letter-spacing:0.01em; border:1px solid transparent; }
+.icp-grade.g-Aplus, .icp-grade.g-A{ background:rgba(22,163,74,0.12); color:#15803d; border-color:rgba(22,163,74,0.35); }
+.icp-grade.g-B{ background:#eff6ff; color:var(--primary); border-color:#bfdbfe; }
+.icp-grade.g-C{ background:#fef3c7; color:#b45309; border-color:#fcd34d; }
+.icp-grade.g-D{ background:#f1f5f9; color:#94a3b8; border-color:var(--line); }
+/* Remove (✕) button */
 .bridge-row .remove{ flex:0 0 auto; border:none; background:none; color:#cbd5e1; font-size:0.95rem; line-height:1;
-cursor:pointer; padding:4px 6px; border-radius:6px; transition:color .12s,background .12s; }
+  cursor:pointer; padding:4px 6px; border-radius:6px; transition:color .12s,background .12s; }
 .bridge-row .remove:hover{ color:#dc2626; background:#fee2e2; }
 .bridge-row .remove:disabled{ opacity:0.4; cursor:default; }
 .bridge-row.removing{ opacity:0.45; }
@@ -255,810 +235,967 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 .collection-day .bridges{ color:var(--muted); font-size:0.84rem; line-height:1.6; }
 .collection-day .bchip{ display:inline-block; background:#f1f5f9; border-radius:6px; padding:2px 8px; margin:2px 4px 2px 0; font-size:0.78rem; }
 .timeline-rail{ border-left:2px solid var(--line); padding-left:18px; margin-left:6px; }
-
-/* ---------- Log tab ---------- */
-.log-row{ font-size:0.84rem; padding:9px 14px; border-top:1px solid #f1f5f9; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
-.log-row:first-child{ border-top:none; }
-.log-date{ color:#64748b; font-size:0.75rem; white-space:nowrap; min-width:130px; }
-.log-path{ flex:1; }
-.log-level{ font-size:0.7rem; font-weight:600; padding:1px 7px; border-radius:10px; white-space:nowrap; }
-.log-level.l1{ background:#dcfce7; color:#166534; }
-.log-level.l2{ background:#dbeafe; color:#1e40af; }
-.log-level.l3{ background:#f3f4f6; color:#374151; }
-.log-level.lunk{ background:#f3f4f6; color:#94a3b8; }
 </style>
 </head>
 <body>
+<div class="app">
 
-<!-- ===== Sign-in overlay (hidden once authenticated) ===== -->
-<div id="signinOverlay">
-  <div class="signin-box">
-    <div class="logo">📡</div>
-    <h1>Gershon.AI Radar</h1>
-    <p>Your Source → Bridge → Target intelligence platform.<br>Sign in to continue.</p>
-    <a href="/api/auth/linkedin/login" class="btn-linkedin">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-      Sign in with LinkedIn
-    </a>
-    <div class="signin-denied" id="signinDenied">
-      Access denied. Your account is not on the approved list.<br>
-      Contact the administrator to request access.
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+      <h1>Gershon.AI</h1>
     </div>
+    <div class="brand-meta">
+      <div class="eyebrow">Company</div>
+      <div class="ver" id="sideVer">v1.5.2</div>
+      <div class="ts" id="sideTs"></div>
+    </div>
+    <nav class="nav-items">
+      <button class="nav-item active" id="nav-dashboard"   onclick="showView('dashboard')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg></span> Dashboard</button>
+      <div class="nav-sec">Pipeline</div>
+      <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
+      <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges</button>
+      <button class="nav-item"        id="nav-sources"     onclick="showView('sources')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v17"/><path d="M14 9h3a1 1 0 0 1 1 1v11"/><line x1="9" y1="7" x2="10" y2="7"/><line x1="9" y1="11" x2="10" y2="11"/><line x1="9" y1="15" x2="10" y2="15"/></svg></span> Sources</button>
+      <div class="nav-sec">Activity</div>
+      <button class="nav-item"        id="nav-log"         onclick="showView('log')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg></span> Log</button>
+      <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span> Collections</button>
+      <button class="nav-item"        id="nav-settings"    onclick="showView('settings')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings</button>
+    </nav>
+    <div class="foot">
+      <button class="foot-btn primary" data-on="0" onclick="toggleDemo(this)"><span class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 15l.7 1.9L20.6 18l-1.9.7L18 20.6l-.7-1.9L15.4 18l1.9-.7z"/></svg></span> <span class="lbl">Demo Mode</span></button>
+      <button class="foot-btn ghost" onclick="sideLogout()"><span class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> Logout</button>
+      <div class="foot-domain">radar.gershonCRM.com</div>
+    </div>
+  </aside>
+  <script>
+    (function(){
+      var t = document.getElementById('sideTs');
+      if (t) { try {
+        var now = new Date();
+        var s = now.toLocaleString('en-US', { month:'long', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', hour12:true });
+        var tz = (now.toLocaleTimeString('en-US', { timeZoneName:'short' }).split(' ').pop()) || '';
+        t.textContent = s + ' ' + tz;
+      } catch(e) {} }
+    })();
+    function toggleDemo(btn){
+      var on = btn.getAttribute('data-on') === '1';
+      btn.setAttribute('data-on', on ? '0' : '1');
+      var lbl = btn.querySelector('.lbl'); if (lbl) lbl.textContent = on ? 'Demo Mode' : 'Live Mode';
+    }
+    function sideLogout(){ if (confirm('Log out of Radar?')) location.reload(); }
+  </script>
+
+  <!-- ===== Main ===== -->
+  <div class="main">
+  <div class="content">
+
+    <!-- ===== Dashboard ===== -->
+    <section id="view-dashboard" class="view active">
+      <div class="page-head"><h2>Dashboard</h2><p>Your Source → Bridge → Target pipeline at a glance.</p></div>
+      <div id="warningBanner" class="banner" style="display:none">
+        WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
+        <div class="stat"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
+        <div class="stat"><div class="num" id="statPushed">0</div><div class="label">Pushed to Botdog</div><div class="sub" id="statPushedPct">0%</div></div>
+        <div class="stat"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
+        <div class="stat"><div class="num" id="statSources">0</div><div class="label">Sources active</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel"><h3>Targets per Bridge</h3><div class="chart-wrap"><canvas id="chartBridges"></canvas></div></div>
+        <div class="panel"><h3>Targets per Source</h3><div class="chart-wrap"><canvas id="chartSources"></canvas></div></div>
+      </div>
+      <div class="panel" style="margin-bottom:18px"><h3>Daily collection trend</h3><div class="chart-wrap"><canvas id="chartTrend"></canvas></div></div>
+
+      <div class="panel">
+        <h3>Source → Bridge → Target flow <span style="font-weight:400;color:#94a3b8;font-size:0.8rem">(click a node to filter)</span></h3>
+        <div class="flow" id="flowDiagram"></div>
+        <div class="flow-hint" id="flowHint">Click a Source or Bridge to highlight its path.</div>
+      </div>
+    </section>
+
+    <!-- ===== Targets ===== -->
+    <section id="view-targets" class="view">
+      <div class="page-head"><h2>Targets</h2><p>Every connection collected through your bridges.</p></div>
+      <div class="table-controls">
+        <input type="text" id="tSearch" placeholder="Search name, title, company…" oninput="renderTargets()">
+        <select id="tBridge" onchange="renderTargets()"><option value="">All bridges</option></select>
+        <select id="tSource" onchange="renderTargets()"><option value="">All sources</option></select>
+        <span class="result-count" id="tCount">0 targets</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="tHead">
+            <th class="sortable" data-key="name">Name <span class="arrow"></span></th>
+            <th class="sortable" data-key="title">Title <span class="arrow"></span></th>
+            <th class="sortable" data-key="company">Company <span class="arrow"></span></th>
+            <th class="sortable" data-key="bridge">Bridge <span class="arrow"></span></th>
+            <th class="sortable" data-key="source">Source <span class="arrow"></span></th>
+            <th class="sortable" data-key="date">Date <span class="arrow"></span></th>
+            <th>LinkedIn</th>
+            <th class="sortable" data-key="botdog">Botdog <span class="arrow"></span></th>
+          </tr></thead>
+          <tbody id="targetsBody"><tr><td colspan="8" class="empty">No targets yet</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Bridges ===== -->
+    <section id="view-bridges" class="view">
+      <div class="page-head"><h2>Bridges</h2><p>Well-connected people who introduce you to targets.</p></div>
+      <div class="bridges-note">
+        Toggle a candidate <strong>Active</strong> to have the extension collect that person's ICP connections as Targets.
+      </div>
+      <div class="bridges-controls">
+        <div class="seg" id="bridgeFilterSeg">
+          <button class="active" data-filter="all" onclick="setBridgeFilter('all')">All</button>
+          <button data-filter="active" onclick="setBridgeFilter('active')">Active only</button>
+        </div>
+        <span class="result-count" id="bridgeCount"></span>
+      </div>
+      <div id="bridgesBody"></div>
+    </section>
+
+    <!-- ===== Sources ===== -->
+    <section id="view-sources" class="view">
+      <div class="page-head"><h2>Sources</h2><p>Organizations you watch and collect connections from.</p></div>
+      <div class="settings-card" style="max-width:620px">
+        <h2>Add a Source</h2>
+        <p>Add an organization to watch. Paste its LinkedIn company URL — collect its team into Targets next.</p>
+        <div class="field"><label>Source name</label><input id="srcName" placeholder="e.g. Krymkier Law"></div>
+        <div class="field"><label>LinkedIn company URL</label><input id="srcUrl" placeholder="https://www.linkedin.com/company/..."></div>
+        <div class="field"><label>Sales Nav company URL or Org ID <span style="color:#94a3b8;font-weight:400">— enables bridge discovery</span></label><input id="srcOrg" placeholder="…/organization/139070  or  139070"></div>
+        <div class="field"><label>Role / function keyword <span style="color:#94a3b8;font-weight:400">— optional; narrows discovery for large orgs</span></label><input id="srcKeyword" placeholder="e.g. Team France Export"></div>
+        <div class="field"><label>Type</label>
+          <select id="srcCat">
+            <option value="partner">Partner</option>
+            <option value="competitor">Competitor</option>
+            <option value="organization">Organization</option>
+          </select>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;color:#334155;margin:2px 0 12px;cursor:pointer">
+          <input type="checkbox" id="srcDiscoverNow" checked style="width:16px;height:16px"> Collect bridges now <span style="color:#94a3b8">(otherwise on the monthly discovery run)</span>
+        </label>
+        <button class="btn-save" onclick="addSource()">+ Add Source</button>
+        <div id="srcStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="card-grid" id="sourcesBody"></div>
+    </section>
+
+    <!-- ===== Collections ===== -->
+    <section id="view-collections" class="view">
+      <div class="page-head"><h2>Collections</h2><p>When new targets were retrieved from Sales Navigator, by day.</p></div>
+      <div class="timeline-rail" id="collectionsBody"><div class="empty">No collections yet</div></div>
+    </section>
+
+    <!-- ===== Log ===== -->
+    <section id="view-log" class="view">
+      <div class="page-head"><h2>Collection Log</h2><p>Every prospect ever collected — one line each. <strong>Date : Source &rsaquo; Bridge &rsaquo; Prospect</strong> with the connection level relative to you.</p></div>
+      <div class="table-controls">
+        <input type="text" id="logSearch" placeholder="Search source, bridge, or prospect…" oninput="renderLog()">
+        <select id="logLevel" onchange="renderLog()">
+          <option value="">All levels</option>
+          <option value="1st">Level 1</option>
+          <option value="2nd">Level 2</option>
+          <option value="3rd">Level 3</option>
+          <option value="none">No level yet</option>
+        </select>
+        <span class="result-count" id="logCount"></span>
+      </div>
+      <div class="log-rail" id="logBody"><div class="empty">No collections yet</div></div>
+    </section>
+
+    <!-- ===== Settings ===== -->
+    <section id="view-settings" class="view">
+      <div class="page-head"><h2>Settings</h2><p>Backend API keys and their live status.</p></div>
+      <div class="settings-card">
+        <h2>API Keys</h2>
+        <p>Stored securely in the Apps Script backend.</p>
+        <div class="field">
+          <label>Botdog API Key</label>
+          <input type="password" id="inputBotdog" placeholder="paste key…">
+        </div>
+        <div class="field">
+          <label>Resend API Key</label>
+          <input type="password" id="inputResend" placeholder="paste key…">
+        </div>
+        <button class="btn-save" onclick="saveSettings()">Save Keys</button>
+        <div id="saveStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
+        <h2>Outreach Campaign (Botdog)</h2>
+        <p>New targets are pushed to this campaign. Pick one of your campaigns, or paste its ID.</p>
+        <div class="field">
+          <label>Campaign</label>
+          <select id="botdogCampaignSelect" onchange="onCampaignSelect()">
+            <option value="">— loading your campaigns… —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Campaign ID <span style="color:#94a3b8;font-weight:400">(auto-filled; or paste manually)</span></label>
+          <input type="text" id="botdogCampaignId" placeholder="campaign id">
+        </div>
+        <button class="btn-save" onclick="saveCampaign()">Save Campaign</button>
+        <div id="campaignStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
+        <h2>Key Status</h2>
+        <p>Current backend key status.</p>
+        <div id="keyStatus" class="key-status">Loading…</div>
+      </div>
+    </section>
+
+  </div>
   </div>
 </div>
-<!-- ===== App (hidden until authenticated) ===== -->
-<div class="app" id="appShell" style="display:none">
 
-<!-- ===== Sidebar ===== -->
-<aside class="sidebar">
-<div class="brand">
-<div class="logo-line">
-<span class="logo">📡</span>
-<h1>Gershon.AI</h1>
-</div>
-<div class="ver">Radar v1.5.0</div>
-<div class="ts" id="sideTs">—</div>
-</div>
-
-<!-- User chip (populated after /api/me) -->
-<div class="user-chip" id="userChip" style="display:none">
-  <div class="avatar" id="userAvatar">?</div>
-  <span class="uname" id="userName">—</span>
-</div>
-
-<div class="nav-section">
-<div class="nav-section-label">Intelligence</div>
-<div class="nav-items">
-<button class="nav-item active" id="nav-dashboard" onclick="showView('dashboard')"><span class="ico">📊</span> Dashboard</button>
-<button class="nav-item" id="nav-targets" onclick="showView('targets')"><span class="ico">🎯</span> Targets</button>
-<button class="nav-item" id="nav-bridges" onclick="showView('bridges')"><span class="ico">🤝</span> Bridges</button>
-<button class="nav-item" id="nav-log" onclick="showView('log')"><span class="ico">📋</span> Log</button>
-</div>
-</div>
-
-<div class="nav-section">
-<div class="nav-section-label">Configuration</div>
-<div class="nav-items">
-<button class="nav-item" id="nav-sources" onclick="showView('sources')"><span class="ico">🏢</span> Sources</button>
-<button class="nav-item" id="nav-collections" onclick="showView('collections')"><span class="ico">📥</span> Collections</button>
-<button class="nav-item" id="nav-settings" onclick="showView('settings')"><span class="ico">⚙️</span> Settings</button>
-</div>
-</div>
-
-<div style="flex:1"></div>
-
-<div class="foot">
-<button class="foot-btn" onclick="load()"><span>🔄</span> Refresh data</button>
-<button class="foot-btn" onclick="window.open('https://radar.gershoncrm.com','_blank')"><span>↗</span> Open live site</button>
-<a href="/api/auth/logout" class="foot-btn logout" style="text-decoration:none"><span>⎋</span> Sign out</a>
-<div class="foot-copy">© 2026 Gershon Consulting · Source → Bridge → Target</div>
-</div>
-</aside>
-
-<!-- ===== Main ===== -->
-<div class="main">
-<div class="content">
-
-<!-- ===== Dashboard ===== -->
-<section id="view-dashboard" class="view active">
-<div class="page-head"><h2>Dashboard</h2><p>Your Source → Bridge → Target pipeline at a glance.</p></div>
-<div id="warningBanner" class="banner" style="display:none">
-Hub connection error — check that HUB_SECRET is set in Cloudflare Pages env vars.
-</div>
-<div class="stats">
-<div class="stat"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
-<div class="stat"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
-<div class="stat"><div class="num" id="statPushed">0</div><div class="label">Pushed to Botdog</div><div class="sub" id="statPushedPct">0%</div></div>
-<div class="stat"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
-<div class="stat"><div class="num" id="statSources">0</div><div class="label">Sources active</div></div>
-</div>
-
-<div class="grid-2">
-<div class="panel"><h3>Targets per Bridge</h3><div class="chart-wrap"><canvas id="chartBridges"></canvas></div></div>
-<div class="panel"><h3>Targets per Source</h3><div class="chart-wrap"><canvas id="chartSources"></canvas></div></div>
-</div>
-<div class="panel" style="margin-bottom:18px"><h3>Daily collection trend</h3><div class="chart-wrap"><canvas id="chartTrend"></canvas></div></div>
-
-<div class="panel">
-<h3>Source → Bridge → Target flow <span style="font-weight:400;color:#94a3b8;font-size:0.8rem">(click a node to filter)</span></h3>
-<div class="flow" id="flowDiagram"></div>
-<div class="flow-hint" id="flowHint">Click a Source or Bridge to highlight its path.</div>
-</div>
-</section>
-
-<!-- ===== Targets ===== -->
-<section id="view-targets" class="view">
-<div class="page-head"><h2>Targets</h2><p>Every connection collected through your bridges.</p></div>
-<div class="table-controls">
-<input type="text" id="tSearch" placeholder="Search name, title, company…" oninput="renderTargets()">
-<select id="tBridge" onchange="renderTargets()"><option value="">All bridges</option></select>
-<select id="tSource" onchange="renderTargets()"><option value="">All sources</option></select>
-<span class="result-count" id="tCount">0 targets</span>
-</div>
-<div class="table-wrap">
-<table>
-<thead><tr id="tHead">
-<th class="sortable" data-key="name">Name <span class="arrow"></span></th>
-<th class="sortable" data-key="title">Title <span class="arrow"></span></th>
-<th class="sortable" data-key="company">Company <span class="arrow"></span></th>
-<th class="sortable" data-key="bridge">Bridge <span class="arrow"></span></th>
-<th class="sortable" data-key="source">Source <span class="arrow"></span></th>
-<th class="sortable" data-key="date">Date <span class="arrow"></span></th>
-<th>LinkedIn</th>
-<th class="sortable" data-key="botdog">Botdog <span class="arrow"></span></th>
-</tr></thead>
-<tbody id="targetsBody"><tr><td colspan="8" class="empty">No targets yet</td></tr></tbody>
-</table>
-</div>
-</section>
-
-<!-- ===== Bridges ===== -->
-<section id="view-bridges" class="view">
-<div class="page-head"><h2>Bridges</h2><p>Well-connected people who introduce you to targets. Sorted by ICP-fit grade.</p></div>
-<div class="bridges-note">
-Toggle a candidate <strong>Active</strong> to have the extension collect that person's ICP connections as Targets.
-Grade: <strong>A+</strong> = helps foreign companies enter/expand into US · <strong>A</strong> = international expansion · <strong>B</strong> = commercial/BD · <strong>C</strong> = senior leadership · <strong>D</strong> = other
-</div>
-<div class="bridges-controls">
-<div class="seg" id="bridgeFilterSeg">
-<button class="active" data-filter="all" onclick="setBridgeFilter('all')">All</button>
-<button data-filter="active" onclick="setBridgeFilter('active')">Active only</button>
-</div>
-<span class="result-count" id="bridgeCount"></span>
-</div>
-<div id="bridgesBody"></div>
-</section>
-
-<!-- ===== Log ===== -->
-<section id="view-log" class="view">
-<div class="page-head"><h2>Log</h2><p>One line per prospect ever collected, newest first.</p></div>
-<div class="table-controls">
-<input type="text" id="logSearch" placeholder="Search date, source, bridge, prospect…" oninput="renderLog()">
-<select id="logLevel" onchange="renderLog()">
-<option value="">All levels</option>
-<option value="1st">1st</option>
-<option value="2nd">2nd</option>
-<option value="3rd">3rd</option>
-<option value="—">Unknown</option>
-</select>
-<span class="result-count" id="logCount">0 entries</span>
-</div>
-<div class="table-wrap">
-<div id="logBody"><div class="empty">No prospects yet</div></div>
-</div>
-</section>
-
-<!-- ===== Sources ===== -->
-<section id="view-sources" class="view">
-<div class="page-head"><h2>Sources</h2><p>Organizations you watch and collect connections from.</p></div>
-<div class="settings-card" style="max-width:620px">
-<h2>Add a Source</h2>
-<p>Add an organization to watch. Paste its LinkedIn company URL — collect its team into Targets next.</p>
-<div class="field"><label>Source name</label><input id="srcName" placeholder="e.g. Krymkier Law"></div>
-<div class="field"><label>LinkedIn company URL</label><input id="srcUrl" placeholder="https://www.linkedin.com/company/..."></div>
-<div class="field"><label>Type</label>
-<select id="srcCat">
-<option value="partner">Partner</option>
-<option value="competitor">Competitor</option>
-<option value="organization">Organization</option>
-</select>
-</div>
-<button class="btn-save" onclick="addSource()">+ Add Source</button>
-<div id="srcStatus" style="margin-top:8px;font-size:0.85rem"></div>
-</div>
-<div class="card-grid" id="sourcesBody"></div>
-</section>
-
-<!-- ===== Collections ===== -->
-<section id="view-collections" class="view">
-<div class="page-head"><h2>Collections</h2><p>When new targets were retrieved from Sales Navigator, by day.</p></div>
-<div class="timeline-rail" id="collectionsBody"><div class="empty">No collections yet</div></div>
-</section>
-
-<!-- ===== Settings ===== -->
-<section id="view-settings" class="view">
-<div class="page-head"><h2>Settings</h2><p>Backend API keys and their live status.</p></div>
-<div class="settings-card">
-<h2>API Keys</h2>
-<p>Stored securely in the Apps Script backend.</p>
-<div class="field">
-<label>Botdog API Key</label>
-<input type="password" id="inputBotdog" placeholder="paste key…">
-</div>
-<div class="field">
-<label>Resend API Key</label>
-<input type="password" id="inputResend" placeholder="paste key…">
-</div>
-<button class="btn-save" onclick="saveSettings()">Save Keys</button>
-<div id="saveStatus" style="margin-top:8px;font-size:0.85rem"></div>
-</div>
-<div class="settings-card">
-<h2>Key Status</h2>
-<p>Current backend key status.</p>
-<div id="keyStatus" class="key-status">Loading…</div>
-</div>
-</section>
-
-</div>
-</div>
-</div>
 <script>
-// ===== Version =====
-const sideVer = 'v1.5.0';
-
-// ===== Hub proxy URL (all backend calls go through this — never directly to Apps Script) =====
-// The proxy validates the session cookie server-side and injects the verified owner + HUB_SECRET.
-const HUB = '/api/hub';
-
 const CONFIG = {
+  WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec',
+  // bridge (person) -> the Source organization they represent
   BRIDGE_SOURCE: {
-    'Elie Cohen': { source: 'The Triana Group', category: 'partner', results: 55 },
-    'Jabril Bensedrine': { source: 'The Triana Group', category: 'partner', results: 45 },
-    'Phil Jeudy': { source: 'The Triana Group', category: 'partner', results: 207 },
-    'Mathias Cohen': { source: 'The Triana Group', category: 'partner', results: 30 },
-    'Anne Charlotte Le Bourhis': { source: 'The Triana Group', category: 'partner', results: 53 },
-    'Marie-Jos\u00e9e Rodi-Andrieu': { source: 'The Triana Group', category: 'partner', results: 336 },
+    'Elie Cohen':                { source: 'The Triana Group', category: 'partner', results: 55  },
+    'Jabril Bensedrine':         { source: 'The Triana Group', category: 'partner', results: 45  },
+    'Phil Jeudy':                { source: 'The Triana Group', category: 'partner', results: 207 },
+    'Mathias Cohen':             { source: 'The Triana Group', category: 'partner', results: 30  },
+    'Anne Charlotte Le Bourhis': { source: 'The Triana Group', category: 'partner', results: 53  },
+    'Marie-Josée Rodi-Andrieu':  { source: 'The Triana Group', category: 'partner', results: 336 },
   }
 };
-
-// ===== Auth gate =====
-// Called on page load. Shows the sign-in overlay or reveals the app.
-async function initAuth() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('denied') === '1') {
-    document.getElementById('signinDenied').classList.add('show');
-    document.getElementById('signinOverlay').classList.remove('hidden');
-    return;
-  }
-
-  let me;
-  try {
-    const resp = await fetch('/api/me', { credentials: 'same-origin' });
-    me = await resp.json();
-  } catch (e) {
-    me = { ok: false };
-  }
-
-  if (!me.ok) {
-    // Not authenticated — show sign-in screen
-    document.getElementById('signinOverlay').classList.remove('hidden');
-    return;
-  }
-
-  // Authenticated — wire up user chip and reveal app
-  const user = me.user;
-  document.getElementById('userChip').style.display = 'flex';
-  document.getElementById('userName').textContent = user.name || user.email;
-  document.getElementById('userAvatar').textContent = (user.name || user.email || '?')[0].toUpperCase();
-  document.getElementById('signinOverlay').classList.add('hidden');
-  document.getElementById('appShell').style.display = 'flex';
-
-  // Boot the app
-  initSorting();
-  load();
-}
-
-// ===== Sidebar timestamp =====
-function updateSidebarTs() {
-const el = document.getElementById('sideTs');
-if (el) el.textContent = new Date().toLocaleString();
-}
-
-function _norm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim(); }
+function _norm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); }
 function bridgeSource(name) {
-for (var k in CONFIG.BRIDGE_SOURCE) { if (_norm(k) === _norm(name)) return CONFIG.BRIDGE_SOURCE[k].source; }
-return 'Unassigned';
+  var n = _norm(name);
+  // 1) Real per-record source: discovered candidates (BRIDGES) and collected targets (ROWS)
+  //    both carry the Source they came from — use that, not just the hardcoded seed list.
+  for (var i = 0; i < BRIDGES.length; i++) { if (BRIDGES[i] && BRIDGES[i].source && _norm(BRIDGES[i].name) === n) return BRIDGES[i].source; }
+  for (var j = 0; j < ROWS.length; j++) { if (ROWS[j] && ROWS[j].source && _norm(ROWS[j].radar_person) === n) return ROWS[j].source; }
+  // 2) Fallback: the original hardcoded Triana seed bridges.
+  for (var k in CONFIG.BRIDGE_SOURCE) { if (_norm(k) === n) return CONFIG.BRIDGE_SOURCE[k].source; }
+  return 'Unassigned';
 }
 function leadSource(r) {
-if (r && r.source) return r.source;
-return bridgeSource(r && r.radar_person);
+  if (r && r.source) return r.source;
+  return bridgeSource(r && r.radar_person);
 }
-
-// ===== ICP-fit grade =====
-function icpGrade(title) {
-const t = _norm(title || '');
-if (!t) return 'D';
-if (/us market|usa market|north america|american market|us expansion|expand.*us|enter.*us|us entry|us go.to.market|go.to.market.*us/.test(t)) return 'A+';
-if (/foreign.*compan|international.*compan|compan.*foreign|global.*us|us.*global/.test(t)) return 'A+';
-if (/market entry|market access|market expansion/.test(t) && /us|america/.test(t)) return 'A+';
-if (/international expansion|global expansion|international development|global development/.test(t)) return 'A';
-if (/international business|global business|cross.border|cross border/.test(t)) return 'A';
-if (/international trade|global trade|export|import/.test(t)) return 'A';
-if (/international.*director|director.*international|global.*director|director.*global/.test(t)) return 'A';
-if (/international.*manager|manager.*international|global.*manager|manager.*global/.test(t)) return 'A';
-if (/international.*head|head.*international|global.*head|head.*global/.test(t)) return 'A';
-if (/international.*vp|vp.*international|global.*vp|vp.*global/.test(t)) return 'A';
-if (/business development|biz dev|bd director|bd manager|bd head/.test(t)) return 'B';
-if (/commercial director|commercial manager|commercial head|commercial vp|chief commercial/.test(t)) return 'B';
-if (/sales director|sales manager|sales head|chief sales|vp sales|head of sales/.test(t)) return 'B';
-if (/revenue|growth/.test(t) && /director|vp|head|chief|manager/.test(t)) return 'B';
-if (/partnership|alliances/.test(t)) return 'B';
-if (/ceo|coo|cfo|cto|cmo|cpo|chief exec|chief operating|chief financial|chief technolog/.test(t)) return 'C';
-if (/president|vice president|managing director|general manager|executive director/.test(t)) return 'C';
-if (/founder|co-founder|cofounder|owner|partner/.test(t)) return 'C';
-if (/\bvp\b|\bsvp\b|\bevp\b/.test(t)) return 'C';
-return 'D';
-}
-
-function gradeClass(g) {
-if (g === 'A+') return 'grade-aplus';
-if (g === 'A') return 'grade-a';
-if (g === 'B') return 'grade-b';
-if (g === 'C') return 'grade-c';
-return 'grade-d';
-}
-
-const GRADE_ORDER = { 'A+': 0, 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
 
 // ===== Global state =====
 let ROWS = [];
 let STORED_SOURCES = [];
 let CHARTS = {};
-let SORT = { key: 'date', dir: -1 };
-let FLOW_FILTER = null;
-let BRIDGES = [];
-let BRIDGE_FILTER = 'all';
+let SORT = { key: 'date', dir: -1 };       // default: newest first
+let FLOW_FILTER = null;                      // {type:'source'|'bridge', value:''}
+let BRIDGES = [];                            // candidate bridges from getBridges
+let BRIDGE_FILTER = 'all';                   // 'all' | 'active'
 let BRIDGES_LOADED = false;
-
-// ===== Hub helpers =====
-// All calls go to /api/hub (the Cloudflare Pages proxy).
-// The proxy injects the verified owner + HUB_SECRET server-side.
-// The browser never holds HUB_SECRET and cannot forge the owner.
-
-async function hubGet(params) {
-  const url = HUB + '?' + new URLSearchParams({ callback: '_cb', ...params, _: Date.now() });
-  const r = await fetch(url, { credentials: 'same-origin' });
-  const t = await r.text();
-  return JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
-}
-
-async function hubPost(body) {
-  const resp = await fetch(HUB, {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(body),
-  });
-  return resp.json();
-}
 
 // ===== Backend: Sources =====
 async function loadSources() {
-try {
-const j = await hubGet({ action: 'getSources' });
-if (j.success) STORED_SOURCES = j.sources || [];
-} catch(e) { console.error('loadSources', e); }
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=getSources&_=' + Date.now();
+    const r = await fetch(url); const t = await r.text();
+    const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (j.success) STORED_SOURCES = j.sources || [];
+  } catch(e) { console.error('loadSources', e); }
 }
 async function addSource() {
-const name = (document.getElementById('srcName').value || '').trim();
-const url = (document.getElementById('srcUrl').value || '').trim();
-const cat = document.getElementById('srcCat').value;
-const st = document.getElementById('srcStatus');
-if (!name) { st.textContent = 'Enter a source name.'; return; }
-st.textContent = 'Adding…';
-try {
-const d = await hubPost({ action: 'addSource', name, linkedin_url: url, category: cat });
-if (d.saved) {
-st.textContent = '\u2713 Added "' + name + '". Now collect its team into Targets.';
-document.getElementById('srcName').value = ''; document.getElementById('srcUrl').value = '';
-await loadSources(); await load();
-} else { st.textContent = 'Error: ' + JSON.stringify(d); }
-} catch(e) { st.textContent = 'Error: ' + e.message; }
+  const name = (document.getElementById('srcName').value || '').trim();
+  const url  = (document.getElementById('srcUrl').value || '').trim();
+  const cat  = document.getElementById('srcCat').value;
+  const orgRaw = (document.getElementById('srcOrg').value || '').trim();
+  const keyword = (document.getElementById('srcKeyword').value || '').trim();
+  const discoverNow = document.getElementById('srcDiscoverNow').checked;
+  const st   = document.getElementById('srcStatus');
+  // Pull the numeric org id out of a Sales Nav / company URL, or accept a bare number.
+  const orgId = (orgRaw.match(/(?:organization|company)\/(\d+)/) || orgRaw.match(/^(\d{3,})$/) || [])[1] || '';
+  if (!name) { st.textContent = 'Enter a source name.'; return; }
+  if (discoverNow && !orgId) { st.textContent = 'To collect bridges now, add the Sales Nav company URL or Org ID (or untick the box).'; return; }
+  st.textContent = 'Adding…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: name, linkedin_url: url, category: cat, org_id: orgId, discover_keyword: keyword, discover_now: discoverNow }) });
+    const d = await resp.json();
+    if (d.saved) {
+      st.textContent = discoverNow
+        ? '✓ Added "' + name + '". Bridges queued — they’ll be collected on the next sync, or open the Radar extension and click Discover to run now.'
+        : '✓ Added "' + name + '". Bridges will be found on the monthly discovery run.';
+      document.getElementById('srcName').value = ''; document.getElementById('srcUrl').value = ''; document.getElementById('srcOrg').value = ''; document.getElementById('srcKeyword').value = '';
+      await loadSources(); await load();
+    } else { st.textContent = 'Error: ' + JSON.stringify(d); }
+  } catch(e) { st.textContent = 'Error: ' + e.message; }
 }
 
 // ===== Backend: Bridge candidates =====
 async function loadBridges() {
-try {
-const j = await hubGet({ action: 'getBridges' });
-if (j.success) { BRIDGES = j.bridges || []; BRIDGES_LOADED = true; }
-} catch(e) { console.error('loadBridges', e); }
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=getBridges&_=' + Date.now();
+    const r = await fetch(url); const t = await r.text();
+    const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (j.success) { BRIDGES = j.bridges || []; BRIDGES_LOADED = true; }
+  } catch(e) { console.error('loadBridges', e); }
 }
 async function setBridgeActive(urn, active, statusEl) {
-if (statusEl) { statusEl.textContent = 'saving…'; statusEl.classList.remove('ok'); }
-try {
-const d = await hubPost({ action: 'setBridgeActive', urn, active });
-if (d && (d.saved || d.success)) {
-if (statusEl) { statusEl.textContent = '\u2713'; statusEl.classList.add('ok'); setTimeout(() => { if (statusEl.textContent === '\u2713') statusEl.textContent = ''; }, 1600); }
-return true;
-}
-if (statusEl) { statusEl.textContent = 'error'; }
-return false;
-} catch(e) {
-if (statusEl) statusEl.textContent = 'error';
-return false;
-}
+  if (statusEl) { statusEl.textContent = 'saving…'; statusEl.classList.remove('ok'); }
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setBridgeActive', urn: urn, active: active })
+    });
+    const d = await resp.json();
+    if (d && (d.saved || d.success)) {
+      if (statusEl) { statusEl.textContent = '✓'; statusEl.classList.add('ok'); setTimeout(() => { if (statusEl.textContent === '✓') statusEl.textContent = ''; }, 1600); }
+      return true;
+    }
+    if (statusEl) { statusEl.textContent = 'error'; }
+    return false;
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'error';
+    return false;
+  }
 }
 async function deleteBridge(urn){
-try {
-const d = await hubPost({ action: 'deleteBridge', urn });
-return !!(d && (d.saved || d.success || d.deleted));
-} catch(e) { return false; }
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'deleteBridge', urn: urn })
+    });
+    const d = await resp.json();
+    return !!(d && (d.saved || d.success || d.deleted));
+  } catch(e) {
+    return false;
+  }
 }
 
 // ===== Backend: main data load =====
 async function load() {
-try {
-const json = await hubGet({});
-if (json.success) { ROWS = json.rows || []; renderAll(); }
-else { document.getElementById('warningBanner').style.display = 'block'; }
-} catch(e) { console.error('load', e); document.getElementById('warningBanner').style.display = 'block'; }
-await loadSources();
-await loadBridges();
-await loadKeyStatus();
+  if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
+    document.getElementById('warningBanner').style.display = 'block'; return;
+  }
+  await loadSources();
+  await loadBridges();
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&_=' + Date.now();
+    const resp = await fetch(url);
+    const text = await resp.text();
+    const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (json.success) { ROWS = json.rows || []; renderAll(); }
+  } catch(e) { console.error('load', e); }
+  await loadKeyStatus();
 }
 
 // ===== Helpers =====
 function isThisWeek(d){
-if(!d) return false;
-const dt = new Date(d); if(isNaN(dt)) return false;
-const now = new Date();
-const weekAgo = new Date(now.getTime() - 7*24*60*60*1000);
-return dt >= weekAgo && dt <= now;
+  if(!d) return false;
+  const dt = new Date(d); if(isNaN(dt)) return false;
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7*24*60*60*1000);
+  return dt >= weekAgo && dt <= now;
 }
 function dayKey(d){ try{ const dt=new Date(d); if(isNaN(dt)) return ''; return dt.toISOString().slice(0,10); }catch(e){ return ''; } }
 function fmtDate(d){ try{ return d ? new Date(d).toLocaleDateString() : ''; }catch(e){ return d||''; } }
-function fmtDateTime(d){ try{ return d ? new Date(d).toLocaleString() : ''; }catch(e){ return d||''; } }
 function fmtDayLabel(key){ try{ return new Date(key+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }catch(e){ return key; } }
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function fullName(r){ return ((r.first_name||'')+' '+(r.last_name||'')).trim(); }
+// Defensive name cleaner — strips LinkedIn status suffixes ("… was last active 2 days ago",
+// "… is reachable", etc.), trailing " • …" segments, and trailing emoji/flags, so records
+// stored with dirty names (e.g. "Patrick Ferron was last active 2 days ago") display clean.
+function cleanName(raw){
+  let s = String(raw||'').replace(/\s+/g,' ').trim();
+  if(!s) return '';
+  const cut = s.match(/\s+(?:is|was)\s+(?:reachable|last active|open to work|a group member|hiring|online|out of office)\b/i);
+  if(cut && cut.index>=0) s = s.slice(0, cut.index);
+  s = s.replace(/\s*[•·]\s*.*$/,'');
+  try { s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{1F1E6}-\u{1F1FF}].*$/u,''); } catch(e) {}
+  return s.replace(/\s+/g,' ').replace(/^[\s.,;:•·\-]+|[\s.,;:•·\-]+$/g,'').trim();
+}
+function fullName(r){ return cleanName(((r.first_name||'')+' '+(r.last_name||'')).trim()); }
+
+// ===== ICP-fit grade (computed client-side from a bridge's title) =====
+// Returns one of "A+","A","B","C","D" — first matching rule wins, top to bottom.
+function icpGrade(title){
+  const t = String(title||'');
+  if (!t.trim()) return 'D';
+  const mentionsUS = /\b(US|U\.S\.|USA|United States|America|American)\b/i.test(t);
+  // A+ — explicitly bringing foreign companies INTO the US
+  const aPlusForeign = /help(ing)?\b.*\b(foreign|international|overseas|european|french|non[- ]?us)\b.*\b(compan|business|firm|client|brand)/i.test(t);
+  if (aPlusForeign && mentionsUS) return 'A+';
+  if (/\b(US|U\.S\.|USA|United States|America|American)\b.*\b(market entry|expansion|soft.?land|go[- ]?to[- ]?market|launch|set ?up|establish)/i.test(t)) return 'A+';
+  if (/\b(expand|enter|launch|bring|grow)\b.*\b(to|into|in)\b.*\b(the )?(US|U\.S\.|USA|United States|America)\b/i.test(t)) return 'A+';
+  if (/\bUS market entry\b|\bUS expansion\b/i.test(t)) return 'A+';
+  // A — international expansion generally (not US-specific)
+  if (/international (expansion|development|business|trade|growth)|market entry|cross[- ]?border|internationaliz|global expansion|expand(ing)? abroad|go[- ]?to[- ]?market|market development/i.test(t)) return 'A';
+  // B — commercial / BD roles
+  if (/business development|partnership|sales|commercial|export|growth|account (manager|executive)|revenue/i.test(t)) return 'B';
+  // C — senior / leadership without the above
+  if (/partner|founder|ceo|coo|managing director|director|vice president|\bvp\b|head of|president|consultant|advisor/i.test(t)) return 'C';
+  // D — none of the above
+  return 'D';
+}
+// Sort weight: A+ (highest) → D (lowest)
+function gradeRank(g){ return ({ 'A+':5, 'A':4, 'B':3, 'C':2, 'D':1 })[g] || 0; }
+// Connection-level badge from bridge.connection ("1st"/"2nd"/"3rd"/"")
+function connBadge(connection){
+  const c = _norm(connection);
+  if (c === '1st') return '<span class="lvl-badge lvl-1">Level 1 &#10003;</span>';
+  if (c === '2nd') return '<span class="lvl-badge lvl-2">Level 2</span>';
+  if (c === '3rd') return '<span class="lvl-badge lvl-3">Level 3</span>';
+  return '<span class="lvl-badge lvl-0">Level ?</span>';
+}
 
 // ===== Render orchestration =====
 function renderAll(){
-renderStats();
-populateFilters();
-renderTargets();
-renderBridges();
-renderSources();
-renderCollections();
-renderLog();
-renderCharts();
-renderFlow();
+  renderStats();
+  populateFilters();
+  renderTargets();
+  renderBridges();
+  renderSources();
+  renderCollections();
+  renderLog();
+  renderCharts();
+  renderFlow();
+}
+
+// ----- Collection Log view -----
+// One line per prospect ever collected: DATE : SOURCE > BRIDGE > PROSPECT (level with you).
+function levelChip(connection){
+  const c = _norm(connection);
+  if (c === '1st') return '<span class="lg-lvl l1">Level 1</span>';
+  if (c === '2nd') return '<span class="lg-lvl l2">Level 2</span>';
+  if (c === '3rd') return '<span class="lg-lvl l3">Level 3</span>';
+  return '<span class="lg-lvl l0">Level —</span>';
+}
+function renderLog(){
+  const body = document.getElementById('logBody');
+  if (!body) return;
+  const q  = (document.getElementById('logSearch').value||'').toLowerCase().trim();
+  const fl = document.getElementById('logLevel').value;
+  const cnt = document.getElementById('logCount');
+
+  // Newest first.
+  let list = ROWS.slice().sort((a,b) =>
+    (new Date(b.collected_date||0)) - (new Date(a.collected_date||0)));
+
+  list = list.filter(r => {
+    const conn = _norm(r.connection);
+    if (fl === 'none' && conn) return false;
+    if (fl && fl !== 'none' && conn !== fl) return false;
+    if (!q) return true;
+    const hay = [leadSource(r), r.radar_person, fullName(r), r.company, r.title]
+      .map(x => String(x||'').toLowerCase()).join(' ');
+    return hay.indexOf(q) !== -1;
+  });
+
+  if (cnt) cnt.textContent = list.length + (list.length===1?' collection':' collections');
+
+  if (!list.length) { body.innerHTML = '<div class="empty" style="padding:18px">No matching collections.</div>'; return; }
+
+  let html = '', lastDay = '';
+  list.forEach(r => {
+    const day = dayKey(r.collected_date);
+    if (day !== lastDay) { html += '<div class="log-day">' + esc(fmtDayLabel(day) || 'Undated') + '</div>'; lastDay = day; }
+    const source   = esc(leadSource(r) || 'Unassigned');
+    const bridge   = esc(r.radar_person || '—');
+    const prospect = esc(fullName(r) || '(unknown)');
+    html +=
+      '<div class="log-line">' +
+        '<span class="lg-date">' + esc(fmtDate(r.collected_date)) + '</span>' +
+        '<span class="lg-sep">:</span>' +
+        '<span class="lg-source">' + source + '</span>' +
+        '<span class="lg-arrow">&rsaquo;</span>' +
+        '<span class="lg-bridge">' + bridge + '</span>' +
+        '<span class="lg-arrow">&rsaquo;</span>' +
+        '<span class="lg-prospect">' + prospect + '</span>' +
+        levelChip(r.connection) +
+      '</div>';
+  });
+  body.innerHTML = html;
 }
 
 function renderStats(){
-const rows = ROWS;
-const bridges = new Set(rows.map(r => r.radar_person).filter(Boolean));
-const sources = new Set(rows.map(leadSource).filter(Boolean));
-const pushed = rows.filter(r => r.botdog_pushed).length;
-document.getElementById('statTotal').textContent = rows.length;
-document.getElementById('statWeek').textContent = rows.filter(r => isThisWeek(r.collected_date)).length;
-document.getElementById('statPushed').textContent = pushed;
-document.getElementById('statPushedPct').textContent = rows.length ? Math.round(pushed/rows.length*100) + '% of targets' : '0%';
-document.getElementById('statBridges').textContent = bridges.size;
-document.getElementById('statSources').textContent = sources.size;
+  const rows = ROWS;
+  const bridges = new Set(rows.map(r => r.radar_person).filter(Boolean));
+  const sources = new Set(rows.map(leadSource).filter(Boolean));
+  const pushed  = rows.filter(r => r.botdog_pushed).length;
+  document.getElementById('statTotal').textContent     = rows.length;
+  document.getElementById('statWeek').textContent      = rows.filter(r => isThisWeek(r.collected_date)).length;
+  document.getElementById('statPushed').textContent    = pushed;
+  document.getElementById('statPushedPct').textContent = rows.length ? Math.round(pushed/rows.length*100) + '% of targets' : '0%';
+  document.getElementById('statBridges').textContent   = bridges.size;
+  document.getElementById('statSources').textContent   = sources.size;
+  document.getElementById('leadCount').textContent     = rows.length;
 }
 
+// ----- Targets view -----
 function populateFilters(){
-const bridges = Array.from(new Set(ROWS.map(r => r.radar_person).filter(Boolean))).sort();
-const sources = Array.from(new Set(ROWS.map(leadSource).filter(Boolean))).sort();
-const bSel = document.getElementById('tBridge'), sSel = document.getElementById('tSource');
-const bVal = bSel.value, sVal = sSel.value;
-bSel.innerHTML = '<option value="">All bridges</option>' + bridges.map(b => '<option>' + esc(b) + '</option>').join('');
-sSel.innerHTML = '<option value="">All sources</option>' + sources.map(s => '<option>' + esc(s) + '</option>').join('');
-bSel.value = bVal; sSel.value = sVal;
+  const bridges = Array.from(new Set(ROWS.map(r => r.radar_person).filter(Boolean))).sort();
+  const sources = Array.from(new Set(ROWS.map(leadSource).filter(Boolean))).sort();
+  const bSel = document.getElementById('tBridge'), sSel = document.getElementById('tSource');
+  const bVal = bSel.value, sVal = sSel.value;
+  bSel.innerHTML = '<option value="">All bridges</option>' + bridges.map(b => '<option>' + esc(b) + '</option>').join('');
+  sSel.innerHTML = '<option value="">All sources</option>' + sources.map(s => '<option>' + esc(s) + '</option>').join('');
+  bSel.value = bVal; sSel.value = sVal;
 }
 
 function rowFields(r){
-return {
-name: fullName(r), title: r.title||'', company: r.company||'',
-bridge: r.radar_person||'', source: leadSource(r)||'',
-date: r.collected_date ? new Date(r.collected_date).getTime() : 0,
-botdog: r.botdog_pushed ? 1 : 0, _r: r
-};
+  return {
+    name: fullName(r), title: r.title||'', company: r.company||'',
+    bridge: r.radar_person||'', source: leadSource(r)||'',
+    date: r.collected_date ? new Date(r.collected_date).getTime() : 0,
+    botdog: r.botdog_pushed ? 1 : 0, _r: r
+  };
 }
 
 function renderTargets(){
-const q = (document.getElementById('tSearch').value||'').toLowerCase().trim();
-const fb = document.getElementById('tBridge').value;
-const fs = document.getElementById('tSource').value;
-let list = ROWS.map(rowFields);
-if (fb) list = list.filter(x => x.bridge === fb);
-if (fs) list = list.filter(x => x.source === fs);
-if (q) list = list.filter(x => (x.name+' '+x.title+' '+x.company).toLowerCase().includes(q));
+  const q = (document.getElementById('tSearch').value||'').toLowerCase().trim();
+  const fb = document.getElementById('tBridge').value;
+  const fs = document.getElementById('tSource').value;
+  let list = ROWS.map(rowFields);
+  if (fb) list = list.filter(x => x.bridge === fb);
+  if (fs) list = list.filter(x => x.source === fs);
+  if (q)  list = list.filter(x => (x.name+' '+x.title+' '+x.company).toLowerCase().includes(q));
 
-const k = SORT.key, dir = SORT.dir;
-list.sort((a,b) => {
-let va = a[k], vb = b[k];
-if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
-if (va < vb) return -1*dir; if (va > vb) return 1*dir; return 0;
-});
+  const k = SORT.key, dir = SORT.dir;
+  list.sort((a,b) => {
+    let va = a[k], vb = b[k];
+    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return -1*dir; if (va > vb) return 1*dir; return 0;
+  });
 
-const body = document.getElementById('targetsBody');
-body.innerHTML = list.length ? list.map(x => {
-const r = x._r;
-return '<tr><td>' + esc(x.name) + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.company) +
-'</td><td>' + esc(x.bridge) + '</td><td>' + esc(x.source) + '</td><td>' + fmtDate(r.collected_date) +
-'</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">&#8599;</a>' : '&mdash;') +
-'</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">&#10003;</span>' : '') + '</td></tr>';
-}).join('') : '<tr><td colspan="8" class="empty">No targets match</td></tr>';
-document.getElementById('tCount').textContent = list.length + ' target' + (list.length===1?'':'s');
+  const body = document.getElementById('targetsBody');
+  body.innerHTML = list.length ? list.map(x => {
+    const r = x._r;
+    return '<tr><td>' + esc(x.name) + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.company) +
+      '</td><td>' + esc(x.bridge) + '</td><td>' + esc(x.source) + '</td><td>' + fmtDate(r.collected_date) +
+      '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') +
+      '</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="empty">No targets match</td></tr>';
+  document.getElementById('tCount').textContent = list.length + ' target' + (list.length===1?'':'s');
 
-document.querySelectorAll('#tHead th.sortable').forEach(th => {
-th.classList.toggle('sorted', th.dataset.key === SORT.key);
-const a = th.querySelector('.arrow');
-a.textContent = th.dataset.key === SORT.key ? (SORT.dir === 1 ? '\u25b2' : '\u25bc') : '';
-});
+  // update header arrows
+  document.querySelectorAll('#tHead th.sortable').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.key === SORT.key);
+    const a = th.querySelector('.arrow');
+    a.textContent = th.dataset.key === SORT.key ? (SORT.dir === 1 ? '▲' : '▼') : '';
+  });
 }
 
 function initSorting(){
-document.querySelectorAll('#tHead th.sortable').forEach(th => {
-th.addEventListener('click', () => {
-const key = th.dataset.key;
-if (SORT.key === key) SORT.dir *= -1;
-else { SORT.key = key; SORT.dir = (key === 'date' || key === 'botdog') ? -1 : 1; }
-renderTargets();
-});
-});
+  document.querySelectorAll('#tHead th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (SORT.key === key) SORT.dir *= -1;
+      else { SORT.key = key; SORT.dir = (key === 'date' || key === 'botdog') ? -1 : 1; }
+      renderTargets();
+    });
+  });
 }
 
-function renderLog(){
-const q = (document.getElementById('logSearch').value||'').toLowerCase().trim();
-const lf = document.getElementById('logLevel').value;
-const sorted = ROWS.slice().sort((a,b) => {
-const da = a.collected_date ? new Date(a.collected_date).getTime() : 0;
-const db = b.collected_date ? new Date(b.collected_date).getTime() : 0;
-return db - da;
-});
-let rows = sorted.filter(r => {
-const level = r.connection_level || '\u2014';
-if (lf && level !== lf) return false;
-const name = fullName(r);
-const src = leadSource(r);
-const bridge = r.radar_person || '\u2014';
-const line = (fmtDateTime(r.collected_date) + ' ' + src + ' ' + bridge + ' ' + name + ' ' + level).toLowerCase();
-if (q && !line.includes(q)) return false;
-return true;
-});
-const body = document.getElementById('logBody');
-const countEl = document.getElementById('logCount');
-countEl.textContent = rows.length + ' entr' + (rows.length===1?'y':'ies');
-if (!rows.length) { body.innerHTML = '<div class="empty">No matching entries</div>'; return; }
-body.innerHTML = rows.map(r => {
-const name = fullName(r);
-const src = esc(leadSource(r));
-const bridge = esc(r.radar_person || '\u2014');
-const level = r.connection_level || '\u2014';
-const lvlClass = level === '1st' ? 'l1' : level === '2nd' ? 'l2' : level === '3rd' ? 'l3' : 'lunk';
-const dt = r.collected_date ? new Date(r.collected_date) : null;
-const dateStr = dt ? dt.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '\u2014';
-return '<div class="log-row">' +
-'<span class="log-date">' + esc(dateStr) + '</span>' +
-'<span class="log-path">' + src + ' \u203a ' + bridge + ' \u203a <strong>' + esc(name) + '</strong></span>' +
-'<span class="log-level ' + lvlClass + '">' + esc(level) + '</span>' +
-'</div>';
-}).join('');
-}
-
+// ----- Bridges view -----
 function bridgeCounts(){
-const byBridge = {};
-ROWS.forEach(r => { const k = r.radar_person || '\u2014'; (byBridge[k] = byBridge[k] || []).push(r); });
-Object.keys(CONFIG.BRIDGE_SOURCE).forEach(k => { if (!byBridge[k]) byBridge[k] = []; });
-return byBridge;
+  const byBridge = {};
+  ROWS.forEach(r => { const k = r.radar_person || '—'; (byBridge[k] = byBridge[k] || []).push(r); });
+  Object.keys(CONFIG.BRIDGE_SOURCE).forEach(k => { if (!byBridge[k]) byBridge[k] = []; });
+  return byBridge;
 }
+// # of targets already collected via a bridge (match row.radar_person to bridge.name)
 function targetsForBridge(name){
-const n = _norm(name);
-let c = 0;
-ROWS.forEach(r => { if (_norm(r.radar_person) === n) c++; });
-return c;
+  const n = _norm(name);
+  let c = 0;
+  ROWS.forEach(r => { if (_norm(r.radar_person) === n) c++; });
+  return c;
 }
 function setBridgeFilter(f){
-BRIDGE_FILTER = f;
-document.querySelectorAll('#bridgeFilterSeg button').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
-renderBridges();
+  BRIDGE_FILTER = f;
+  document.querySelectorAll('#bridgeFilterSeg button').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  renderBridges();
 }
 function renderBridges(){
-const body = document.getElementById('bridgesBody');
-const countEl = document.getElementById('bridgeCount');
-if (!BRIDGES_LOADED) { body.innerHTML = '<div class="empty">Loading bridge candidates\u2026</div>'; if (countEl) countEl.textContent = ''; return; }
-if (!BRIDGES.length) { body.innerHTML = '<div class="empty">No bridge candidates yet \u2014 add a Source and the extension will discover its people.</div>'; if (countEl) countEl.textContent = ''; return; }
-const bySource = {};
-BRIDGES.forEach(b => { const s = b.source || 'Unassigned'; (bySource[s] = bySource[s] || []).push(b); });
-const sourceEntries = Object.entries(bySource).sort((a,b) => b[1].length - a[1].length);
-const showActiveOnly = BRIDGE_FILTER === 'active';
-let totalActive = 0;
-BRIDGES.forEach(b => { if (b.active) totalActive++; });
-const html = sourceEntries.map(([src, list]) => {
-const activeCount = list.filter(b => b.active).length;
-const visible = showActiveOnly ? list.filter(b => b.active) : list;
-if (!visible.length) return '';
-visible.sort((a,b) => {
-const ga = GRADE_ORDER[icpGrade(a.title)] || 4;
-const gb = GRADE_ORDER[icpGrade(b.title)] || 4;
-if (ga !== gb) return ga - gb;
-if (!!b.active !== !!a.active) return (b.active?1:0) - (a.active?1:0);
-return targetsForBridge(b.name) - targetsForBridge(a.name);
-});
-const rows = visible.map(b => {
-const tgt = targetsForBridge(b.name);
-const on = !!b.active;
-const urnAttr = esc(b.urn);
-const grade = icpGrade(b.title);
-const gradePill = '<span class="pill ' + gradeClass(grade) + '">' + esc(grade) + '</span>';
-const conn = b.connection ? '<span class="pill conn">' + esc(b.connection) + '</span>' : '';
-const is1st = _norm(b.connection) === '1st';
-const hint = is1st ? '' : '<span class="conn-hint">connect first</span>';
-const connect = b.linkedin_url ? '<a class="connect" href="' + esc(b.linkedin_url) + '" target="_blank" rel="noopener">Open profile &#8599;</a>' : '';
-const ttl = b.title ? '<div class="ttl">' + esc(b.title) + '</div>' : '';
-return '<div class="bridge-row' + (on ? ' on' : '') + '" data-urn="' + urnAttr + '">' +
-'<label class="switch"><input type="checkbox"' + (on ? ' checked' : '') +
-' onchange="onBridgeToggle(this,\'' + jsq(b.urn) + '\')"><span class="track"></span></label>' +
-'<div class="info"><div class="nm">' + esc(b.name) + ' ' + conn + ' ' + gradePill + ' ' + hint + ' ' + connect + '</div>' + ttl + '</div>' +
-'<div class="tgtcount"><b>' + tgt + '</b><br><span style="font-size:0.72rem">targets</span></div>' +
-'<div class="save-status"></div>' +
-'<button class="remove" title="Remove candidate" onclick="onBridgeRemove(this,\'' + jsq(b.urn) + '\')">\u2715</button>' +
-'</div>';
-}).join('');
-return '<div class="bridge-src-section">' +
-'<div class="bridge-src-head"><span class="nm">' + esc(src.toUpperCase()) + '</span>' +
-'<span class="meta">' + list.length + ' candidate' + (list.length===1?'':'s') + '</span>' +
-'<span class="actives">' + activeCount + ' active</span></div>' +
-'<div class="bridge-list">' + rows + '</div></div>';
-}).join('');
-body.innerHTML = html || '<div class="empty">No active bridges yet \u2014 toggle a candidate on above.</div>';
-if (countEl) countEl.textContent = totalActive + ' of ' + BRIDGES.length + ' active';
+  const body = document.getElementById('bridgesBody');
+  const countEl = document.getElementById('bridgeCount');
+
+  // Not fetched yet
+  if (!BRIDGES_LOADED) {
+    body.innerHTML = '<div class="empty">Loading bridge candidates…</div>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  // Empty state
+  if (!BRIDGES.length) {
+    body.innerHTML = '<div class="empty">No bridge candidates yet — add a Source and the extension will discover its people.</div>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+
+  // Group by source (organization)
+  const bySource = {};
+  BRIDGES.forEach(b => {
+    const s = b.source || 'Unassigned';
+    (bySource[s] = bySource[s] || []).push(b);
+  });
+
+  // Sort sources by candidate count desc
+  const sourceEntries = Object.entries(bySource).sort((a,b) => b[1].length - a[1].length);
+  const showActiveOnly = BRIDGE_FILTER === 'active';
+
+  let totalShown = 0, totalActive = 0;
+  BRIDGES.forEach(b => { if (b.active) totalActive++; });
+
+  const html = sourceEntries.map(([src, list]) => {
+    const activeCount = list.filter(b => b.active).length;
+    const visible = showActiveOnly ? list.filter(b => b.active) : list;
+    if (!visible.length) return '';
+    totalShown += visible.length;
+
+    // sort within source: active first, then by ICP grade (A+→D),
+    // then Level 1 first within a grade, then target count desc, then name
+    visible.sort((a,b) => {
+      if (!!b.active !== !!a.active) return (b.active?1:0) - (a.active?1:0);
+      const gb = gradeRank(icpGrade(b.title)), ga = gradeRank(icpGrade(a.title));
+      if (gb !== ga) return gb - ga;
+      const l1b = (_norm(b.connection)==='1st')?1:0, l1a = (_norm(a.connection)==='1st')?1:0;
+      if (l1b !== l1a) return l1b - l1a;
+      const tb = targetsForBridge(b.name), ta = targetsForBridge(a.name);
+      if (tb !== ta) return tb - ta;
+      return _norm(a.name).localeCompare(_norm(b.name));
+    });
+
+    const rows = visible.map(b => {
+      const tgt = targetsForBridge(b.name);
+      const on  = !!b.active;
+      const urnAttr = esc(b.urn);
+      const is1st = _norm(b.connection) === '1st';
+      const lvl  = connBadge(b.connection);
+      const hint = is1st ? '' : '<span class="conn-hint">connect first</span>';
+      const grade = icpGrade(b.title);
+      const gradeBadge = '<span class="icp-grade g-' + grade.replace('+','plus') + '" title="ICP fit">' + grade + '</span>';
+      const connect = b.linkedin_url
+        ? '<a class="connect" href="' + esc(b.linkedin_url) + '" target="_blank" rel="noopener">Open profile ↗</a>'
+        : '';
+      const ttl  = b.title ? '<div class="ttl">' + esc(b.title) + '</div>' : '';
+      return '<div class="bridge-row' + (on ? ' on' : '') + '" data-urn="' + urnAttr + '">' +
+        '<label class="switch"><input type="checkbox"' + (on ? ' checked' : '') +
+          ' onchange="onBridgeToggle(this,\'' + jsq(b.urn) + '\')"><span class="track"></span></label>' +
+        gradeBadge +
+        '<div class="info"><div class="nm">' + esc(cleanName(b.name)) + ' ' + lvl + ' ' + hint + ' ' + connect + '</div>' + ttl + '</div>' +
+        '<div class="tgtcount"><b>' + tgt + '</b><br><span style="font-size:0.72rem">targets</span></div>' +
+        '<div class="save-status"></div>' +
+        '<button class="remove" title="Remove candidate" onclick="onBridgeRemove(this,\'' + jsq(b.urn) + '\')">✕</button>' +
+        '</div>';
+    }).join('');
+
+    return '<div class="bridge-src-section">' +
+      '<div class="bridge-src-head"><span class="nm">' + esc(src.toUpperCase()) + '</span>' +
+        '<span class="meta">' + list.length + ' candidate' + (list.length===1?'':'s') + '</span>' +
+        '<span class="actives">' + activeCount + ' active</span></div>' +
+      '<div class="bridge-list">' + rows + '</div></div>';
+  }).join('');
+
+  body.innerHTML = html || '<div class="empty">No active bridges yet — toggle a candidate on above.</div>';
+  if (countEl) countEl.textContent = totalActive + ' of ' + BRIDGES.length + ' active';
 }
 
+// Toggle handler: optimistic UI + POST
 async function onBridgeToggle(inputEl, urn){
-const newState = inputEl.checked;
-const rowEl = inputEl.closest('.bridge-row');
-const statusEl = rowEl ? rowEl.querySelector('.save-status') : null;
-if (rowEl) rowEl.classList.toggle('on', newState);
-inputEl.disabled = true;
-const rec = BRIDGES.find(b => String(b.urn) === String(urn));
-const prev = rec ? rec.active : undefined;
-if (rec) rec.active = newState;
-const ok = await setBridgeActive(urn, newState, statusEl);
-inputEl.disabled = false;
-if (!ok) { if (rec) rec.active = prev; inputEl.checked = !newState; if (rowEl) rowEl.classList.toggle('on', !newState); }
-renderBridges();
+  const newState = inputEl.checked;
+  const rowEl = inputEl.closest('.bridge-row');
+  const statusEl = rowEl ? rowEl.querySelector('.save-status') : null;
+
+  // optimistic UI
+  if (rowEl) rowEl.classList.toggle('on', newState);
+  inputEl.disabled = true;
+  const rec = BRIDGES.find(b => String(b.urn) === String(urn));
+  const prev = rec ? rec.active : undefined;
+  if (rec) rec.active = newState;
+
+  const ok = await setBridgeActive(urn, newState, statusEl);
+  inputEl.disabled = false;
+
+  if (!ok) {
+    // revert on failure
+    if (rec) rec.active = prev;
+    inputEl.checked = !newState;
+    if (rowEl) rowEl.classList.toggle('on', !newState);
+  }
+  // refresh the per-source active count + header badge (cheap re-render)
+  renderBridges();
 }
 
+// Remove handler: optimistic DOM removal + POST deleteBridge
 async function onBridgeRemove(btnEl, urn){
-const rowEl = btnEl.closest('.bridge-row');
-const statusEl = rowEl ? rowEl.querySelector('.save-status') : null;
-btnEl.disabled = true;
-if (rowEl) rowEl.classList.add('removing');
-if (statusEl) { statusEl.textContent = 'removing\u2026'; statusEl.classList.remove('ok'); }
-const ok = await deleteBridge(urn);
-if (ok) { BRIDGES = BRIDGES.filter(b => String(b.urn) !== String(urn)); renderBridges(); }
-else { if (rowEl) rowEl.classList.remove('removing'); btnEl.disabled = false; if (statusEl) statusEl.textContent = 'error'; }
+  const rowEl = btnEl.closest('.bridge-row');
+  const statusEl = rowEl ? rowEl.querySelector('.save-status') : null;
+
+  // optimistic UI
+  btnEl.disabled = true;
+  if (rowEl) rowEl.classList.add('removing');
+  if (statusEl) { statusEl.textContent = 'removing…'; statusEl.classList.remove('ok'); }
+
+  const ok = await deleteBridge(urn);
+  if (ok) {
+    // drop from state and re-render (keeps counts/grouping consistent)
+    BRIDGES = BRIDGES.filter(b => String(b.urn) !== String(urn));
+    renderBridges();
+  } else {
+    if (rowEl) rowEl.classList.remove('removing');
+    btnEl.disabled = false;
+    if (statusEl) statusEl.textContent = 'error';
+  }
 }
 
+// ----- Sources view -----
 function sourceAgg(){
-const byBridge = bridgeCounts();
-const bySource = {};
-const ensureSrc = s => (bySource[s] = bySource[s] || { bridges: [], leads: 0, url: '', category: 'partner' });
-STORED_SOURCES.forEach(s => { const o = ensureSrc(s.name); o.url = s.linkedin_url || o.url; o.category = s.category || o.category; });
-ROWS.forEach(r => { ensureSrc(leadSource(r)).leads++; });
-Object.keys(byBridge).forEach(b => { if (b && b !== '\u2014') ensureSrc(bridgeSource(b)).bridges.push(b); });
-return bySource;
+  const byBridge = bridgeCounts();
+  const bySource = {};
+  const ensureSrc = s => (bySource[s] = bySource[s] || { bridges: [], leads: 0, url: '', category: 'partner' });
+  STORED_SOURCES.forEach(s => { const o = ensureSrc(s.name); o.url = s.linkedin_url || o.url; o.category = s.category || o.category; o.org_id = s.org_id || o.org_id; });
+  ROWS.forEach(r => { ensureSrc(leadSource(r)).leads++; });
+  Object.keys(byBridge).forEach(b => { if (b && b !== '—') ensureSrc(bridgeSource(b)).bridges.push(b); });
+  return bySource;
 }
 function renderSources(){
-const bySource = sourceAgg();
-const sBody = document.getElementById('sourcesBody');
-const sEntries = Object.entries(bySource).filter(([s,info]) => s && (s !== 'Unassigned' || info.leads > 0)).sort((a,b) => b[1].leads - a[1].leads);
-sBody.innerHTML = sEntries.length ? sEntries.map(([s, info]) => {
-const cat = info.category || 'partner';
-const link = info.url ? '<a href="' + esc(info.url) + '" target="_blank" style="font-size:0.8rem">&#8599; company</a>' : '';
-const via = info.bridges.length ? 'via ' + info.bridges.length + ' bridge' + (info.bridges.length===1?'':'s') + ': ' + esc(info.bridges.join(', ')) : (info.leads ? 'leadership collected directly' : 'no targets collected yet');
-return '<div class="entity-card"><div class="top"><div><h3>&#128205; ' + esc(s) + '</h3>' + (link?('<p>'+link+'</p>'):'') + '</div><span class="pill ' + cat + '">' + cat + '</span></div>' + '<p style="margin-top:10px"><span class="big">' + info.leads + '</span> <small>targets</small></p>' + '<p style="margin-top:6px">' + via + '</p></div>';
-}).join('') : '<div class="empty">No sources yet \u2014 add one above.</div>';
+  const bySource = sourceAgg();
+  const sBody = document.getElementById('sourcesBody');
+  const sEntries = Object.entries(bySource)
+    .filter(([s, info]) => s && (s !== 'Unassigned' || info.leads > 0))
+    .sort((a,b) => b[1].leads - a[1].leads);
+  sBody.innerHTML = sEntries.length ? sEntries.map(([s, info]) => {
+    const cat = info.category || 'partner';
+    const link = info.url ? '<a href="' + esc(info.url) + '" target="_blank" style="font-size:0.8rem">↗ company</a>' : '';
+    const nb = info.bridges.length;
+    const via = nb
+      ? nb + ' bridge' + (nb===1?'':'s') + ': ' + esc(info.bridges.map(cleanName).join(', '))
+      : (info.leads ? 'leadership collected directly'
+         : (info.org_id ? 'ready — no bridges yet (use “Find Bridges Now” in the extension)'
+                        : 'add a Sales Nav Org ID to enable bridge discovery'));
+    return '<div class="entity-card"><div class="top"><div><h3>📍 ' + esc(s) + '</h3>' + (link?('<p>'+link+'</p>'):'') +
+      '</div><span class="pill ' + cat + '">' + cat + '</span></div>' +
+      '<p style="margin-top:10px"><span class="big">' + info.leads + '</span> <small>targets</small></p>' +
+      '<p style="margin-top:6px">' + via + '</p></div>';
+  }).join('') : '<div class="empty">No sources yet — add one above.</div>';
 }
 
+// ----- Collections view -----
 function renderCollections(){
-const byDay = {};
-ROWS.forEach(r => { const k = dayKey(r.collected_date); if (!k) return; (byDay[k] = byDay[k] || []).push(r); });
-const days = Object.keys(byDay).sort().reverse();
-const body = document.getElementById('collectionsBody');
-if (!days.length) { body.innerHTML = '<div class="empty">No collections yet</div>'; return; }
-body.innerHTML = days.map(k => {
-const rows = byDay[k];
-const byBridge = {};
-rows.forEach(r => { const b = r.radar_person || 'Unassigned'; byBridge[b] = (byBridge[b]||0)+1; });
-const chips = Object.entries(byBridge).sort((a,b)=>b[1]-a[1]).map(([b,c]) => '<span class="bchip">' + esc(b) + ' (' + c + ')</span>').join('');
-return '<div class="collection-day"><div class="date">' + esc(fmtDayLabel(k)) + '</div><div class="summary">' + rows.length + ' new target' + (rows.length===1?'':'s') + ' collected</div><div class="bridges">bridges: ' + chips + '</div></div>';
-}).join('');
+  const byDay = {};
+  ROWS.forEach(r => {
+    const k = dayKey(r.collected_date); if (!k) return;
+    (byDay[k] = byDay[k] || []).push(r);
+  });
+  const days = Object.keys(byDay).sort().reverse();
+  const body = document.getElementById('collectionsBody');
+  if (!days.length) { body.innerHTML = '<div class="empty">No collections yet</div>'; return; }
+  body.innerHTML = days.map(k => {
+    const rows = byDay[k];
+    const byBridge = {};
+    rows.forEach(r => { const b = r.radar_person || 'Unassigned'; byBridge[b] = (byBridge[b]||0)+1; });
+    const chips = Object.entries(byBridge).sort((a,b)=>b[1]-a[1])
+      .map(([b,c]) => '<span class="bchip">' + esc(b) + ' (' + c + ')</span>').join('');
+    return '<div class="collection-day"><div class="date">' + esc(fmtDayLabel(k)) + '</div>' +
+      '<div class="summary">' + rows.length + ' new target' + (rows.length===1?'':'s') + ' collected</div>' +
+      '<div class="bridges">bridges: ' + chips + '</div></div>';
+  }).join('');
 }
 
+// ----- Charts -----
 function destroyChart(id){ if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
 function renderCharts(){
-if (typeof Chart === 'undefined') return;
-const PRIMARY='#1e40af', ACCENT='#3b82f6';
-const palette=['#1e40af','#3b82f6','#60a5fa','#93c5fd','#2563eb','#1d4ed8','#0ea5e9','#38bdf8','#818cf8','#a5b4fc'];
-const byBridge = bridgeCounts();
-const bEntries = Object.entries(byBridge).filter(([n])=>n&&n!=='\u2014').sort((a,b)=>b[1].length-a[1].length);
-destroyChart('chartBridges');
-CHARTS.chartBridges = new Chart(document.getElementById('chartBridges'), {
-type:'bar', data:{ labels:bEntries.map(e=>e[0]), datasets:[{ label:'Targets', data:bEntries.map(e=>e[1].length), backgroundColor:ACCENT, borderRadius:4 }] },
-options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
-});
-const bySource = sourceAgg();
-const sEntries = Object.entries(bySource).filter(([s,i])=>s&&(s!=='Unassigned'||i.leads>0)).sort((a,b)=>b[1].leads-a[1].leads);
-destroyChart('chartSources');
-CHARTS.chartSources = new Chart(document.getElementById('chartSources'), {
-type:'doughnut', data:{ labels:sEntries.map(e=>e[0]), datasets:[{ data:sEntries.map(e=>e[1].leads), backgroundColor:palette, borderWidth:2, borderColor:'#fff' }] },
-options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:12, font:{size:11}}}} }
-});
-const byDay = {};
-ROWS.forEach(r => { const k = dayKey(r.collected_date); if (k) byDay[k] = (byDay[k]||0)+1; });
-const dKeys = Object.keys(byDay).sort();
-destroyChart('chartTrend');
-CHARTS.chartTrend = new Chart(document.getElementById('chartTrend'), {
-type:'line', data:{ labels:dKeys.map(fmtDayLabel), datasets:[{ label:'New targets', data:dKeys.map(k=>byDay[k]), borderColor:PRIMARY, backgroundColor:'rgba(59,130,246,0.12)', fill:true, tension:0.3, pointRadius:3, pointBackgroundColor:PRIMARY }] },
-options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
-});
+  if (typeof Chart === 'undefined') return;
+  const PRIMARY='#1e40af', ACCENT='#3b82f6';
+  const palette=['#1e40af','#3b82f6','#60a5fa','#93c5fd','#2563eb','#1d4ed8','#0ea5e9','#38bdf8','#818cf8','#a5b4fc'];
+
+  // Targets per Bridge
+  const byBridge = bridgeCounts();
+  const bEntries = Object.entries(byBridge).filter(([n])=>n&&n!=='—').sort((a,b)=>b[1].length-a[1].length);
+  destroyChart('chartBridges');
+  CHARTS.chartBridges = new Chart(document.getElementById('chartBridges'), {
+    type:'bar',
+    data:{ labels:bEntries.map(e=>e[0]), datasets:[{ label:'Targets', data:bEntries.map(e=>e[1].length), backgroundColor:ACCENT, borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+  });
+
+  // Targets per Source
+  const bySource = sourceAgg();
+  const sEntries = Object.entries(bySource).filter(([s,i])=>s&&(s!=='Unassigned'||i.leads>0)).sort((a,b)=>b[1].leads-a[1].leads);
+  destroyChart('chartSources');
+  CHARTS.chartSources = new Chart(document.getElementById('chartSources'), {
+    type:'doughnut',
+    data:{ labels:sEntries.map(e=>e[0]), datasets:[{ data:sEntries.map(e=>e[1].leads), backgroundColor:palette, borderWidth:2, borderColor:'#fff' }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:12, font:{size:11}}}} }
+  });
+
+  // Daily trend
+  const byDay = {};
+  ROWS.forEach(r => { const k = dayKey(r.collected_date); if (k) byDay[k] = (byDay[k]||0)+1; });
+  const dKeys = Object.keys(byDay).sort();
+  destroyChart('chartTrend');
+  CHARTS.chartTrend = new Chart(document.getElementById('chartTrend'), {
+    type:'line',
+    data:{ labels:dKeys.map(fmtDayLabel), datasets:[{ label:'New targets', data:dKeys.map(k=>byDay[k]),
+      borderColor:PRIMARY, backgroundColor:'rgba(59,130,246,0.12)', fill:true, tension:0.3, pointRadius:3, pointBackgroundColor:PRIMARY }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+  });
 }
 
+// ----- Flow diagram -----
 function renderFlow(){
-const bySource = sourceAgg();
-const byBridge = bridgeCounts();
-const sources = Object.entries(bySource).filter(([s,i]) => s && (s!=='Unassigned' || i.leads>0)).sort((a,b)=>b[1].leads-a[1].leads);
-const bridges = Object.entries(byBridge).filter(([n]) => n && n!=='\u2014').sort((a,b)=>b[1].length-a[1].length);
-const f = FLOW_FILTER;
-const bridgeMatchesFilter = (name) => { if (!f) return true; if (f.type==='bridge') return name===f.value; if (f.type==='source') return bridgeSource(name)===f.value; return true; };
-const sourceMatchesFilter = (name) => { if (!f) return true; if (f.type==='source') return name===f.value; if (f.type==='bridge') return bridgeSource(f.value)===name; return true; };
-const srcCol = sources.map(([s,info]) => {
-const dim = !sourceMatchesFilter(s) ? ' dim' : '';
-const act = (f && f.type==='source' && f.value===s) ? ' active' : '';
-return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'source\',\'' + jsq(s) + '\')">' + '<span class="nm">' + esc(s) + '</span><span class="ct">' + info.leads + '</span></div>';
-}).join('') || '<div class="flow-node target">No sources</div>';
-const brCol = bridges.map(([n,l]) => {
-const dim = !bridgeMatchesFilter(n) ? ' dim' : '';
-const act = (f && f.type==='bridge' && f.value===n) ? ' active' : '';
-return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'bridge\',\'' + jsq(n) + '\')">' + '<span class="nm">' + esc(n) + '</span><span class="ct">' + l.length + '</span></div>';
-}).join('') || '<div class="flow-node target">No bridges</div>';
-let tCount, tLabel;
-if (f && f.type==='bridge') { tCount = (byBridge[f.value]||[]).length; tLabel = 'targets via ' + f.value; }
-else if (f && f.type==='source') { tCount = (bySource[f.value]||{leads:0}).leads; tLabel = 'targets from ' + f.value; }
-else { tCount = ROWS.length; tLabel = 'total targets'; }
-const tgtCol = '<div class="flow-node target"><span class="big" style="font-size:1.4rem;font-weight:700;color:#1e40af">' + tCount + '</span><br><span style="font-size:0.78rem;color:#64748b">' + esc(tLabel) + '</span></div>';
-document.getElementById('flowDiagram').innerHTML = '<div class="flow-col"><div class="colhead">Sources</div>' + srcCol + '</div>' + '<div class="flow-col"><div class="colhead">Bridges</div>' + brCol + '</div>' + '<div class="flow-col"><div class="colhead">Targets</div>' + tgtCol + '</div>';
-document.getElementById('flowHint').textContent = f ? 'Filtering by ' + f.type + ': ' + f.value + ' \u2014 click again to clear.' : 'Click a Source or Bridge to highlight its path.';
+  const bySource = sourceAgg();
+  const byBridge = bridgeCounts();
+
+  // map source -> bridges, bridge -> count
+  const sources = Object.entries(bySource)
+    .filter(([s,i]) => s && (s!=='Unassigned' || i.leads>0))
+    .sort((a,b)=>b[1].leads-a[1].leads);
+  const bridges = Object.entries(byBridge)
+    .filter(([n]) => n && n!=='—')
+    .sort((a,b)=>b[1].length-a[1].length);
+
+  const f = FLOW_FILTER;
+  const bridgeMatchesFilter = (name) => {
+    if (!f) return true;
+    if (f.type==='bridge') return name===f.value;
+    if (f.type==='source') return bridgeSource(name)===f.value;
+    return true;
+  };
+  const sourceMatchesFilter = (name) => {
+    if (!f) return true;
+    if (f.type==='source') return name===f.value;
+    if (f.type==='bridge') return bridgeSource(f.value)===name;
+    return true;
+  };
+
+  const srcCol = sources.map(([s,info]) => {
+    const dim = !sourceMatchesFilter(s) ? ' dim' : '';
+    const act = (f && f.type==='source' && f.value===s) ? ' active' : '';
+    return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'source\',\'' + jsq(s) + '\')">' +
+      '<span class="nm">' + esc(s) + '</span><span class="ct">' + info.leads + '</span></div>';
+  }).join('') || '<div class="flow-node target">No sources</div>';
+
+  const brCol = bridges.map(([n,l]) => {
+    const dim = !bridgeMatchesFilter(n) ? ' dim' : '';
+    const act = (f && f.type==='bridge' && f.value===n) ? ' active' : '';
+    return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'bridge\',\'' + jsq(n) + '\')">' +
+      '<span class="nm">' + esc(n) + '</span><span class="ct">' + l.length + '</span></div>';
+  }).join('') || '<div class="flow-node target">No bridges</div>';
+
+  // Targets column: count under current filter
+  let tCount, tLabel;
+  if (f && f.type==='bridge') {
+    tCount = (byBridge[f.value]||[]).length; tLabel = 'targets via ' + f.value;
+  } else if (f && f.type==='source') {
+    tCount = (bySource[f.value]||{leads:0}).leads; tLabel = 'targets from ' + f.value;
+  } else {
+    tCount = ROWS.length; tLabel = 'total targets';
+  }
+  const tgtCol = '<div class="flow-node target"><span class="big" style="font-size:1.4rem;font-weight:700;color:#1e40af">' + tCount + '</span><br>' +
+    '<span style="font-size:0.78rem;color:#64748b">' + esc(tLabel) + '</span></div>';
+
+  document.getElementById('flowDiagram').innerHTML =
+    '<div class="flow-col"><div class="colhead">Sources</div>' + srcCol + '</div>' +
+    '<div class="flow-col"><div class="colhead">Bridges</div>' + brCol + '</div>' +
+    '<div class="flow-col"><div class="colhead">Targets</div>' + tgtCol + '</div>';
+
+  document.getElementById('flowHint').textContent = f
+    ? 'Filtering by ' + f.type + ': ' + f.value + ' — click again to clear.'
+    : 'Click a Source or Bridge to highlight its path.';
 }
 function jsq(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
-function setFlowFilter(type, value){ if (FLOW_FILTER && FLOW_FILTER.type===type && FLOW_FILTER.value===value) FLOW_FILTER = null; else FLOW_FILTER = { type, value }; renderFlow(); }
-
-function showView(name){
-document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-document.getElementById('view-' + name).classList.add('active');
-document.getElementById('nav-' + name).classList.add('active');
-if (name === 'dashboard') Object.values(CHARTS).forEach(c => { try{ c.resize(); }catch(e){} });
-if (name === 'bridges') { loadBridges().then(renderBridges); }
-if (name === 'log') renderLog();
+function setFlowFilter(type, value){
+  if (FLOW_FILTER && FLOW_FILTER.type===type && FLOW_FILTER.value===value) FLOW_FILTER = null;
+  else FLOW_FILTER = { type:type, value:value };
+  renderFlow();
 }
 
+// ===== Navigation =====
+function showView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  // charts need a resize nudge when their container becomes visible
+  if (name === 'dashboard') Object.values(CHARTS).forEach(c => { try{ c.resize(); }catch(e){} });
+  // refresh bridge candidates each time the Bridges view is opened
+  if (name === 'bridges') { loadBridges().then(renderBridges); }
+}
+
+// ===== Settings =====
 async function saveSettings() {
-const botdog = document.getElementById('inputBotdog').value.trim();
-const resend = document.getElementById('inputResend').value.trim();
-const status = document.getElementById('saveStatus');
-if (!botdog && !resend) { status.textContent = 'Enter at least one key.'; return; }
-status.textContent = 'Saving\u2026';
-try {
-const data = await hubPost({ action: 'setConfig', botdog_api_key: botdog, resend_api_key: resend });
-status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
-if (data.saved) await loadKeyStatus();
-} catch(e) { status.textContent = 'Error: ' + e.message; }
+  const botdog = document.getElementById('inputBotdog').value.trim();
+  const resend = document.getElementById('inputResend').value.trim();
+  const status = document.getElementById('saveStatus');
+  if (!botdog && !resend) { status.textContent = 'Enter at least one key.'; return; }
+  status.textContent = 'Saving…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_api_key: botdog, resend_api_key: resend }) });
+    const data = await resp.json();
+    status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
+    if (data.saved) await loadKeyStatus();
+  } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
 
 async function loadKeyStatus() {
-try {
-const json = await hubGet({ action: 'keyStatus' });
-const fmt = function(set, valid){
-if (!set) return '<span style="color:#dc2626">Missing</span>';
-return valid ? '<span style="color:#16a34a;font-weight:600">Set &amp; Valid \u2713</span>' : '<span style="color:#dc2626;font-weight:600">Set but Invalid \u2717</span>';
-};
-const when = json.tested_at ? 'Last tested: ' + new Date(json.tested_at).toLocaleString() : '';
-document.getElementById('keyStatus').innerHTML = 'Botdog: ' + fmt(json.botdog_set, json.botdog_valid) + '<br>Resend: ' + fmt(json.resend_set, json.resend_valid) + '<br><small style="color:#94a3b8">' + when + ' \u00b7 auto-tested daily</small>';
-} catch(e) {}
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=keyStatus&_=' + Date.now();
+    const resp = await fetch(url);
+    const text = await resp.text();
+    const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    const fmt = function(set, valid){
+      if (!set) return '<span style="color:#dc2626">Missing</span>';
+      return valid ? '<span style="color:#16a34a;font-weight:600">Set &amp; Valid ✓</span>'
+                   : '<span style="color:#dc2626;font-weight:600">Set but Invalid ✗</span>';
+    };
+    const when = json.tested_at ? 'Last tested: ' + new Date(json.tested_at).toLocaleString() : '';
+    document.getElementById('keyStatus').innerHTML =
+      'Botdog: ' + fmt(json.botdog_set, json.botdog_valid) + '<br>' +
+      'Resend: ' + fmt(json.resend_set, json.resend_valid) + '<br>' +
+      '<small style="color:#94a3b8">' + when + ' · auto-tested daily</small>';
+  } catch(e) {}
 }
 
-// Update sidebar timestamp every minute
-updateSidebarTs();
-setInterval(updateSidebarTs, 60000);
+// ----- Botdog campaign selection -----
+function onCampaignSelect(){
+  const v = document.getElementById('botdogCampaignSelect').value;
+  if (v) document.getElementById('botdogCampaignId').value = v;
+}
+async function loadCampaigns(){
+  const sel = document.getElementById('botdogCampaignSelect');
+  const idInput = document.getElementById('botdogCampaignId');
+  if (!sel) return;
+  let currentId = '', currentName = '';
+  try {
+    const cfg = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r=>r.text());
+    const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    currentId = j.botdog_campaign_id || ''; currentName = j.botdog_campaign_name || '';
+    if (currentId && idInput && !idInput.value) idInput.value = currentId;
+  } catch(e) {}
+  try {
+    const t = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getBotdogCampaigns&_=' + Date.now()).then(r=>r.text());
+    const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    const list = (j && j.campaigns) || [];
+    if (list.length) {
+      sel.innerHTML = '<option value="">— select a campaign —</option>' +
+        list.map(c => '<option value="' + esc(c.id) + '"' + (c.id===currentId?' selected':'') + '>' + esc(c.name || c.id) + '</option>').join('');
+    } else {
+      sel.innerHTML = '<option value="">— couldn’t load campaigns; paste ID below —</option>';
+    }
+  } catch(e) { sel.innerHTML = '<option value="">— couldn’t load campaigns; paste ID below —</option>'; }
+}
+async function saveCampaign(){
+  const id = (document.getElementById('botdogCampaignId').value || '').trim();
+  const sel = document.getElementById('botdogCampaignSelect');
+  const name = sel && sel.selectedOptions.length ? (sel.selectedOptions[0].textContent||'').trim() : '';
+  const status = document.getElementById('campaignStatus');
+  if (!id) { status.textContent = 'Select a campaign or paste its ID.'; return; }
+  status.textContent = 'Saving…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_campaign_id: id, botdog_campaign_name: name }) });
+    const data = await resp.json();
+    status.textContent = data.saved ? '✓ Campaign saved — new targets will push here.' : 'Error: ' + JSON.stringify(data);
+  } catch(e) { status.textContent = 'Error: ' + e.message; }
+}
 
-// ===== Boot =====
-initAuth();
+initSorting();
+load();
+loadCampaigns();
 </script>
 </body>
 </html>
