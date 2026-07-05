@@ -95,6 +95,11 @@ body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backgr
 .stat .num{ font-size:2rem; font-weight:700; color:var(--primary); line-height:1.1; }
 .stat .label{ color:var(--muted); font-size:0.82rem; margin-top:6px; }
 .stat .sub{ color:#94a3b8; font-size:0.72rem; margin-top:2px; }
+.stat.clk{ cursor:pointer; transition:box-shadow .15s, border-color .15s, transform .05s; }
+.stat.clk:hover{ box-shadow:0 4px 14px rgba(99,102,241,0.14); border-color:#c7cbf5; }
+.stat.clk:active{ transform:translateY(1px); }
+.stat-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--brand-soft,#eef0fe); color:var(--brand-ink,#4f46e5); font-size:0.78rem; font-weight:600; padding:3px 10px; border-radius:12px; margin-right:10px; cursor:pointer; }
+.stat-chip .x{ font-weight:700; }
 
 .panel{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
 .panel h3{ font-size:0.95rem; font-weight:600; color:#334155; margin-bottom:14px; }
@@ -293,7 +298,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.5.3</div>
+      <div class="ver" id="sideVer">v1.5.4</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -346,11 +351,12 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
       </div>
       <div class="stats">
-        <div class="stat"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
-        <div class="stat"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
-        <div class="stat"><div class="num" id="statPushed">0</div><div class="label">Pushed to Botdog</div><div class="sub" id="statPushedPct">0%</div></div>
-        <div class="stat"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
-        <div class="stat"><div class="num" id="statSources">0</div><div class="label">Sources active</div></div>
+        <div class="stat clk" onclick="statGo('targets','today')" title="See today's new targets"><div class="num" id="statToday">0</div><div class="label">New today</div></div>
+        <div class="stat clk" onclick="statGo('targets','week')" title="See this week's targets"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
+        <div class="stat clk" onclick="statGo('targets','')" title="See all targets"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
+        <div class="stat clk" onclick="statGo('targets','pushed')" title="See targets pushed to Botdog"><div class="num" id="statPushed">0</div><div class="label">Pushed to Botdog</div><div class="sub" id="statPushedPct">0%</div></div>
+        <div class="stat clk" onclick="statGo('bridges','')" title="See active bridges"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
+        <div class="stat clk" onclick="statGo('sources','')" title="See sources"><div class="num" id="statSources">0</div><div class="label">Sources active</div></div>
       </div>
 
       <div class="grid-2">
@@ -544,6 +550,25 @@ let SORT = { key: 'date', dir: -1 };       // default: newest first
 let FLOW_FILTER = null;                      // {type:'source'|'bridge', value:''}
 let BRIDGES = [];                            // candidate bridges from getBridges
 let BRIDGE_FILTER = 'all';                   // 'all' | 'active'
+let STAT_FILTER = '';                        // '' | 'today' | 'week' | 'pushed' — set by clicking a dashboard stat
+
+// Clicking a dashboard number jumps to the underlying list, filtered.
+function statGo(view, filter){
+  if (view === 'targets') {
+    STAT_FILTER = filter || '';
+    const s = document.getElementById('tSearch'); if (s) s.value = '';
+    const b = document.getElementById('tBridge'); if (b) b.value = '';
+    const so = document.getElementById('tSource'); if (so) so.value = '';
+    showView('targets'); renderTargets();
+  } else if (view === 'bridges') {
+    BRIDGE_FILTER = 'active';
+    showView('bridges'); loadBridges().then(renderBridges);
+  } else {
+    showView(view);
+  }
+}
+function clearStatFilter(){ STAT_FILTER = ''; renderTargets(); }
+const STAT_LABEL = { today: 'New today', week: 'Added this week', pushed: 'Pushed to Botdog' };
 let BRIDGES_LOADED = false;
 
 // ===== Backend: Sources =====
@@ -646,6 +671,12 @@ function isThisWeek(d){
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7*24*60*60*1000);
   return dt >= weekAgo && dt <= now;
+}
+function isToday(d){
+  if(!d) return false;
+  const dt = new Date(d); if(isNaN(dt)) return false;
+  const n = new Date();
+  return dt.getFullYear()===n.getFullYear() && dt.getMonth()===n.getMonth() && dt.getDate()===n.getDate();
 }
 function dayKey(d){ try{ const dt=new Date(d); if(isNaN(dt)) return ''; return dt.toISOString().slice(0,10); }catch(e){ return ''; } }
 function fmtDate(d){ try{ return d ? new Date(d).toLocaleDateString() : ''; }catch(e){ return d||''; } }
@@ -781,6 +812,7 @@ function renderStats(){
   const sources = new Set(rows.map(leadSource).filter(Boolean));
   const pushed  = rows.filter(r => r.botdog_pushed).length;
   document.getElementById('statTotal').textContent     = rows.length;
+  document.getElementById('statToday').textContent     = rows.filter(r => isToday(r.collected_date)).length;
   document.getElementById('statWeek').textContent      = rows.filter(r => isThisWeek(r.collected_date)).length;
   document.getElementById('statPushed').textContent    = pushed;
   document.getElementById('statPushedPct').textContent = rows.length ? Math.round(pushed/rows.length*100) + '% of targets' : '0%';
@@ -826,6 +858,9 @@ function renderTargets(){
   if (fb) list = list.filter(x => x.bridge === fb);
   if (fs) list = list.filter(x => x.source === fs);
   if (q)  list = list.filter(x => (x.name+' '+x.title+' '+x.company+' '+x.location+' '+x.language).toLowerCase().includes(q));
+  if (STAT_FILTER === 'today')       list = list.filter(x => isToday(x._r.collected_date));
+  else if (STAT_FILTER === 'week')   list = list.filter(x => isThisWeek(x._r.collected_date));
+  else if (STAT_FILTER === 'pushed') list = list.filter(x => x.botdog === 1);
 
   const k = SORT.key, dir = SORT.dir;
   list.sort((a,b) => {
@@ -843,7 +878,8 @@ function renderTargets(){
       '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') +
       '</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
   }).join('') : '<tr><td colspan="10" class="empty">No targets match</td></tr>';
-  document.getElementById('tCount').textContent = list.length + ' target' + (list.length===1?'':'s');
+  const _chip = STAT_FILTER ? '<span class="stat-chip" onclick="clearStatFilter()" title="Clear filter">' + esc(STAT_LABEL[STAT_FILTER]||STAT_FILTER) + ' <span class="x">✕</span></span>' : '';
+  document.getElementById('tCount').innerHTML = _chip + list.length + ' target' + (list.length===1?'':'s');
 
   // update header arrows
   document.querySelectorAll('#tHead th.sortable').forEach(th => {
