@@ -678,6 +678,10 @@ async function extractLeadsFromPage(radarPerson, category, source) {
           if (/\b(is|was)\s+(reachable|last active|open to work|a group member|hiring|online|out of office)\b/i.test(t)) continue;
           if (/mutual connection|connections?$|^shared|degree connection/i.test(t)) continue;
           if (/^message$|view .* profile|^view profile|^connect$|^save$|^more$/i.test(t)) continue;
+          // Reject Sales Nav CTA/placeholder text that appears where a title would be for
+          // out-of-network cards (e.g. "Save this lead to your list and get alerts when they
+          // change jobs, post to LinkedIn, and more.").
+          if (/save this lead|get alerts|save to list|add to list|change jobs, post/i.test(tl)) continue;
           if (t.length > title.length) title = t;  // keep the longest qualifying leaf
         }
         if (title.length > 200) title = title.slice(0, 200);
