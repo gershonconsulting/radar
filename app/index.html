@@ -298,7 +298,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.5.4</div>
+      <div class="ver" id="sideVer">v1.5.5</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -1078,7 +1078,7 @@ function renderSources(){
          : (info.org_id ? 'ready — no bridges yet (use “Find Bridges Now” in the extension)'
                         : 'add a Sales Nav Org ID to enable bridge discovery'));
     const btn = '<button class="btn-secondary" onclick="requestBridges(this,\'' + jsq(s) + '\')">🧭 Find Bridges</button>';
-    return '<div class="entity-card"><div class="top"><div><h3>📍 ' + esc(s) + '</h3>' + (link?('<p>'+link+'</p>'):'') +
+    return '<div class="entity-card"><div class="top"><div><h3><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:' + sourceColor(s) + ';margin-right:8px;vertical-align:middle"></span>' + esc(s) + '</h3>' + (link?('<p>'+link+'</p>'):'') +
       '</div><span class="pill ' + cat + '">' + cat + '</span></div>' +
       '<p style="margin-top:10px"><span class="big">' + info.leads + '</span> <small>targets</small></p>' +
       '<p style="margin-top:6px">' + via + '</p>' +
@@ -1145,10 +1145,20 @@ function renderCollections(){
 
 // ----- Charts -----
 function destroyChart(id){ if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+// Distinct, multi-hue palette so each Source is easy to tell apart (not just blues).
+const SOURCE_PALETTE = ['#6366f1','#ef4444','#10b981','#f59e0b','#0ea5e9','#ec4899','#14b8a6','#f97316','#8b5cf6','#84cc16','#e11d48','#06b6d4','#a855f7','#eab308','#22c55e','#3b82f6','#f43f5e','#d946ef','#0891b2','#65a30d'];
+// Stable color per source name: alphabetical index into the palette, so a source keeps the
+// same color everywhere on the dashboard (doughnut + source cards + flow) and across reloads.
+function sourceColor(name){
+  const names = Array.from(new Set(STORED_SOURCES.map(s => s.name).concat(ROWS.map(leadSource))))
+    .filter(Boolean).map(_norm).sort();
+  const i = names.indexOf(_norm(name));
+  return SOURCE_PALETTE[(i < 0 ? 0 : i) % SOURCE_PALETTE.length];
+}
+
 function renderCharts(){
   if (typeof Chart === 'undefined') return;
   const PRIMARY='#1e40af', ACCENT='#3b82f6';
-  const palette=['#1e40af','#3b82f6','#60a5fa','#93c5fd','#2563eb','#1d4ed8','#0ea5e9','#38bdf8','#818cf8','#a5b4fc'];
 
   // Targets per Bridge
   const byBridge = bridgeCounts();
@@ -1166,7 +1176,7 @@ function renderCharts(){
   destroyChart('chartSources');
   CHARTS.chartSources = new Chart(document.getElementById('chartSources'), {
     type:'doughnut',
-    data:{ labels:sEntries.map(e=>e[0]), datasets:[{ data:sEntries.map(e=>e[1].leads), backgroundColor:palette, borderWidth:2, borderColor:'#fff' }] },
+    data:{ labels:sEntries.map(e=>e[0]), datasets:[{ data:sEntries.map(e=>e[1].leads), backgroundColor:sEntries.map(e=>sourceColor(e[0])), borderWidth:2, borderColor:'#fff' }] },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:12, font:{size:11}}}} }
   });
 
