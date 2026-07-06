@@ -336,7 +336,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.0</div>
+      <div class="ver" id="sideVer">v1.6.1</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -780,6 +780,53 @@ function obDismiss(){ try{ localStorage.setItem('radar_onboarded','1'); }catch(e
 
 function obDot(done){ return '<div class="ob-dot ' + (done?'done':'todo') + '">' + (done?'&#10003;':'&#9675;') + '</div>'; }
 
+// ===== Extension auto-detection =====
+// The Radar content script announces itself two ways: it sets data-radar-ext (=version)
+// and data-radar-salesnav (='1'/'0') on <html>, and dispatches a window 'radar-ext-ready'
+// CustomEvent {detail:{version,salesNav}}. detectExtension() reads the attributes and
+// persists the onboarding flags; initExtDetect() wires the event + polls on load.
+function detectExtension(){
+  try {
+    var ver = document.documentElement.getAttribute('data-radar-ext');
+    if (ver) {
+      localStorage.setItem('radar_ext_ok', '1');
+      localStorage.setItem('radar_ext_ver', ver);
+    }
+    var sn = document.documentElement.getAttribute('data-radar-salesnav');
+    if (sn === '1') { localStorage.setItem('radar_salesnav_ok', '1'); }
+  } catch(e) {}
+  renderOnboarding();
+}
+
+let _extDetectInit = false;
+function initExtDetect(){
+  if (_extDetectInit) return;
+  _extDetectInit = true;
+  window.addEventListener('radar-ext-ready', function(e){
+    try {
+      if (e.detail) {
+        if (e.detail.version) {
+          localStorage.setItem('radar_ext_ok', '1');
+          localStorage.setItem('radar_ext_ver', e.detail.version);
+        }
+        if (e.detail.salesNav === true) localStorage.setItem('radar_salesnav_ok', '1');
+      }
+    } catch(_) {}
+    detectExtension();
+  });
+  // Nudge the extension to announce, then detect immediately.
+  try { window.dispatchEvent(new Event('radar-ext-ping')); } catch(e) {}
+  detectExtension();
+  // Poll a handful of times in case the content script injects late.
+  var tries = 0;
+  var poll = setInterval(function(){
+    tries++;
+    if (obFlag('radar_ext_ok') || tries >= 6) { clearInterval(poll); }
+    try { window.dispatchEvent(new Event('radar-ext-ping')); } catch(e) {}
+    detectExtension();
+  }, 1500);
+}
+
 // Test & Save the Botdog key through the proxy (same pattern as saveSettings),
 // then re-check keyStatus; only mark step done when the backend confirms it's valid.
 async function obSaveBotdog(){
@@ -841,25 +888,31 @@ function renderOnboarding(){
     '<div class="ob-step">' + obDot(true) +
       '<div class="ob-body"><div class="ob-title done">Signed in with LinkedIn</div></div>' +
     '</div>');
-  // 2) Sales Navigator connected
+  // 2) Sales Navigator connected — best-effort auto-detected via the extension.
   steps.push(
     '<div class="ob-step">' + obDot(done.salesnav) +
       '<div class="ob-body"><div class="ob-title' + (done.salesnav?' done':'') + '">Sales Navigator connected</div>' +
-        (done.salesnav ? '' :
+        (done.salesnav ?
+        '<div class="ob-note">Sales Navigator detected</div>' :
         '<div class="ob-actions">' +
           '<a class="ob-link" href="https://www.linkedin.com/sales/" target="_blank" rel="noopener">Open Sales Navigator ↗</a>' +
-          '<button class="ob-btn" onclick="obMark(\'' + OB_KEYS.salesnav + '\')">Mark as connected</button>' +
-        '</div>') +
+          '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
+        '</div>' +
+        '<div class="ob-note">Detection is best-effort. <a onclick="obMark(\'' + OB_KEYS.salesnav + '\')">I\'ve connected it</a></div>') +
       '</div>' +
     '</div>');
-  // 3) Chrome extension installed
+  // 3) Chrome extension installed — auto-detected via the content script.
+  var extVer = '';
+  try { extVer = localStorage.getItem('radar_ext_ver') || ''; } catch(e) {}
   steps.push(
     '<div class="ob-step">' + obDot(done.ext) +
-      '<div class="ob-body"><div class="ob-title' + (done.ext?' done':'') + '">Install the Chrome extension</div>' +
-        (done.ext ? '' :
+      '<div class="ob-body"><div class="ob-title' + (done.ext?' done':'') + '">' +
+        (done.ext ? 'Extension installed' + (extVer ? ' (v' + extVer + ')' : '') : 'Install the Chrome extension') + '</div>' +
+        (done.ext ?
+        '<div class="ob-note">detected automatically</div>' :
         '<div class="ob-actions">' +
           '<a class="ob-link" href="/extension.html" target="_blank" rel="noopener">Download &amp; install ↗</a>' +
-          '<button class="ob-btn" onclick="obMark(\'' + OB_KEYS.ext + '\')">Mark as installed</button>' +
+          '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
         '</div>') +
       '</div>' +
     '</div>');
@@ -1539,6 +1592,8 @@ async function initAuth(){
   initSorting();
   load();
   loadCampaigns();
+  // Start auto-detecting the Chrome extension (and best-effort Sales Nav).
+  initExtDetect();
   // Record this login in the Users store (fire-and-forget, through the authenticated proxy).
   try { fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, credentials:'same-origin',
     body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'logLogin', email:user.email, name:user.name, linkedin_sub:user.sub }) }); } catch(e) {}
