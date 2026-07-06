@@ -350,7 +350,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.4</div>
+      <div class="ver" id="sideVer">v1.6.5</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -1184,9 +1184,15 @@ function rowLocation(r){
   if (country) return country;
   return String(r.location||'').trim() || '—';
 }
+function cleanTitle(t){
+  const s = String(t || '').trim();
+  // Sales Nav CTA/placeholder that sometimes lands in the title for out-of-network cards.
+  if (/save this lead|get alerts|change jobs, post/i.test(s)) return '';
+  return s;
+}
 function rowFields(r){
   return {
-    name: fullName(r), title: r.title||'', company: r.company||'',
+    name: fullName(r), title: cleanTitle(r.title), company: r.company||'',
     location: rowLocation(r), language: r.language||'—',
     bridge: r.radar_person||'', source: leadSource(r)||'',
     date: r.collected_date ? new Date(r.collected_date).getTime() : 0,
