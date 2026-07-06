@@ -106,6 +106,12 @@ body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backgr
 .sync-status.info{ background:#eff6ff; color:#1e40af; }
 .sync-status.ok{ background:#ecfdf5; color:#065f46; }
 .sync-status.err{ background:#fef2f2; color:#991b1b; }
+.excl-toggle{ display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; color:#6b7280; cursor:pointer; user-select:none; }
+.excl-toggle input{ cursor:pointer; }
+.sel-box{ width:16px; height:16px; cursor:pointer; accent-color:var(--brand,#4f46e5); }
+tr.row-excluded{ opacity:0.5; background:#fafafa; }
+tr.row-excluded td{ text-decoration:line-through; text-decoration-color:#cbd5e1; }
+tr.row-excluded td:first-child{ text-decoration:none; }
 .stat-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--brand-soft,#eef0fe); color:var(--brand-ink,#4f46e5); font-size:0.78rem; font-weight:600; padding:3px 10px; border-radius:12px; margin-right:10px; cursor:pointer; }
 .stat-chip .x{ font-weight:700; }
 
@@ -344,7 +350,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.3</div>
+      <div class="ver" id="sideVer">v1.6.4</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -431,11 +437,13 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <input type="text" id="tSearch" placeholder="Search name, title, company…" oninput="renderTargets()">
         <select id="tBridge" onchange="renderTargets()"><option value="">All bridges</option></select>
         <select id="tSource" onchange="renderTargets()"><option value="">All sources</option></select>
+        <label class="excl-toggle"><input type="checkbox" id="tShowExcluded" onchange="toggleShowExcluded()"> Show unselected</label>
         <span class="result-count" id="tCount">0 targets</span>
       </div>
       <div class="table-wrap">
         <table>
           <thead><tr id="tHead">
+            <th title="Selected targets go to Botdog. Uncheck to exclude permanently.">✓</th>
             <th class="sortable" data-key="name">Name <span class="arrow"></span></th>
             <th class="sortable" data-key="title">Title <span class="arrow"></span></th>
             <th class="sortable" data-key="company">Company <span class="arrow"></span></th>
@@ -447,7 +455,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
             <th>LinkedIn</th>
             <th class="sortable" data-key="botdog">Botdog <span class="arrow"></span></th>
           </tr></thead>
-          <tbody id="targetsBody"><tr><td colspan="10" class="empty">No targets yet</td></tr></tbody>
+          <tbody id="targetsBody"><tr><td colspan="11" class="empty">No targets yet</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -602,7 +610,45 @@ let SORT = { key: 'date', dir: -1 };       // default: newest first
 let FLOW_FILTER = null;                      // {type:'source'|'bridge', value:''}
 let BRIDGES = [];                            // candidate bridges from getBridges
 let BRIDGE_FILTER = 'all';                   // 'all' | 'active'
-let STAT_FILTER = '';                        // '' | 'today' | 'week' | 'pushed' — set by clicking a dashboard stat
+let STAT_FILTER = '';                        // '' | 'today' | 'week' | 'pushed' | 'nolink' — set by clicking a dashboard stat
+
+// ----- Target selection (unselect = exclude from Botdog, kept forever) -----
+// EXCLUDED holds lead_ids the user has unselected. Unselected targets are hidden from the
+// working list, excluded from Botdog, and — because the row stays in the sheet (deduped by
+// lead_id) — are never re-added as "new" on a later collection. Persisted to the hub config
+// (excluded_leads) AND mirrored to localStorage so the choice survives instantly and across
+// devices once the backend stores it.
+let EXCLUDED = new Set();
+let SHOW_EXCLUDED = false;
+const EXCL_LS_KEY = 'radar_excluded_leads';
+function leadKey(r){ return String((r && (r.lead_id || r.linkedin_url)) || '').trim(); }
+function loadExclusions(cfgList){
+  const set = new Set();
+  try { (JSON.parse(localStorage.getItem(EXCL_LS_KEY) || '[]') || []).forEach(v => set.add(String(v))); } catch(e) {}
+  if (Array.isArray(cfgList)) cfgList.forEach(v => set.add(String(v)));
+  EXCLUDED = set;
+}
+function persistExclusions(){
+  const arr = [...EXCLUDED];
+  try { localStorage.setItem(EXCL_LS_KEY, JSON.stringify(arr)); } catch(e) {}
+  // Best-effort sync to the hub so Botdog skips them and other devices see the choice.
+  try {
+    fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'setConfig', excluded_leads: JSON.stringify(arr) }) });
+  } catch(e) {}
+}
+function toggleTargetSelect(lid, box){
+  if (!lid) return;
+  if (box && box.checked) EXCLUDED.delete(String(lid)); else EXCLUDED.add(String(lid));
+  persistExclusions();
+  renderStats();
+  renderTargets();
+}
+function toggleShowExcluded(){
+  const el = document.getElementById('tShowExcluded');
+  SHOW_EXCLUDED = !!(el && el.checked);
+  renderTargets();
+}
 
 // Clicking a dashboard number jumps to the underlying list, filtered.
 function statGo(view, filter){
@@ -704,6 +750,7 @@ async function load() {
   if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
     document.getElementById('warningBanner').style.display = 'block'; return;
   }
+  loadExclusions();  // from localStorage first, so the UI reflects choices immediately
   await loadSources();
   await loadBridges();
   try {
@@ -711,7 +758,12 @@ async function load() {
     const resp = await fetch(url);
     const text = await resp.text();
     const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
-    if (json.success) { ROWS = json.rows || []; renderAll(); }
+    if (json.success) {
+      ROWS = json.rows || [];
+      // Merge hub-stored exclusions (cross-device) with local ones, if the backend provides them.
+      if (json.excluded_leads) { try { loadExclusions(JSON.parse(json.excluded_leads)); } catch(e) {} }
+      renderAll();
+    }
   } catch(e) { console.error('load', e); }
   await loadKeyStatus();
 }
@@ -1039,9 +1091,13 @@ function renderLog(){
 function renderStats(){
   const rows = ROWS;
   const total   = rows.length;
-  const pushed  = rows.filter(r => r.botdog_pushed).length;
-  const linked  = rows.filter(r => String(r.linkedin_url || '').trim()).length;
-  const pct = (n) => total ? Math.round(n / total * 100) + '%' : '0%';
+  // Percentages are over SELECTED targets (the ones you intend for Botdog). Unselecting the
+  // prospects with no LinkedIn URL is how you drive both numbers toward 100%.
+  const selected = rows.filter(r => !EXCLUDED.has(leadKey(r)));
+  const selCount = selected.length;
+  const pushed  = selected.filter(r => r.botdog_pushed).length;
+  const linked  = selected.filter(r => String(r.linkedin_url || '').trim()).length;
+  const pct = (n) => selCount ? Math.round(n / selCount * 100) + '%' : '0%';
   // Bridges/Sources reflect the ACTUAL active bridge list (not just bridges that have already
   // produced targets) so newly discovered/activated bridges are counted the moment they exist.
   const activeBridges = BRIDGES.filter(b => b.active === true);
@@ -1051,9 +1107,9 @@ function renderStats(){
   document.getElementById('statToday').textContent     = rows.filter(r => isToday(r.collected_date)).length;
   document.getElementById('statWeek').textContent      = rows.filter(r => isThisWeek(r.collected_date)).length;
   document.getElementById('statLinkedPct').textContent = pct(linked);
-  document.getElementById('statLinkedSub').textContent = linked + ' of ' + total;
+  document.getElementById('statLinkedSub').textContent = linked + ' of ' + selCount + ' selected';
   document.getElementById('statPushedPct').textContent = pct(pushed);
-  document.getElementById('statPushedSub').textContent = pushed + ' of ' + total;
+  document.getElementById('statPushedSub').textContent = pushed + ' of ' + selCount + ' selected';
   document.getElementById('statBridges').textContent   = activeBridgeCount;
   document.getElementById('statSources').textContent   = activeSourceCount || STORED_SOURCES.length;
   document.getElementById('leadCount').textContent     = rows.length;
@@ -1150,6 +1206,8 @@ function renderTargets(){
   else if (STAT_FILTER === 'week')   list = list.filter(x => isThisWeek(x._r.collected_date));
   else if (STAT_FILTER === 'pushed') list = list.filter(x => x.botdog === 1);
   else if (STAT_FILTER === 'nolink') list = list.filter(x => !String((x._r && x._r.linkedin_url) || '').trim());
+  // Hide unselected (excluded) targets unless the user asks to see them.
+  if (!SHOW_EXCLUDED) list = list.filter(x => !EXCLUDED.has(leadKey(x._r)));
 
   const k = SORT.key, dir = SORT.dir;
   list.sort((a,b) => {
@@ -1161,12 +1219,18 @@ function renderTargets(){
   const body = document.getElementById('targetsBody');
   body.innerHTML = list.length ? list.map(x => {
     const r = x._r;
-    return '<tr><td>' + esc(x.name) + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.company) +
+    const lid = leadKey(r);
+    const excluded = EXCLUDED.has(lid);
+    const lidArg = "'" + String(lid).replace(/['"\\]/g, '') + "'";
+    return '<tr class="' + (excluded ? 'row-excluded' : '') + '">' +
+      '<td style="text-align:center"><input type="checkbox" class="sel-box"' + (excluded ? '' : ' checked') +
+        ' onchange="toggleTargetSelect(' + lidArg + ', this)" title="' + (excluded ? 'Unselected — excluded from Botdog' : 'Selected — will go to Botdog') + '"></td>' +
+      '<td>' + esc(x.name) + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.company) +
       '</td><td>' + esc(x.location) + '</td><td>' + esc(x.language) +
       '</td><td>' + esc(x.bridge) + '</td><td>' + esc(x.source) + '</td><td>' + fmtDate(r.collected_date) +
       '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') +
       '</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
-  }).join('') : '<tr><td colspan="10" class="empty">No targets match</td></tr>';
+  }).join('') : '<tr><td colspan="11" class="empty">No targets match</td></tr>';
   const _chip = STAT_FILTER ? '<span class="stat-chip" onclick="clearStatFilter()" title="Clear filter">' + esc(STAT_LABEL[STAT_FILTER]||STAT_FILTER) + ' <span class="x">✕</span></span>' : '';
   document.getElementById('tCount').innerHTML = _chip + list.length + ' target' + (list.length===1?'':'s');
 
