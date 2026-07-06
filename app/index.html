@@ -98,6 +98,14 @@ body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backgr
 .stat.clk{ cursor:pointer; transition:box-shadow .15s, border-color .15s, transform .05s; }
 .stat.clk:hover{ box-shadow:0 4px 14px rgba(99,102,241,0.14); border-color:#c7cbf5; }
 .stat.clk:active{ transform:translateY(1px); }
+.sync-btn{ flex:0 0 auto; display:inline-flex; align-items:center; gap:8px; background:var(--brand,#4f46e5); color:#fff; border:none; border-radius:10px; padding:10px 18px; font-size:0.92rem; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(79,70,229,0.25); transition:background .15s, transform .05s, opacity .15s; white-space:nowrap; }
+.sync-btn:hover{ background:var(--brand-ink,#4338ca); }
+.sync-btn:active{ transform:translateY(1px); }
+.sync-btn:disabled{ opacity:0.6; cursor:wait; }
+.sync-status{ margin:0 0 14px; padding:10px 14px; border-radius:8px; font-size:0.86rem; font-weight:500; }
+.sync-status.info{ background:#eff6ff; color:#1e40af; }
+.sync-status.ok{ background:#ecfdf5; color:#065f46; }
+.sync-status.err{ background:#fef2f2; color:#991b1b; }
 .stat-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--brand-soft,#eef0fe); color:var(--brand-ink,#4f46e5); font-size:0.78rem; font-weight:600; padding:3px 10px; border-radius:12px; margin-right:10px; cursor:pointer; }
 .stat-chip .x{ font-weight:700; }
 
@@ -336,7 +344,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.1</div>
+      <div class="ver" id="sideVer">v1.6.2</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -384,7 +392,11 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 
     <!-- ===== Dashboard ===== -->
     <section id="view-dashboard" class="view active">
-      <div class="page-head"><h2>Dashboard</h2><p>Your Source → Bridge → Target pipeline at a glance.</p></div>
+      <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div><h2>Dashboard</h2><p>Your Source → Bridge → Target pipeline at a glance.</p></div>
+        <button id="syncNowBtn" onclick="triggerSync()" class="sync-btn">🔄 Sync Now</button>
+      </div>
+      <div id="syncStatus" class="sync-status" style="display:none"></div>
       <div id="warningBanner" class="banner" style="display:none">
         WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
       </div>
@@ -1025,17 +1037,70 @@ function renderLog(){
 
 function renderStats(){
   const rows = ROWS;
-  const bridges = new Set(rows.map(r => r.radar_person).filter(Boolean));
-  const sources = new Set(rows.map(leadSource).filter(Boolean));
   const pushed  = rows.filter(r => r.botdog_pushed).length;
+  // Bridges/Sources reflect the ACTUAL active bridge list (not just bridges that have already
+  // produced targets) so newly discovered/activated bridges are counted the moment they exist.
+  const activeBridges = BRIDGES.filter(b => b.active === true);
+  const activeBridgeCount = activeBridges.length;
+  const activeSourceCount = new Set(activeBridges.map(b => _norm(b.source)).filter(Boolean)).size;
   document.getElementById('statTotal').textContent     = rows.length;
   document.getElementById('statToday').textContent     = rows.filter(r => isToday(r.collected_date)).length;
   document.getElementById('statWeek').textContent      = rows.filter(r => isThisWeek(r.collected_date)).length;
   document.getElementById('statPushed').textContent    = pushed;
   document.getElementById('statPushedPct').textContent = rows.length ? Math.round(pushed/rows.length*100) + '% of targets' : '0%';
-  document.getElementById('statBridges').textContent   = bridges.size;
-  document.getElementById('statSources').textContent   = sources.size;
+  document.getElementById('statBridges').textContent   = activeBridgeCount;
+  document.getElementById('statSources').textContent   = activeSourceCount || STORED_SOURCES.length;
   document.getElementById('leadCount').textContent     = rows.length;
+}
+
+// ----- Sync Now (web app drives the extension) -----
+// The extension's content script listens for 'radar-ext-sync' and runs the daily sync
+// (bridge discovery for new sources + prospect collection), then dispatches
+// 'radar-ext-sync-result'. This lets the user run a collection without opening the popup.
+let SYNC_RUNNING = false;
+function syncMsg(text, kind){
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = 'sync-status ' + (kind || 'info');
+  el.textContent = text;
+}
+function triggerSync(){
+  if (SYNC_RUNNING) return;
+  const btn = document.getElementById('syncNowBtn');
+  const hasExt = document.documentElement.getAttribute('data-radar-ext');
+  if (!hasExt) {
+    syncMsg('Chrome extension not detected. Install/reload the Radar extension, then try again.', 'err');
+    return;
+  }
+  SYNC_RUNNING = true;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Syncing…'; }
+  syncMsg('Sync started — collecting prospects from your active bridges in the background. This can take a few minutes; you can keep working.', 'info');
+  let done = false;
+  const onResult = (e) => {
+    if (done) return; done = true;
+    window.removeEventListener('radar-ext-sync-result', onResult);
+    SYNC_RUNNING = false;
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Sync Now'; }
+    const d = (e && e.detail) || {};
+    if (d.ok) {
+      const nw = (d.result && (d.result.written != null ? d.result.written : d.result.newLeads)) ;
+      syncMsg('✓ Sync complete' + (nw != null ? ' — ' + nw + ' new prospects written.' : '.') + ' Refreshing…', 'ok');
+      load();
+    } else {
+      syncMsg('Sync error: ' + (d.error || 'unknown') + '. Make sure you are logged into Sales Navigator.', 'err');
+    }
+  };
+  window.addEventListener('radar-ext-sync-result', onResult);
+  window.dispatchEvent(new CustomEvent('radar-ext-sync'));
+  // Safety timeout: the SW keeps running even if we miss the event; re-enable the button.
+  setTimeout(() => {
+    if (done) return; done = true;
+    window.removeEventListener('radar-ext-sync-result', onResult);
+    SYNC_RUNNING = false;
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Sync Now'; }
+    syncMsg('Sync is running in the background. Refresh the page in a few minutes to see new prospects.', 'info');
+  }, 180000);
 }
 
 // ----- Targets view -----
