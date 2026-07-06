@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Radar Collector</title>
+  <style>
+    body { width: 320px; font: 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 16px; color: #1f2937; }
+    .header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+    h1 { font-size: 14px; margin: 0; font-weight: 600; color: #FE1B04; }
+    .ver { font-size: 10px; color: #9ca3af; font-weight: 400; }
+    .sub { font-size: 11px; color: #6b7280; margin-bottom: 14px; line-height: 1.4; }
+    .auto { font-size: 11px; color: #059669; margin: 2px 0 12px; }
+    .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; margin-bottom: 8px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; background: #FE1B04; color: white; }
+    .btn:hover { background: #d11200; }
+    .btn:disabled { opacity: 0.6; cursor: wait; }
+    .status { font-size: 11px; padding: 8px 10px; border-radius: 6px; margin: 4px 0; line-height: 1.4; }
+    .status.ok { background: #d1fae5; color: #065f46; }
+    .status.err { background: #fee2e2; color: #991b1b; }
+    .status.info { background: #f3f4f6; color: #374151; }
+    .last { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f3f4f6; font-size: 11px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Radar Collector</h1>
+    <span class="ver" id="ver"></span>
+  </div>
+  <div class="sub">Collects prospects from your radar bridges in Sales Navigator and appends them to your Google Sheet. Bridge discovery for new sources happens automatically as part of the sync.</div>
+  <div class="auto">⏰ Runs automatically once a day while Chrome is open. Use Sync Now to run it on demand.</div>
+  <button id="sync-now" class="btn"><span>🔄</span> Sync Now</button>
+  <div id="status"></div>
+  <div class="last" id="last-captured"></div>
+  <script src="popup.js"></script>
+</body>
+</html>

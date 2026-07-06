@@ -1,6 +1,5 @@
 // =============================================================
 // Radar - Sales Navigator Collector (sync-core.js / service worker)
-// v1.4.8: captures prospect connection level
 // Scrapes connections from Sales Navigator, resolves public /in/ URLs,
 // POSTs to Apps Script hub. Logs every step to chrome.storage.local
 // so the Radar dashboard can display them in real time.
@@ -39,6 +38,10 @@ const SEARCH_FILTERS = {
 // (Owner/Partner 320, CXO 310, VP 300) to propose as candidate bridges.
 const DISCOVER_SENIORITY_IDS = ['320', '310', '300'];
 const MAX_CANDIDATES_PER_SOURCE = 40;
+// Bridge discovery cadence: new senior people inside a Source change slowly, so we only
+// look for new candidate bridges ~monthly. Prospect COLLECTION from active bridges still
+// runs every daily sync. Tracked via chrome.storage.local 'lastDiscoverAt'.
+const DISCOVER_INTERVAL_DAYS = 30;
 
 // --- Logging ---
 const MAX_LOG_ENTRIES = 200;
@@ -68,7 +71,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg.action === 'discoverNow') {
-    discoverBridges().then(async r => { await pushLog(); sendResponse({ ok: true, result: r }); }).catch(async e => { await pushLog(); sendResponse({ ok: false, error: String(e) }); });
+    // Manual discovery scans all sources, resets the monthly clock, and clears any pending flags.
+    discoverBridges().then(async r => { await chrome.storage.local.set({ lastDiscoverAt: new Date().toISOString() }); await clearDiscoverPending([]); await closeScrapeWindow(); await pushLog(); sendResponse({ ok: true, result: r }); }).catch(async e => { await closeScrapeWindow(); await pushLog(); sendResponse({ ok: false, error: String(e) }); });
     return true;
   }
   if (msg.action === 'getLog') {
@@ -76,6 +80,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg.action === 'clearLog') { clearLog().then(() => sendResponse({ ok: true })); return true; }
+  if (msg.action === 'salesNavStatus') {
+    checkLogin().then(ok => sendResponse({ ok: !!ok })).catch(() => sendResponse({ ok: false }));
+    return true;
+  }
 });
 
 // Forward the run log to the hub so it's visible server-side (for debugging).
@@ -84,6 +92,14 @@ async function pushLog() {
     const stored = await chrome.storage.local.get('radarLog');
     const arr = stored.radarLog || [];
     await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: INGEST_SECRET, action: 'pushLog', log: arr.slice(0, 150) }) });
+  } catch (e) {}
+}
+
+// Clear the "collect bridges now" (discover_pending) flag on the hub for the given source
+// names once we've discovered them (or all pending if no names passed).
+async function clearDiscoverPending(names) {
+  try {
+    await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: INGEST_SECRET, action: 'clearDiscoverPending', names: names || [] }) });
   } catch (e) {}
 }
 
@@ -96,41 +112,85 @@ async function runSync() {
   await log('info', 'login-check', { loggedIn });
   if (!loggedIn) { await log('warn', 'No Sales Nav tab detected - proceeding anyway (opened tabs use your logged-in session)'); }
 
-  // Step 1: discover new candidate bridges from Sources (best-effort, never blocks collection).
-  try { await discoverBridges(); }
-  catch (err) { await log('error', 'discover:error', { error: String(err) }); }
-
-  // Step 2: resolve the list of bridges to collect from. Prefer ACTIVE bridges from the hub;
-  // fall back to the hardcoded seed if the hub returns none (and seed them into the hub).
-  const bridges = await resolveActiveBridges();
-  await log('info', 'scrape:bridges', { count: bridges.length });
-
-  const allLeads = [];
-  for (const bridge of bridges) {
-    try {
-      await log('info', 'scrape:start', { bridge: bridge.bridge });
-      const leads = await scrapeBridge(bridge);
-      await log('info', 'scrape:done', { bridge: bridge.bridge, leadCount: leads.length });
-      if (leads.length) notify('New targets', leads.length + ' new connections via ' + bridge.bridge);
-      allLeads.push(...leads);
-    } catch (err) { await log('error', 'scrape:error', { bridge: bridge.bridge, error: String(err) }); }
-    await humanDelay(12000, 28000);
-  }
-  await log('info', 'scrape:total', { totalLeads: allLeads.length });
-
-  await log('info', 'resolve:start', { toResolve: Math.min(allLeads.filter(l => !l.linkedin_url).length, MAX_RESOLVE_PER_RUN) });
-  const resolved = await resolvePublicUrls(allLeads);
-  await log('info', 'resolve:done', { resolvedCount: resolved.filter(l => l.linkedin_url).length });
-
-  if (!WEBAPP_URL || WEBAPP_URL === '__WEBAPP_URL__') { await log('warn', 'WEBAPP_URL not set'); return { status: 'no-webapp-url' }; }
-
+  // Step 1: discover candidate bridges from Sources — ONCE PER SOURCE, then never again
+  // automatically. Prospect collection is the priority. We only look for bridges when:
+  //   (a) the user asks — popup "Find Bridges Now" (discoverNow) or a source flagged
+  //       "collect now" (discover_pending); or
+  //   (b) a source has NEVER been discovered yet (zero bridges on the hub for it) — the
+  //       one-time first pass for a brand-new source.
+  // A source that already has bridges is NEVER re-hunted on its own (no monthly top-up).
+  // Everything else skips straight to Step 2 (collecting prospects), which always runs.
   try {
-    await log('info', 'ingest:start', { leads: resolved.length });
-    const result = await postToHub(resolved);
-    await log('info', 'run:done', { written: result.written, status: result.status || 'ok' });
-    notify('Sync complete', ((result && result.written) || 0) + ' new targets added.');
-    return result;
-  } catch(err) { await log('error', 'ingest:error', { error: String(err) }); return { status: 'ingest-error', error: String(err) }; }
+    let sources = [];
+    try { sources = await getSources(); } catch (e) { sources = []; }
+    // Build the set of sources that already have at least one bridge (i.e. already discovered).
+    const discoveredSources = new Set();
+    try {
+      const rb = await fetchHubJsonp('getBridges');
+      ((rb && rb.bridges) || []).forEach(b => { if (b && b.source) discoveredSources.add(_normName(b.source)); });
+    } catch (e) {}
+    const pending = sources.filter(s => String(s.discover_pending || '').trim());
+    // Brand-new sources: have an org_id to search with, and no bridges discovered yet.
+    const neverDiscovered = sources.filter(s =>
+      String(s.org_id || '').trim() &&
+      !String(s.discover_pending || '').trim() &&
+      !discoveredSources.has(_normName(s.name))
+    );
+    if (pending.length) {
+      // User explicitly asked to collect bridges for these sources — honor it.
+      await log('info', 'discover:pending', { count: pending.length, sources: pending.map(s => s.name) });
+      await discoverBridges(pending);
+      await clearDiscoverPending(pending.map(s => s.name));
+    }
+    if (neverDiscovered.length) {
+      // One-time first pass for sources that have never been discovered. After this they will
+      // have bridges on the hub and won't be picked up here again.
+      await log('info', 'discover:first-pass', { count: neverDiscovered.length, sources: neverDiscovered.map(s => s.name) });
+      await discoverBridges(neverDiscovered);
+    }
+    if (!pending.length && !neverDiscovered.length) {
+      await log('info', 'discover:skip', { reason: 'all sources already discovered - prioritizing prospects' });
+    }
+  } catch (err) { await log('error', 'discover:error', { error: String(err) }); }
+
+  // Step 2 onward runs inside a try/finally so the dedicated background scrape window is
+  // ALWAYS torn down at the end of the run, whatever path we exit by.
+  try {
+    // Step 2: resolve the list of bridges to collect from. Prefer ACTIVE bridges from the hub;
+    // fall back to the hardcoded seed if the hub returns none (and seed them into the hub).
+    const bridges = shuffle(await resolveActiveBridges());
+    await log('info', 'scrape:bridges', { count: bridges.length, order: 'randomized' });
+
+    const allLeads = [];
+    for (const bridge of bridges) {
+      try {
+        await log('info', 'scrape:start', { bridge: bridge.bridge });
+        const leads = await scrapeBridge(bridge);
+        await log('info', 'scrape:done', { bridge: bridge.bridge, leadCount: leads.length });
+        if (leads.length) notify('New targets', leads.length + ' new connections via ' + bridge.bridge);
+        allLeads.push(...leads);
+      } catch (err) { await log('error', 'scrape:error', { bridge: bridge.bridge, error: String(err) }); }
+      await humanDelay(12000, 28000);
+    }
+    await log('info', 'scrape:total', { totalLeads: allLeads.length });
+
+    await log('info', 'resolve:start', { toResolve: Math.min(allLeads.filter(l => !l.linkedin_url).length, MAX_RESOLVE_PER_RUN) });
+    const resolved = await resolvePublicUrls(allLeads);
+    await log('info', 'resolve:done', { resolvedCount: resolved.filter(l => l.linkedin_url).length });
+
+    if (!WEBAPP_URL || WEBAPP_URL === '__WEBAPP_URL__') { await log('warn', 'WEBAPP_URL not set'); return { status: 'no-webapp-url' }; }
+
+    try {
+      await log('info', 'ingest:start', { leads: resolved.length });
+      const result = await postToHub(resolved);
+      await log('info', 'run:done', { written: result.written, status: result.status || 'ok' });
+      notify('Sync complete', ((result && result.written) || 0) + ' new targets added.');
+      return result;
+    } catch(err) { await log('error', 'ingest:error', { error: String(err) }); return { status: 'ingest-error', error: String(err) }; }
+  } finally {
+    // Always clean up the dedicated background scrape window at the end of the run.
+    await closeScrapeWindow();
+  }
 }
 
 // --- Hub reads (JSONP-style: hub wraps the JSON in a callback we strip) ---
@@ -167,6 +227,25 @@ async function addBridges(source, bridges) {
     body: JSON.stringify({ secret: INGEST_SECRET, action: 'addBridges', source, bridges }),
   });
   try { return await resp.json(); } catch (e) { return { success: false, error: String(e) }; }
+}
+
+// Activate discovered bridges immediately so the NEXT sync collects prospects from them.
+// The hub stores new candidates as active=false; without this they'd sit idle forever and
+// the source would show "no bridges yet" even though discovery found people. We auto-activate
+// because bridge discovery already narrows to senior roles (+ optional keyword) — the user can
+// still deactivate any they don't want from the Bridges tab.
+async function activateBridges(bridges) {
+  for (const b of bridges) {
+    const urn = b && (b.urn || b.entityUrn);
+    if (!urn) continue;
+    try {
+      await fetch(WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ secret: INGEST_SECRET, action: 'setBridgeActive', urn, active: true }),
+      });
+    } catch (e) { /* best-effort; a missed activation is retried on the next discovery */ }
+  }
 }
 
 // Resolve the bridges to COLLECT from. Prefer ACTIVE hub bridges; else fall back to the
@@ -208,19 +287,26 @@ async function resolveActiveBridges() {
 // --- Bridge discovery ---
 // For each Source with an org_id, search Sales Nav for senior people AT that org and
 // propose them as candidate bridges (pushed to the hub as active=false).
-async function discoverBridges() {
+async function discoverBridges(sourcesArg) {
   await log('info', 'discover:start');
-  let sources = [];
-  try { sources = await getSources(); }
-  catch (err) { await log('error', 'discover:sources-failed', { error: String(err) }); return { status: 'sources-failed', error: String(err) }; }
+  let sources = sourcesArg || null;
+  if (!sources) {
+    try { sources = await getSources(); }
+    catch (err) { await log('error', 'discover:sources-failed', { error: String(err) }); return { status: 'sources-failed', error: String(err) }; }
+  }
 
   let totalCandidates = 0;
-  for (const src of sources) {
+  for (const src of shuffle(sources)) {
     const orgId = (src.org_id || '').toString().trim();
     if (!orgId) { continue; }
     try {
-      await log('info', 'discover:source', { source: src.name, org_id: orgId });
-      const query = '(filters:List((type:CURRENT_COMPANY,values:List((id:urn%3Ali%3Aorganization%3A' + orgId + ',selectionType:INCLUDED))),(type:SENIORITY_LEVEL,values:List(' +
+      // Optional per-source role/function keyword (e.g. "Team France Export"). Essential for
+      // large orgs where "senior alone" is too broad — narrows to the bridge's actual function.
+      // Strip DSL-breaking chars; spaces are fine (encodeURIComponent handles them below).
+      const kw = (src.discover_keyword || '').toString().trim().replace(/[(),:]/g, ' ').replace(/\s+/g, ' ').trim();
+      const kwPart = kw ? 'keywords:' + kw + ',' : '';
+      await log('info', 'discover:source', { source: src.name, org_id: orgId, keyword: kw || '(none)' });
+      const query = '(' + kwPart + 'filters:List((type:CURRENT_COMPANY,values:List((id:urn%3Ali%3Aorganization%3A' + orgId + ',selectionType:INCLUDED))),(type:SENIORITY_LEVEL,values:List(' +
         DISCOVER_SENIORITY_IDS.map(id => '(id:' + id + ',selectionType:INCLUDED)').join(',') +
         '))))';
       const url = 'https://www.linkedin.com/sales/search/people?query=' + encodeURIComponent(query);
@@ -228,8 +314,10 @@ async function discoverBridges() {
       const trimmed = candidates.slice(0, MAX_CANDIDATES_PER_SOURCE);
       if (trimmed.length > 0) {
         const res = await addBridges(src.name, trimmed);
-        await log('info', 'discover:pushed', { source: src.name, count: trimmed.length, ok: !!(res && res.success) });
-        notify('New bridge candidates', trimmed.length + ' people found at ' + src.name + ' — review in the Bridges tab.');
+        // Auto-activate so the next sync collects prospects from them (no manual step).
+        await activateBridges(trimmed);
+        await log('info', 'discover:pushed', { source: src.name, count: trimmed.length, ok: !!(res && res.success), activated: true });
+        notify('New bridges', trimmed.length + ' people found at ' + src.name + ' — prospects will be collected on the next sync.');
       } else {
         await log('info', 'discover:empty', { source: src.name });
       }
@@ -243,21 +331,75 @@ async function discoverBridges() {
   return { status: 'ok', totalCandidates };
 }
 
-// Open the discovery search in a background tab and scrape candidate bridge cards.
+// --- Dedicated background scrape window ---
+// Sales Nav VIRTUALIZES results: a tab must be active:true to render. Making it active
+// in the user's CURRENT window steals focus every time. Instead we route ALL scraping
+// page-opens into a single dedicated background window that is NEVER focused. A tab that
+// is active:true inside an UNFOCUSED window still renders (virtualization works), but the
+// window itself never grabs the user's focus. Helpers are defensive so a window/tab error
+// never aborts a run.
+let scrapeWindowId = null;
+
+// Ensure the dedicated background window exists; (re)create it if missing. Returns its id.
+async function getScrapeWindow() {
+  if (scrapeWindowId !== null) {
+    try {
+      await chrome.windows.get(scrapeWindowId);
+      return scrapeWindowId;  // still exists
+    } catch (e) {
+      scrapeWindowId = null;  // was closed by the user; recreate below
+    }
+  }
+  try {
+    const win = await chrome.windows.create({ focused: false, state: 'normal', width: 1280, height: 900, top: 40, left: 40 });
+    scrapeWindowId = win.id;
+    // Defensively re-assert unfocused (some platforms briefly focus a new window).
+    try { await chrome.windows.update(scrapeWindowId, { focused: false }); } catch (e) {}
+  } catch (e) {
+    scrapeWindowId = null;
+  }
+  return scrapeWindowId;
+}
+
+// Open a scrape URL as an active tab INSIDE the unfocused background window (renders, no
+// global focus steal). Returns the created tab (or null on failure).
+async function openScrapeTab(url) {
+  const winId = await getScrapeWindow();
+  if (winId === null) return null;
+  try {
+    const tab = await chrome.tabs.create({ windowId: winId, url, active: true });
+    // Re-assert unfocused right after, defensively — the window must never grab focus.
+    try { await chrome.windows.update(winId, { focused: false }); } catch (e) {}
+    return tab;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Tear down the dedicated background window (called at the end of a run).
+async function closeScrapeWindow() {
+  if (scrapeWindowId !== null) {
+    try { await chrome.windows.remove(scrapeWindowId); } catch (e) {}
+    scrapeWindowId = null;
+  }
+}
+
+// Open the discovery search in a background tab (inside the unfocused scrape window) and
+// scrape candidate bridge cards.
 async function scrapeDiscoveryInTab(url) {
+  const tab = await openScrapeTab(url);
+  if (!tab) throw new Error('scrape window/tab unavailable');
   return new Promise((resolve, reject) => {
-    chrome.tabs.create({ url, active: true }, tab => {
-      setTimeout(() => {
-        chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractCandidatesFromPage }, results => {
-          const out = (results && results[0]) ? (results[0].result || []) : [];
-          const err = chrome.runtime.lastError;
-          // Linger like a human reading the page, then close the tab.
-          setTimeout(() => { try { chrome.tabs.remove(tab.id); } catch (e) {} }, 3500 + Math.floor(Math.random() * 5000));
-          if (err) { reject(new Error(err.message)); return; }
-          resolve(out);
-        });
-      }, 6000 + Math.floor(Math.random() * 3500));
-    });
+    setTimeout(() => {
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractCandidatesFromPage }, results => {
+        const out = (results && results[0]) ? (results[0].result || []) : [];
+        const err = chrome.runtime.lastError;
+        // Linger like a human reading the page, then close the tab (leave the window open).
+        setTimeout(() => { try { chrome.tabs.remove(tab.id); } catch (e) {} }, 3500 + Math.floor(Math.random() * 5000));
+        if (err) { reject(new Error(err.message)); return; }
+        resolve(out);
+      });
+    }, 6000 + Math.floor(Math.random() * 3500));
   });
 }
 
@@ -272,13 +414,32 @@ async function extractCandidatesFromPage() {
   const byUrn = new Map();
   const CAP = 60;
 
+  // Robust name cleaner: strip LinkedIn status suffixes ("… is reachable",
+  // "… was last active 2 days ago", etc.), trailing emoji/flag/symbol runs, and
+  // trailing " • …" segments / stray punctuation. Returns just the person's name.
+  const STATUS_WORDS = 'reachable|last active|open to work|a group member|hiring|online|out of office';
+  const cleanName = (raw) => {
+    let s = (raw || '').replace(/\s+/g, ' ').trim();
+    if (!s) return '';
+    // 1) Cut at the first " is " / " was " followed by a status word.
+    const cut = s.match(new RegExp('\\s+(?:is|was)\\s+(?:' + STATUS_WORDS + ')\\b', 'i'));
+    if (cut && cut.index >= 0) s = s.slice(0, cut.index);
+    // 2) Drop any trailing " • …" segments (LinkedIn appends these after the name).
+    s = s.replace(/\s*[•·]\s*.*$/, '');
+    // 3) Strip a trailing run of emoji / flags / symbols (from the first such char
+    //    at the tail through the end): keep only up to the last Latin-letter word.
+    s = s.replace(/[^\p{L}\p{N}.'\-)]+$/u, '');            // trailing symbols/punct
+    s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{1F1E6}-\u{1F1FF}].*$/u, '');
+    // 4) Final tidy: collapse spaces and trim stray leading/trailing punctuation.
+    s = s.replace(/\s+/g, ' ').replace(/^[\s.,;:•·\-]+|[\s.,;:•·\-]+$/g, '').trim();
+    return s;
+  };
+
   // Extract every currently-rendered lead card into the Map (defensive per-card).
   const harvest = () => {
     document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
       try {
-        let name = (linkEl.textContent || '').replace(/\s+/g, ' ').trim();
-        // Strip LinkedIn status phrases appended to the name link ("… is reachable", etc.).
-        name = name.replace(/\s+is\s+(reachable|open to work|hiring|a group member|out of office).*$/i, '').trim();
+        const name = cleanName(linkEl.textContent || '');
         if (!name) return;
         const urnMatch = linkEl.href.match(/\/sales\/lead\/([^,?\/]+)/);
         if (!urnMatch) return;
@@ -299,27 +460,40 @@ async function extractCandidatesFromPage() {
           .map(e => e.childElementCount === 0 ? (e.textContent || '').replace(/\s+/g, ' ').trim() : '')
           .filter(Boolean);
         const compEl  = card.querySelector('a[href*="/sales/company/"]');
-        const company = compEl ? compEl.textContent.trim() : '';
+        const company = compEl ? compEl.textContent.replace(/\s+/g, ' ').trim() : '';
 
-        // Title = first substantial leaf that isn't the name / a status / a degree / the company.
-        let title = '';
-        const nlow = name.toLowerCase();
-        for (const t of txts) {
-          const tl = t.toLowerCase();
-          if (!t || t.length < 3) continue;
-          if (tl === nlow || tl.indexOf(nlow) === 0) continue;
-          if (/^(1st|2nd|3rd)$/.test(tl)) continue;
-          if (/is reachable|is open to work|·|view .* profile|^message/i.test(t)) continue;
-          if (company && t === company) continue;
-          title = t; break;
+        // Connection degree - look for a 1st/2nd/3rd token in the card text AND aria-labels.
+        // Handles "· 1st", "1st degree", a leading-dot form, or a standalone token.
+        let connection = '';
+        const degSources = [card.textContent || ''];
+        try {
+          card.querySelectorAll('[aria-label]').forEach(el => degSources.push(el.getAttribute('aria-label') || ''));
+        } catch (e) {}
+        for (const src of degSources) {
+          const m = src.match(/(?:[·•.]\s*)?\b(1st|2nd|3rd)\b(?:\s*degree)?/i);
+          if (m) { connection = m[1].toLowerCase(); break; }
         }
 
-        // Connection degree - look for a 1st/2nd/3rd token in the card text.
-        let connection = '';
-        const degMatch = (card.textContent || '').match(/\b(1st|2nd|3rd)\b/);
-        if (degMatch) connection = degMatch[1];
+        // Title/headline = the LONGEST descriptive leaf that isn't the name, a status
+        // phrase, a lone degree token, the company, "mutual connections"/"connection"
+        // text, or "Message"/"View … profile" UI text.
+        const nlow = name.toLowerCase();
+        const clow = company.toLowerCase();
+        let title = '';
+        for (const t of txts) {
+          if (!t || t.length < 3) continue;
+          const tl = t.toLowerCase();
+          if (tl === nlow || tl.indexOf(nlow) === 0) continue;
+          if (clow && (tl === clow || tl.indexOf(clow) === 0)) continue;
+          if (/^[·•.\s]*(1st|2nd|3rd)(\s*degree)?[·•.\s]*$/i.test(t)) continue;
+          if (/\b(is|was)\s+(reachable|last active|open to work|a group member|hiring|online|out of office)\b/i.test(t)) continue;
+          if (/mutual connection|connections?$|^shared|degree connection/i.test(t)) continue;
+          if (/^message$|view .* profile|^view profile|^connect$|^save$|^more$/i.test(t)) continue;
+          if (t.length > title.length) title = t;  // keep the longest qualifying leaf
+        }
+        if (title.length > 200) title = title.slice(0, 200);
 
-        byUrn.set(urn, { name, title: title || '', urn, linkedin_url: linkedin_url, connection });
+        byUrn.set(urn, { name, title: title, urn, linkedin_url: linkedin_url, connection });
       } catch (e) {}
     });
   };
@@ -377,19 +551,19 @@ async function scrapeBridge(bridge) {
 }
 
 async function scrapePageInTab(url, bridge) {
+  const tab = await openScrapeTab(url);
+  if (!tab) throw new Error('scrape window/tab unavailable');
   return new Promise((resolve, reject) => {
-    chrome.tabs.create({ url, active: true }, tab => {
-      setTimeout(() => {
-        chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractLeadsFromPage, args: [bridge.bridge, bridge.category, bridge.source] }, results => {
-          const out = (results && results[0]) ? (results[0].result || []) : [];
-          const err = chrome.runtime.lastError;
-          // Linger like a human reading the page, then close the tab.
-          setTimeout(() => { try { chrome.tabs.remove(tab.id); } catch (e) {} }, 3500 + Math.floor(Math.random() * 5000));
-          if (err) { reject(new Error(err.message)); return; }
-          resolve(out);
-        });
-      }, 6000 + Math.floor(Math.random() * 3500));
-    });
+    setTimeout(() => {
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, func: extractLeadsFromPage, args: [bridge.bridge, bridge.category, bridge.source] }, results => {
+        const out = (results && results[0]) ? (results[0].result || []) : [];
+        const err = chrome.runtime.lastError;
+        // Linger like a human reading the page, then close the tab (leave the window open).
+        setTimeout(() => { try { chrome.tabs.remove(tab.id); } catch (e) {} }, 3500 + Math.floor(Math.random() * 5000));
+        if (err) { reject(new Error(err.message)); return; }
+        resolve(out);
+      });
+    }, 6000 + Math.floor(Math.random() * 3500));
   });
 }
 
@@ -401,12 +575,33 @@ async function extractLeadsFromPage(radarPerson, category, source) {
   const byUrn = new Map();
   const CAP = 60;
 
+  // Robust name cleaner: strip LinkedIn status suffixes ("… is reachable",
+  // "… was last active 2 days ago", etc.), trailing emoji/flag/symbol runs, and
+  // trailing " • …" segments / stray punctuation. Returns just the person's name.
+  const STATUS_WORDS = 'reachable|last active|open to work|a group member|hiring|online|out of office';
+  const cleanName = (raw) => {
+    let s = (raw || '').replace(/\s+/g, ' ').trim();
+    if (!s) return '';
+    // 1) Cut at the first " is " / " was " followed by a status word.
+    const cut = s.match(new RegExp('\\s+(?:is|was)\\s+(?:' + STATUS_WORDS + ')\\b', 'i'));
+    if (cut && cut.index >= 0) s = s.slice(0, cut.index);
+    // 2) Drop any trailing " • …" segments (LinkedIn appends these after the name).
+    s = s.replace(/\s*[•·]\s*.*$/, '');
+    // 3) Strip a trailing run of emoji / flags / symbols.
+    s = s.replace(/[^\p{L}\p{N}.'\-)]+$/u, '');            // trailing symbols/punct
+    s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{1F1E6}-\u{1F1FF}].*$/u, '');
+    // 4) Final tidy.
+    s = s.replace(/\s+/g, ' ').replace(/^[\s.,;:•·\-]+|[\s.,;:•·\-]+$/g, '').trim();
+    return s;
+  };
+
   // Extract every currently-rendered lead card into the Map (defensive per-card).
   const harvest = () => {
     // Anchor on the lead link, then climb to the card that also holds a company link.
     document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
       try {
-        const name = (linkEl.textContent || '').trim();
+        // Clean status suffixes / emoji off the name BEFORE splitting into first/last.
+        const name = cleanName(linkEl.textContent || '');
         if (!name) return;
         const urnMatch = linkEl.href.match(/\/sales\/lead\/([^,?\/]+)/);
         const parts = name.split(' ');
@@ -420,25 +615,96 @@ async function extractLeadsFromPage(radarPerson, category, source) {
         }
         if (!card) return;
         const compEl   = card.querySelector('a[href*="/sales/company/"]');
-        const company  = compEl ? compEl.textContent.trim() : '';
-        // Title = the text leaf sitting just before the company name in the card.
-        let title = '';
+        const company  = compEl ? compEl.textContent.replace(/\s+/g, ' ').trim() : '';
+
+        // Text leaves in the card = elements with no child elements (the visible bits of text).
         const txts = Array.from(card.querySelectorAll('span, div'))
-          .map(e => e.childElementCount === 0 ? (e.textContent || '').trim() : '')
+          .map(e => e.childElementCount === 0 ? (e.textContent || '').replace(/\s+/g, ' ').trim() : '')
           .filter(Boolean);
-        const ci = txts.indexOf(company);
-        if (ci > 0) title = txts[ci - 1];
+
+        const nlow = name.toLowerCase();
+        const clow = company.toLowerCase();
+
+        // Connection degree of THIS prospect relative to the user (1st/2nd/3rd).
+        // Scan the card's text and any aria-labels for the degree badge.
+        let connection = '';
+        try {
+          let deg = (card.textContent || '').match(/(?:^|[·•\s])(1st|2nd|3rd)\b/i)
+                 || (card.textContent || '').match(/\b(1st|2nd|3rd)\s+degree/i);
+          if (!deg) {
+            const al = Array.from(card.querySelectorAll('[aria-label]'))
+              .map(e => e.getAttribute('aria-label') || '').join(' ');
+            deg = al.match(/\b(1st|2nd|3rd)\b/i);
+          }
+          if (deg) connection = deg[1].toLowerCase();
+        } catch (e) {}
+
+        // Location = a short text leaf that looks like a place: contains a comma OR ends in
+        // "Region"/"Area" (e.g. "Greater Paris Metropolitan Region", "London, England, United
+        // Kingdom"), and isn't the name/company/status/degree/UI text. Best-effort.
+        let location = '';
+        for (const t of txts) {
+          if (!t || t.length < 3 || t.length > 80) continue;
+          const tl = t.toLowerCase();
+          if (tl === nlow || tl.indexOf(nlow) === 0) continue;
+          if (clow && (tl === clow || tl.indexOf(clow) === 0)) continue;
+          if (/^[·•.\s]*(1st|2nd|3rd)(\s*degree)?[·•.\s]*$/i.test(t)) continue;
+          if (/\b(is|was)\s+(reachable|last active|open to work|a group member|hiring|online|out of office)\b/i.test(t)) continue;
+          if (/mutual connection|connections?$|^shared|degree connection/i.test(t)) continue;
+          if (/^message$|view .* profile|^view profile|^connect$|^save$|^more$/i.test(t)) continue;
+          const looksPlace = t.indexOf(',') !== -1 || /(?:Region|Area)$/i.test(t);
+          if (!looksPlace) continue;
+          location = t;
+          break;  // take the first plausible location leaf
+        }
+        // Derive country/city from a comma-separated location; else leave blank.
+        let country = '', city = '';
+        if (location.indexOf(',') !== -1) {
+          const segs = location.split(',').map(s => s.trim()).filter(Boolean);
+          if (segs.length) { city = segs[0]; country = segs[segs.length - 1]; }
+        }
+
+        // Title/headline = the LONGEST descriptive leaf that isn't the name, a status phrase,
+        // a lone degree token, the company, "mutual connection(s)"/connection text, the
+        // captured location, or "Message"/"Save"/"Connect"/"View … profile" UI text. Cap ~200.
+        let title = '';
+        for (const t of txts) {
+          if (!t || t.length < 3) continue;
+          const tl = t.toLowerCase();
+          if (tl === nlow || tl.indexOf(nlow) === 0) continue;
+          if (clow && (tl === clow || tl.indexOf(clow) === 0)) continue;
+          if (location && t === location) continue;
+          if (/^[·•.\s]*(1st|2nd|3rd)(\s*degree)?[·•.\s]*$/i.test(t)) continue;
+          if (/\b(is|was)\s+(reachable|last active|open to work|a group member|hiring|online|out of office)\b/i.test(t)) continue;
+          if (/mutual connection|connections?$|^shared|degree connection/i.test(t)) continue;
+          if (/^message$|view .* profile|^view profile|^connect$|^save$|^more$/i.test(t)) continue;
+          if (t.length > title.length) title = t;  // keep the longest qualifying leaf
+        }
+        if (title.length > 200) title = title.slice(0, 200);
+
+        // Language (best-effort): only from the card, never by opening the profile. If the card
+        // (or a descendant) carries a `lang` attribute, use its value; otherwise leave blank.
+        let language = '';
+        try {
+          const langEl = card.matches('[lang]') ? card : card.querySelector('[lang]');
+          if (langEl) language = (langEl.getAttribute('lang') || '').trim();
+        } catch (e) {}
+
         byUrn.set(lead_id, {
           first_name: parts[0] || '',
           last_name: parts.slice(1).join(' ') || '',
           title: title,
           company: company,
+          connection: connection,
+          location: location,
+          country: country,
+          city: city,
+          language: language,
           radar_person: radarPerson,
           source: source || '',
           lead_id: lead_id,
           collected_date: new Date().toISOString(),
-          linkedin_url: '',
-          connection_level: (function() { const m = (card.textContent || '').match(/\b(1st|2nd|3rd)\b/); return m ? m[1] : ''; })()
+          linkedin_url: ''
         });
       } catch(e) {}
     });
@@ -478,15 +744,15 @@ async function resolvePublicUrls(leads) {
 }
 
 async function resolveUrn(urn) {
+  const tab = await openScrapeTab('https://www.linkedin.com/sales/lead/' + urn + ',NAME_SEARCH,undefined');
+  if (!tab) return null;
   return new Promise(resolve => {
-    chrome.tabs.create({ url: 'https://www.linkedin.com/sales/lead/' + urn + ',NAME_SEARCH,undefined', active: false }, tab => {
-      setTimeout(() => {
-        chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => { const l = document.querySelector('a[href*="linkedin.com/in/"]'); return l ? l.href.split('?')[0] : null; } }, results => {
-          chrome.tabs.remove(tab.id);
-          resolve(results && results[0] ? results[0].result : null);
-        });
-      }, 2500);
-    });
+    setTimeout(() => {
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => { const l = document.querySelector('a[href*="linkedin.com/in/"]'); return l ? l.href.split('?')[0] : null; } }, results => {
+        try { chrome.tabs.remove(tab.id); } catch (e) {}
+        resolve(results && results[0] ? results[0].result : null);
+      });
+    }, 2500);
   });
 }
 
@@ -499,6 +765,18 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // Randomized human-like delay (ms) to avoid looking automated to LinkedIn.
 function humanDelay(minMs, maxMs) { return sleep(minMs + Math.floor(Math.random() * Math.max(0, maxMs - minMs))); }
+
+// Fisher-Yates shuffle. We randomize the ORDER in which we visit bridges (and sources during
+// discovery) on every run, so the access pattern isn't identical each time — a fixed order is
+// an easy automation signature for LinkedIn to spot. Returns a shuffled copy.
+function shuffle(arr) {
+  const a = (arr || []).slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+
+// Accent-insensitive key for matching source names between getSources and getBridges.
+function _normName(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
 
 // Desktop notification from Radar. Fails silently if the permission isn't granted.
 function notify(title, message) {
