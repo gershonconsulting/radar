@@ -101,6 +101,44 @@ body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backgr
 .stat-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--brand-soft,#eef0fe); color:var(--brand-ink,#4f46e5); font-size:0.78rem; font-weight:600; padding:3px 10px; border-radius:12px; margin-right:10px; cursor:pointer; }
 .stat-chip .x{ font-weight:700; }
 
+/* ---------- Onboarding ---------- */
+.onboard{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:24px; box-shadow:0 1px 2px rgba(15,23,42,0.04); border-top:3px solid var(--brand); }
+.onboard .ob-head{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+.onboard .ob-head h3{ font-size:1.05rem; font-weight:700; color:#0f172a; }
+.onboard .ob-progress{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+.onboard .ob-count{ font-size:0.8rem; font-weight:700; color:var(--brand-ink); background:var(--brand-soft); padding:3px 11px; border-radius:12px; white-space:nowrap; }
+.onboard .ob-bar{ width:120px; height:6px; border-radius:6px; background:#eef0f4; overflow:hidden; }
+.onboard .ob-bar i{ display:block; height:100%; background:var(--brand); border-radius:6px; transition:width .25s; }
+.ob-step{ display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-top:1px solid #f1f5f9; }
+.ob-step:first-of-type{ border-top:none; }
+.ob-dot{ flex:0 0 22px; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.78rem; font-weight:700; margin-top:1px; }
+.ob-dot.done{ background:#dcfce7; color:#16a34a; }
+.ob-dot.todo{ background:#f1f5f9; color:#94a3b8; border:1px solid var(--line); }
+.ob-body{ flex:1; min-width:0; }
+.ob-body .ob-title{ font-size:0.92rem; font-weight:600; color:#1e293b; }
+.ob-body .ob-title.done{ color:#64748b; }
+.ob-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px; }
+.ob-link{ display:inline-flex; align-items:center; gap:4px; font-size:0.82rem; font-weight:600; color:var(--brand-ink); text-decoration:none; }
+.ob-link:hover{ text-decoration:underline; }
+.ob-btn{ background:var(--brand); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s; }
+.ob-btn:hover{ background:var(--brand-ink); }
+.ob-btn:disabled{ opacity:0.6; cursor:default; }
+.ob-btn.ghost{ background:#fff; color:#334155; border:1px solid var(--line); }
+.ob-btn.ghost:hover{ background:#f8fafc; }
+.ob-field{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+.ob-field input{ flex:1; min-width:200px; padding:8px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:0.85rem; font-family:inherit; }
+.ob-field input:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
+.ob-note{ font-size:0.8rem; color:var(--muted); margin-top:8px; }
+.ob-status{ font-size:0.8rem; margin-top:6px; min-height:1em; }
+.ob-status.ok{ color:#16a34a; font-weight:600; } .ob-status.err{ color:#dc2626; }
+.onboard-done{ display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-left:3px solid #16a34a; border-radius:12px; padding:14px 18px; margin-bottom:24px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.onboard-done .ok-txt{ font-size:0.92rem; font-weight:600; color:#166534; }
+.onboard-done .dismiss{ margin-left:auto; background:none; border:none; color:var(--muted); font-size:0.82rem; font-weight:600; cursor:pointer; font-family:inherit; }
+.onboard-done .dismiss:hover{ color:#334155; text-decoration:underline; }
+.onboard-reopen{ margin-bottom:16px; }
+.onboard-reopen a{ font-size:0.82rem; font-weight:600; color:var(--brand-ink); cursor:pointer; text-decoration:none; }
+.onboard-reopen a:hover{ text-decoration:underline; }
+
 .panel{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
 .panel h3{ font-size:0.95rem; font-weight:600; color:#334155; margin-bottom:14px; }
 .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
@@ -298,7 +336,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.5.5</div>
+      <div class="ver" id="sideVer">v1.6.0</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -350,6 +388,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div id="warningBanner" class="banner" style="display:none">
         WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
       </div>
+      <div id="onboardingWrap"></div>
       <div class="stats">
         <div class="stat clk" onclick="statGo('targets','today')" title="See today's new targets"><div class="num" id="statToday">0</div><div class="label">New today</div></div>
         <div class="stat clk" onclick="statGo('targets','week')" title="See this week's targets"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
@@ -728,8 +767,133 @@ function connBadge(connection){
   return '<span class="lvl-badge lvl-0">Level ?</span>';
 }
 
+// ===== Getting-started onboarding =====
+// Four setup flags tracked in localStorage. Step 1 (signed in) is always true here
+// because renderAll only runs after initAuth reveals the app. The rest are manual/
+// confirm-based for now; real auto-detection comes from the extension later.
+const OB_KEYS = { salesnav:'radar_salesnav_ok', ext:'radar_ext_ok', botdog:'radar_botdog_ok' };
+function obFlag(k){ try{ return localStorage.getItem(k) === '1'; }catch(e){ return false; } }
+function obSet(k, v){ try{ v ? localStorage.setItem(k,'1') : localStorage.removeItem(k); }catch(e){} }
+function obMark(k){ obSet(k, true); renderOnboarding(); }
+function obReopen(){ try{ localStorage.removeItem('radar_onboarded'); }catch(e){} renderOnboarding(); }
+function obDismiss(){ try{ localStorage.setItem('radar_onboarded','1'); }catch(e){} renderOnboarding(); }
+
+function obDot(done){ return '<div class="ob-dot ' + (done?'done':'todo') + '">' + (done?'&#10003;':'&#9675;') + '</div>'; }
+
+// Test & Save the Botdog key through the proxy (same pattern as saveSettings),
+// then re-check keyStatus; only mark step done when the backend confirms it's valid.
+async function obSaveBotdog(){
+  const inp = document.getElementById('obBotdogKey');
+  const st  = document.getElementById('obBotdogStatus');
+  const btn = document.getElementById('obBotdogBtn');
+  const key = (inp && inp.value || '').trim();
+  if (!key) { if (st){ st.className='ob-status err'; st.textContent='Paste your Botdog API key.'; } return; }
+  if (st){ st.className='ob-status'; st.textContent='Testing…'; }
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'setConfig', botdog_api_key: key }) });
+    const data = await resp.json();
+    if (!data.saved) { if (st){ st.className='ob-status err'; st.textContent='Error: ' + JSON.stringify(data); } if (btn) btn.disabled=false; return; }
+    // Re-check backend key status to confirm the key is valid.
+    let valid = false;
+    try {
+      const t = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=keyStatus&_=' + Date.now()).then(r=>r.text());
+      const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+      valid = !!(j.botdog_set && j.botdog_valid);
+    } catch(e) {}
+    // Keep the Settings view's Key Status panel in sync if present.
+    try { loadKeyStatus(); } catch(e) {}
+    if (valid) { obSet(OB_KEYS.botdog, true); if (st){ st.className='ob-status ok'; st.textContent='Connected ✓'; } renderOnboarding(); }
+    else { if (st){ st.className='ob-status err'; st.textContent='Saved, but the key tested invalid. Double-check it.'; } if (btn) btn.disabled=false; }
+  } catch(e) {
+    if (st){ st.className='ob-status err'; st.textContent='Error: ' + e.message; }
+    if (btn) btn.disabled=false;
+  }
+}
+
+function renderOnboarding(){
+  const wrap = document.getElementById('onboardingWrap');
+  if (!wrap) return;
+  const done = { signin:true, salesnav:obFlag(OB_KEYS.salesnav), ext:obFlag(OB_KEYS.ext), botdog:obFlag(OB_KEYS.botdog) };
+  const count = (done.signin?1:0) + (done.salesnav?1:0) + (done.ext?1:0) + (done.botdog?1:0);
+  const all = count === 4;
+  const onboarded = obFlag('radar_onboarded');
+
+  // Fully set up and dismissed → just a small "Setup" reopen link.
+  if (all && onboarded) {
+    wrap.innerHTML = '<div class="onboard-reopen"><a onclick="obReopen()">⚙ Setup</a></div>';
+    return;
+  }
+  // All four done but not yet dismissed → collapsed "all set" line.
+  if (all) {
+    wrap.innerHTML =
+      '<div class="onboard-done">' +
+        '<div class="ob-dot done">&#10003;</div>' +
+        '<span class="ok-txt">You\'re all set — Radar is fully configured.</span>' +
+        '<button class="dismiss" onclick="obDismiss()">dismiss</button>' +
+      '</div>';
+    return;
+  }
+
+  const steps = [];
+  // 1) Signed in
+  steps.push(
+    '<div class="ob-step">' + obDot(true) +
+      '<div class="ob-body"><div class="ob-title done">Signed in with LinkedIn</div></div>' +
+    '</div>');
+  // 2) Sales Navigator connected
+  steps.push(
+    '<div class="ob-step">' + obDot(done.salesnav) +
+      '<div class="ob-body"><div class="ob-title' + (done.salesnav?' done':'') + '">Sales Navigator connected</div>' +
+        (done.salesnav ? '' :
+        '<div class="ob-actions">' +
+          '<a class="ob-link" href="https://www.linkedin.com/sales/" target="_blank" rel="noopener">Open Sales Navigator ↗</a>' +
+          '<button class="ob-btn" onclick="obMark(\'' + OB_KEYS.salesnav + '\')">Mark as connected</button>' +
+        '</div>') +
+      '</div>' +
+    '</div>');
+  // 3) Chrome extension installed
+  steps.push(
+    '<div class="ob-step">' + obDot(done.ext) +
+      '<div class="ob-body"><div class="ob-title' + (done.ext?' done':'') + '">Install the Chrome extension</div>' +
+        (done.ext ? '' :
+        '<div class="ob-actions">' +
+          '<a class="ob-link" href="/extension.html" target="_blank" rel="noopener">Download &amp; install ↗</a>' +
+          '<button class="ob-btn" onclick="obMark(\'' + OB_KEYS.ext + '\')">Mark as installed</button>' +
+        '</div>') +
+      '</div>' +
+    '</div>');
+  // 4) Connect Botdog
+  steps.push(
+    '<div class="ob-step">' + obDot(done.botdog) +
+      '<div class="ob-body"><div class="ob-title' + (done.botdog?' done':'') + '">Connect Botdog</div>' +
+        (done.botdog ? '' :
+        '<div class="ob-field">' +
+          '<input type="password" id="obBotdogKey" placeholder="paste your Botdog API key…">' +
+          '<button class="ob-btn" id="obBotdogBtn" onclick="obSaveBotdog()">Test &amp; Save</button>' +
+        '</div>' +
+        '<div class="ob-status" id="obBotdogStatus"></div>') +
+        '<div class="ob-note">Don\'t have Botdog? <a href="https://tolt.link/gershonAI" target="_blank" rel="noopener">Create your Botdog account →</a></div>' +
+      '</div>' +
+    '</div>');
+
+  const pct = Math.round((count/4)*100);
+  wrap.innerHTML =
+    '<div class="onboard">' +
+      '<div class="ob-head">' +
+        '<h3>Get set up</h3>' +
+        '<div class="ob-progress">' +
+          '<span class="ob-count">' + count + ' of 4 done</span>' +
+          '<span class="ob-bar"><i style="width:' + pct + '%"></i></span>' +
+        '</div>' +
+      '</div>' +
+      steps.join('') +
+    '</div>';
+}
+
 // ===== Render orchestration =====
 function renderAll(){
+  renderOnboarding();
   renderStats();
   populateFilters();
   renderTargets();
@@ -1375,6 +1539,9 @@ async function initAuth(){
   initSorting();
   load();
   loadCampaigns();
+  // Record this login in the Users store (fire-and-forget, through the authenticated proxy).
+  try { fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, credentials:'same-origin',
+    body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'logLogin', email:user.email, name:user.name, linkedin_sub:user.sub }) }); } catch(e) {}
 }
 initAuth();
 </script>
