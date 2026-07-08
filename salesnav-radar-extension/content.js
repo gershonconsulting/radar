@@ -19,6 +19,24 @@
     queryAndAnnounce();
     // let the page trigger a recheck
     window.addEventListener('radar-ext-ping', queryAndAnnounce);
+    // let the Radar web app read the current schedule (to populate Settings).
+    window.addEventListener('radar-ext-get-schedule', function () {
+      try {
+        chrome.runtime.sendMessage({ action: 'getSchedule' }, function (resp) {
+          var detail = (!chrome.runtime.lastError && resp && resp.ok) ? { ok: true, schedule: resp.schedule } : { ok: false };
+          window.dispatchEvent(new CustomEvent('radar-ext-schedule', { detail: detail }));
+        });
+      } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-schedule', { detail: { ok: false } })); }
+    });
+    // let the Radar web app save a new schedule (when + how often to update targets/bridges).
+    window.addEventListener('radar-ext-set-schedule', function (ev) {
+      try {
+        chrome.runtime.sendMessage({ action: 'setSchedule', schedule: (ev && ev.detail) || {} }, function (resp) {
+          var detail = (!chrome.runtime.lastError && resp && resp.ok) ? { ok: true, schedule: resp.schedule } : { ok: false, error: (resp && resp.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message) };
+          window.dispatchEvent(new CustomEvent('radar-ext-schedule-saved', { detail: detail }));
+        });
+      } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-schedule-saved', { detail: { ok: false, error: String(e) } })); }
+    });
     // let the Radar web app trigger a collection run without opening the popup.
     window.addEventListener('radar-ext-sync', function () {
       try {

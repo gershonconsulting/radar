@@ -57,11 +57,31 @@ async function log(level, msg, data) {
 }
 async function clearLog() { await chrome.storage.local.set({ radarLog: [] }); }
 
-// --- Alarms ---
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.alarms.create('dailySync', { periodInMinutes: 1440 });
-  log('info', 'Extension installed, daily alarm set');
-});
+// --- Alarms / schedule ---
+// The extension is the ONLY scheduler — Radar runs fully standalone, with no dependence on
+// Claude, Cowork, scheduled tasks, or Apps Script triggers. The schedule lives in
+// chrome.storage.local ('radar_schedule') and is set from the web app Settings page.
+const DEFAULT_SCHEDULE = {
+  targetsEveryHours: 24,     // how often to collect prospects (targets)
+  bridgesMode: 'new-only',   // 'new-only' | 'periodic' | 'manual'
+  bridgesEveryDays: 30       // used only when bridgesMode === 'periodic'
+};
+async function getSchedule() {
+  const d = await chrome.storage.local.get('radar_schedule');
+  return Object.assign({}, DEFAULT_SCHEDULE, d.radar_schedule || {});
+}
+async function applySchedule(sched) {
+  const s = Object.assign({}, DEFAULT_SCHEDULE, sched || {});
+  s.targetsEveryHours = Math.max(1, Number(s.targetsEveryHours) || 24);
+  s.bridgesEveryDays  = Math.max(1, Number(s.bridgesEveryDays) || 30);
+  await chrome.storage.local.set({ radar_schedule: s });
+  await chrome.alarms.clear('dailySync');
+  chrome.alarms.create('dailySync', { periodInMinutes: Math.round(s.targetsEveryHours * 60), delayInMinutes: 1 });
+  await log('info', 'schedule:applied', { everyHours: s.targetsEveryHours, bridgesMode: s.bridgesMode, bridgesEveryDays: s.bridgesEveryDays });
+  return s;
+}
+chrome.runtime.onInstalled.addListener(async () => { await applySchedule(await getSchedule()); await log('info', 'Extension installed, schedule set'); });
+chrome.runtime.onStartup.addListener(async () => { await applySchedule(await getSchedule()); });
 chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'dailySync') runSync(); });
 
 // --- Messages ---
@@ -82,6 +102,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'clearLog') { clearLog().then(() => sendResponse({ ok: true })); return true; }
   if (msg.action === 'salesNavStatus') {
     checkLogin().then(ok => sendResponse({ ok: !!ok })).catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+  if (msg.action === 'getSchedule') {
+    getSchedule().then(s => sendResponse({ ok: true, schedule: s })).catch(e => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
+  if (msg.action === 'setSchedule') {
+    applySchedule(msg.schedule).then(s => sendResponse({ ok: true, schedule: s })).catch(e => sendResponse({ ok: false, error: String(e) }));
     return true;
   }
 });
@@ -129,6 +157,7 @@ async function runSync() {
       const rb = await fetchHubJsonp('getBridges');
       ((rb && rb.bridges) || []).forEach(b => { if (b && b.source) discoveredSources.add(_normName(b.source)); });
     } catch (e) {}
+    const sched = await getSchedule();               // 'new-only' | 'periodic' | 'manual'
     const pending = sources.filter(s => String(s.discover_pending || '').trim());
     // Brand-new sources: have an org_id to search with, and no bridges discovered yet.
     const neverDiscovered = sources.filter(s =>
@@ -137,19 +166,31 @@ async function runSync() {
       !discoveredSources.has(_normName(s.name))
     );
     if (pending.length) {
-      // User explicitly asked to collect bridges for these sources — honor it.
+      // User explicitly asked to collect bridges for these sources — always honored.
       await log('info', 'discover:pending', { count: pending.length, sources: pending.map(s => s.name) });
       await discoverBridges(pending);
       await clearDiscoverPending(pending.map(s => s.name));
     }
-    if (neverDiscovered.length) {
-      // One-time first pass for sources that have never been discovered. After this they will
-      // have bridges on the hub and won't be picked up here again.
+    // 'manual' mode: only user-triggered discovery (pending). Otherwise do the one-time first
+    // pass for brand-new sources.
+    if (sched.bridgesMode !== 'manual' && neverDiscovered.length) {
       await log('info', 'discover:first-pass', { count: neverDiscovered.length, sources: neverDiscovered.map(s => s.name) });
       await discoverBridges(neverDiscovered);
     }
-    if (!pending.length && !neverDiscovered.length) {
-      await log('info', 'discover:skip', { reason: 'all sources already discovered - prioritizing prospects' });
+    // 'periodic' mode: re-hunt ALL sources every bridgesEveryDays (the user opted into a refresh
+    // cadence from Settings). Default 'new-only' never re-hunts an already-discovered source.
+    if (sched.bridgesMode === 'periodic') {
+      const store = await chrome.storage.local.get('lastDiscoverAt');
+      const last = store.lastDiscoverAt ? new Date(store.lastDiscoverAt).getTime() : 0;
+      const due = !last || (Date.now() - last) >= sched.bridgesEveryDays * 86400000;
+      if (due) {
+        await log('info', 'discover:periodic', { everyDays: sched.bridgesEveryDays });
+        await discoverBridges(sources);
+        await chrome.storage.local.set({ lastDiscoverAt: new Date().toISOString() });
+      }
+    }
+    if (!pending.length && !neverDiscovered.length && sched.bridgesMode !== 'periodic') {
+      await log('info', 'discover:skip', { reason: 'all sources already discovered - prioritizing prospects', bridgesMode: sched.bridgesMode });
     }
   } catch (err) { await log('error', 'discover:error', { error: String(err) }); }
 
