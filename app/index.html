@@ -264,9 +264,10 @@ td a:hover{ text-decoration:underline; }
 .lvl-badge.lvl-3{ background:#e2e8f0; color:#475569; }
 .lvl-badge.lvl-0{ background:#e2e8f0; color:#64748b; }
 /* ICP-fit grade pill */
-.bridge-row .icp-grade{ flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
-  min-width:34px; height:26px; padding:0 8px; border-radius:8px; font-size:0.82rem; font-weight:700;
+.bridge-row .icp-grade, .icp-grade{ flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  min-width:34px; height:24px; padding:0 8px; border-radius:8px; font-size:0.8rem; font-weight:700;
   letter-spacing:0.01em; border:1px solid transparent; }
+.dupe-tag{ font-size:0.72rem; font-weight:700; color:#94a3b8; background:#f1f5f9; border-radius:6px; padding:1px 5px; margin-left:4px; }
 .icp-grade.g-Aplus, .icp-grade.g-A{ background:rgba(22,163,74,0.12); color:#15803d; border-color:rgba(22,163,74,0.35); }
 .icp-grade.g-B{ background:#eff6ff; color:var(--primary); border-color:#bfdbfe; }
 .icp-grade.g-C{ background:#fef3c7; color:#b45309; border-color:#fcd34d; }
@@ -350,7 +351,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.6</div>
+      <div class="ver" id="sideVer">v1.6.7</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -444,6 +445,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <table>
           <thead><tr id="tHead">
             <th title="Selected targets go to Botdog. Uncheck to exclude permanently.">✓</th>
+            <th class="sortable" data-key="grade" title="ICP fit: A+ (brings foreign companies into the US) → D">Grade <span class="arrow"></span></th>
             <th class="sortable" data-key="name">Name <span class="arrow"></span></th>
             <th class="sortable" data-key="title">Title <span class="arrow"></span></th>
             <th class="sortable" data-key="company">Company <span class="arrow"></span></th>
@@ -1232,13 +1234,29 @@ function cleanTitle(t){
   return s;
 }
 function rowFields(r){
+  const title = cleanTitle(r.title);
   return {
-    name: fullName(r), title: cleanTitle(r.title), company: r.company||'',
+    name: fullName(r), title: title, company: r.company||'',
     location: rowLocation(r), language: r.language||'—',
     bridge: r.radar_person||'', source: leadSource(r)||'',
+    grade: icpGrade(title),
     date: r.collected_date ? new Date(r.collected_date).getTime() : 0,
     botdog: r.botdog_pushed ? 1 : 0, _r: r
   };
+}
+// Collapse duplicate people: same person reached via several bridges appears once.
+// Key by lead_id (the LinkedIn URN); fall back to name+company. Keeps the first seen and
+// records how many bridges reached them.
+function dedupeTargets(list){
+  const seen = new Map();
+  for (const x of list) {
+    const r = x._r || {};
+    const key = String(r.lead_id || '').trim() || ((x.name || '') + '|' + (x.company || '')).toLowerCase();
+    if (seen.has(key)) { seen.get(key)._dupes++; continue; }
+    x._dupes = 1;
+    seen.set(key, x);
+  }
+  return [...seen.values()];
 }
 
 function renderTargets(){
@@ -1255,11 +1273,16 @@ function renderTargets(){
   else if (STAT_FILTER === 'nolink') list = list.filter(x => !String((x._r && x._r.linkedin_url) || '').trim());
   // Hide unselected (excluded) targets unless the user asks to see them.
   if (!SHOW_EXCLUDED) list = list.filter(x => !EXCLUDED.has(leadKey(x._r)));
+  // Collapse duplicate people (same person via multiple bridges → one row).
+  const beforeDupes = list.length;
+  list = dedupeTargets(list);
+  const removedDupes = beforeDupes - list.length;
 
   const k = SORT.key, dir = SORT.dir;
   list.sort((a,b) => {
     let va = a[k], vb = b[k];
-    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (k === 'grade') { va = gradeRank(a.grade); vb = gradeRank(b.grade); }
+    else if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
     if (va < vb) return -1*dir; if (va > vb) return 1*dir; return 0;
   });
 
@@ -1269,17 +1292,22 @@ function renderTargets(){
     const lid = leadKey(r);
     const excluded = EXCLUDED.has(lid);
     const lidArg = "'" + String(lid).replace(/['"\\]/g, '') + "'";
+    const g = x.grade || 'D';
+    const gradePill = '<span class="icp-grade g-' + g.replace('+','plus') + '" title="ICP fit">' + g + '</span>';
+    const dupeTag = (x._dupes > 1) ? ' <span class="dupe-tag" title="Reached via ' + x._dupes + ' bridges">×' + x._dupes + '</span>' : '';
     return '<tr class="' + (excluded ? 'row-excluded' : '') + '">' +
       '<td style="text-align:center"><input type="checkbox" class="sel-box"' + (excluded ? '' : ' checked') +
         ' onchange="toggleTargetSelect(' + lidArg + ', this)" title="' + (excluded ? 'Unselected — excluded from Botdog' : 'Selected — will go to Botdog') + '"></td>' +
-      '<td>' + esc(x.name) + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.company) +
+      '<td style="text-align:center">' + gradePill + '</td>' +
+      '<td>' + esc(x.name) + dupeTag + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.company) +
       '</td><td>' + esc(x.location) + '</td><td>' + esc(x.language) +
       '</td><td>' + esc(x.bridge) + '</td><td>' + esc(x.source) + '</td><td>' + fmtDate(r.collected_date) +
       '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') +
       '</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
-  }).join('') : '<tr><td colspan="11" class="empty">No targets match</td></tr>';
+  }).join('') : '<tr><td colspan="12" class="empty">No targets match</td></tr>';
   const _chip = STAT_FILTER ? '<span class="stat-chip" onclick="clearStatFilter()" title="Clear filter">' + esc(STAT_LABEL[STAT_FILTER]||STAT_FILTER) + ' <span class="x">✕</span></span>' : '';
-  document.getElementById('tCount').innerHTML = _chip + list.length + ' target' + (list.length===1?'':'s');
+  const _dupeNote = removedDupes > 0 ? ' <span style="color:#94a3b8">(' + removedDupes + ' duplicate' + (removedDupes===1?'':'s') + ' merged)</span>' : '';
+  document.getElementById('tCount').innerHTML = _chip + list.length + ' target' + (list.length===1?'':'s') + _dupeNote;
 
   // update header arrows
   document.querySelectorAll('#tHead th.sortable').forEach(th => {
@@ -1328,7 +1356,8 @@ function csvCell(v){ const s = String(v == null ? '' : v); return /[",\n]/.test(
 function downloadBridgesCsv(){
   const list = (BRIDGE_FILTER === 'active') ? BRIDGES.filter(b => b.active) : BRIDGES.slice();
   if (!list.length) { alert('No bridges to export yet.'); return; }
-  const header = ['FirstName','LastName','Title','Company Name','LinkedIn link'];
+  const header = ['FirstName','LastName','Title','Company Name','LinkedIn link','Level'];
+  const levelOf = (c) => { const s = String(c||''); if (/1st|^1\b/i.test(s)) return '1'; if (/2nd|^2\b/i.test(s)) return '2'; if (/3rd|^3\b/i.test(s)) return '3'; return ''; };
   const rows = list.map(b => {
     const name = cleanName(b.name || '');
     const parts = name.split(/\s+/);
@@ -1336,7 +1365,7 @@ function downloadBridgesCsv(){
     const last = parts.join(' ');
     const url = String(b.linkedin_url || '');
     const publicUrl = /linkedin\.com\/in\//i.test(url) ? url.split('?')[0] : '';
-    return [first, last, b.title || '', b.source || '', publicUrl || 'NEEDS-ENRICHERPRO'];
+    return [first, last, b.title || '', b.source || '', publicUrl || 'NEEDS-ENRICHERPRO', levelOf(b.connection)];
   });
   const csv = [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
