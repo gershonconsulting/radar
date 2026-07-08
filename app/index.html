@@ -350,7 +350,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.5</div>
+      <div class="ver" id="sideVer">v1.6.6</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -462,7 +462,10 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 
     <!-- ===== Bridges ===== -->
     <section id="view-bridges" class="view">
-      <div class="page-head"><h2>Bridges</h2><p>Well-connected people who introduce you to targets.</p></div>
+      <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div><h2>Bridges</h2><p>Well-connected people who introduce you to targets.</p></div>
+        <button class="sync-btn" onclick="downloadBridgesCsv()" title="Export bridges as CSV (for a Botdog invitation campaign)">⬇ Download CSV</button>
+      </div>
       <div class="bridges-note">
         Toggle a candidate <strong>Active</strong> to have the extension collect that person's ICP connections as Targets.
       </div>
@@ -528,7 +531,41 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 
     <!-- ===== Settings ===== -->
     <section id="view-settings" class="view">
-      <div class="page-head"><h2>Settings</h2><p>Backend API keys and their live status.</p></div>
+      <div class="page-head"><h2>Settings</h2><p>Collection schedule, API keys, and campaign.</p></div>
+      <div class="settings-card">
+        <h2>Collection Schedule</h2>
+        <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected. Install/reload the Radar extension to change the schedule.</div>
+        <div class="field">
+          <label>Collect new targets (prospects)</label>
+          <select id="schedTargets">
+            <option value="6">Every 6 hours</option>
+            <option value="12">Every 12 hours</option>
+            <option value="24" selected>Once a day</option>
+            <option value="48">Every 2 days</option>
+            <option value="168">Once a week</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Look for new bridges</label>
+          <select id="schedBridgesMode">
+            <option value="new-only" selected>Only for new sources (recommended)</option>
+            <option value="periodic">Refresh on a schedule</option>
+            <option value="manual">Manual only (I'll click Find Bridges)</option>
+          </select>
+        </div>
+        <div class="field" id="schedBridgesEveryWrap" style="display:none">
+          <label>Refresh bridges every</label>
+          <select id="schedBridgesEvery">
+            <option value="7">Week</option>
+            <option value="14">2 weeks</option>
+            <option value="30" selected>Month</option>
+            <option value="90">Quarter</option>
+          </select>
+        </div>
+        <button class="btn-save" onclick="saveSchedule()">Save Schedule</button>
+        <div id="schedStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
       <div class="settings-card">
         <h2>API Keys</h2>
         <p>Stored securely in the Apps Script backend.</p>
@@ -544,19 +581,23 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div id="saveStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
-        <h2>Outreach Campaign (Botdog)</h2>
-        <p>New targets are pushed to this campaign. Pick one of your campaigns, or paste its ID.</p>
+        <h2>Outreach Campaigns (Botdog)</h2>
+        <p>Two separate campaigns: one to invite &amp; follow up with <strong>bridges</strong> you're not connected to, one for <strong>targets</strong> (prospects). Pick from your campaigns or paste an ID.</p>
         <div class="field">
-          <label>Campaign</label>
+          <label>Targets campaign <span style="color:#94a3b8;font-weight:400">(prospects)</span></label>
           <select id="botdogCampaignSelect" onchange="onCampaignSelect()">
             <option value="">— loading your campaigns… —</option>
           </select>
+          <input type="text" id="botdogCampaignId" placeholder="targets campaign id" style="margin-top:6px">
         </div>
         <div class="field">
-          <label>Campaign ID <span style="color:#94a3b8;font-weight:400">(auto-filled; or paste manually)</span></label>
-          <input type="text" id="botdogCampaignId" placeholder="campaign id">
+          <label>Bridges campaign <span style="color:#94a3b8;font-weight:400">(invitations to bridges)</span></label>
+          <select id="botdogBridgesCampaignSelect" onchange="onBridgesCampaignSelect()">
+            <option value="">— loading your campaigns… —</option>
+          </select>
+          <input type="text" id="botdogBridgesCampaignId" placeholder="bridges campaign id" style="margin-top:6px">
         </div>
-        <button class="btn-save" onclick="saveCampaign()">Save Campaign</button>
+        <button class="btn-save" onclick="saveCampaign()">Save Campaigns</button>
         <div id="campaignStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
@@ -1278,6 +1319,33 @@ function setBridgeFilter(f){
   document.querySelectorAll('#bridgeFilterSeg button').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
   renderBridges();
 }
+
+// Export bridges to CSV: FirstName, LastName, Title, Company Name, LinkedIn link.
+// Use only public /in/ URLs for the LinkedIn column (Sales Nav lead URLs aren't importable to
+// Botdog). Rows whose public URL is still missing are flagged so you can see what enricherPro
+// needs to resolve. Respects the current All / Active-only filter.
+function csvCell(v){ const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }
+function downloadBridgesCsv(){
+  const list = (BRIDGE_FILTER === 'active') ? BRIDGES.filter(b => b.active) : BRIDGES.slice();
+  if (!list.length) { alert('No bridges to export yet.'); return; }
+  const header = ['FirstName','LastName','Title','Company Name','LinkedIn link'];
+  const rows = list.map(b => {
+    const name = cleanName(b.name || '');
+    const parts = name.split(/\s+/);
+    const first = parts.shift() || '';
+    const last = parts.join(' ');
+    const url = String(b.linkedin_url || '');
+    const publicUrl = /linkedin\.com\/in\//i.test(url) ? url.split('?')[0] : '';
+    return [first, last, b.title || '', b.source || '', publicUrl || 'NEEDS-ENRICHERPRO'];
+  });
+  const csv = [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'radar-bridges-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
 function renderBridges(){
   const body = document.getElementById('bridgesBody');
   const countEl = document.getElementById('bridgeCount');
@@ -1631,6 +1699,57 @@ function showView(name){
   if (name === 'dashboard') Object.values(CHARTS).forEach(c => { try{ c.resize(); }catch(e){} });
   // refresh bridge candidates each time the Bridges view is opened
   if (name === 'bridges') { loadBridges().then(renderBridges); }
+  // load the current collection schedule from the extension when Settings opens
+  if (name === 'settings') { try { loadSchedule(); } catch(e){} }
+}
+
+// ===== Collection schedule (lives in the extension — Radar is self-contained) =====
+function schedBridgesToggle(){
+  const m = document.getElementById('schedBridgesMode');
+  const wrap = document.getElementById('schedBridgesEveryWrap');
+  if (m && wrap) wrap.style.display = (m.value === 'periodic') ? '' : 'none';
+}
+function loadSchedule(){
+  const warn = document.getElementById('schedExtWarn');
+  const hasExt = document.documentElement.getAttribute('data-radar-ext');
+  if (warn) warn.style.display = hasExt ? 'none' : 'block';
+  if (!hasExt) return;
+  const onSched = (e) => {
+    window.removeEventListener('radar-ext-schedule', onSched);
+    const s = (e && e.detail && e.detail.schedule) || {};
+    const t = document.getElementById('schedTargets');
+    const m = document.getElementById('schedBridgesMode');
+    const ev = document.getElementById('schedBridgesEvery');
+    if (t && s.targetsEveryHours) t.value = String(s.targetsEveryHours);
+    if (m && s.bridgesMode) m.value = s.bridgesMode;
+    if (ev && s.bridgesEveryDays) ev.value = String(s.bridgesEveryDays);
+    schedBridgesToggle();
+  };
+  window.addEventListener('radar-ext-schedule', onSched);
+  window.dispatchEvent(new CustomEvent('radar-ext-get-schedule'));
+  const mSel = document.getElementById('schedBridgesMode');
+  if (mSel && !mSel._wired) { mSel._wired = true; mSel.addEventListener('change', schedBridgesToggle); }
+}
+function saveSchedule(){
+  const status = document.getElementById('schedStatus');
+  const hasExt = document.documentElement.getAttribute('data-radar-ext');
+  if (!hasExt) { if (status) status.textContent = 'Chrome extension not detected — reload it and try again.'; return; }
+  const schedule = {
+    targetsEveryHours: parseInt(document.getElementById('schedTargets').value, 10) || 24,
+    bridgesMode: document.getElementById('schedBridgesMode').value || 'new-only',
+    bridgesEveryDays: parseInt(document.getElementById('schedBridgesEvery').value, 10) || 30
+  };
+  if (status) status.textContent = 'Saving…';
+  const onSaved = (e) => {
+    window.removeEventListener('radar-ext-schedule-saved', onSaved);
+    const d = (e && e.detail) || {};
+    if (status) status.textContent = d.ok
+      ? '✓ Saved. Targets every ' + schedule.targetsEveryHours + 'h; bridges: ' + schedule.bridgesMode + '.'
+      : 'Error saving schedule: ' + (d.error || 'unknown');
+  };
+  window.addEventListener('radar-ext-schedule-saved', onSaved);
+  window.dispatchEvent(new CustomEvent('radar-ext-set-schedule', { detail: schedule }));
+  setTimeout(() => { window.removeEventListener('radar-ext-schedule-saved', onSaved); }, 8000);
 }
 
 // ===== Settings =====
@@ -1672,40 +1791,56 @@ function onCampaignSelect(){
   const v = document.getElementById('botdogCampaignSelect').value;
   if (v) document.getElementById('botdogCampaignId').value = v;
 }
+function onBridgesCampaignSelect(){
+  const v = document.getElementById('botdogBridgesCampaignSelect').value;
+  if (v) document.getElementById('botdogBridgesCampaignId').value = v;
+}
+function fillCampaignOptions(sel, list, currentId){
+  if (!sel) return;
+  if (list.length) {
+    sel.innerHTML = '<option value="">— select a campaign —</option>' +
+      list.map(c => '<option value="' + esc(c.id) + '"' + (c.id===currentId?' selected':'') + '>' + esc(c.name || c.id) + '</option>').join('');
+  } else {
+    sel.innerHTML = '<option value="">— couldn’t load campaigns; paste ID below —</option>';
+  }
+}
 async function loadCampaigns(){
   const sel = document.getElementById('botdogCampaignSelect');
+  const bsel = document.getElementById('botdogBridgesCampaignSelect');
   const idInput = document.getElementById('botdogCampaignId');
+  const bIdInput = document.getElementById('botdogBridgesCampaignId');
   if (!sel) return;
-  let currentId = '', currentName = '';
+  let curId = '', curBridgeId = '';
   try {
     const cfg = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r=>r.text());
     const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
-    currentId = j.botdog_campaign_id || ''; currentName = j.botdog_campaign_name || '';
-    if (currentId && idInput && !idInput.value) idInput.value = currentId;
+    curId = j.botdog_campaign_id || '';
+    curBridgeId = j.botdog_bridges_campaign_id || '';
+    if (curId && idInput && !idInput.value) idInput.value = curId;
+    if (curBridgeId && bIdInput && !bIdInput.value) bIdInput.value = curBridgeId;
   } catch(e) {}
   try {
     const t = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getBotdogCampaigns&_=' + Date.now()).then(r=>r.text());
     const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
     const list = (j && j.campaigns) || [];
-    if (list.length) {
-      sel.innerHTML = '<option value="">— select a campaign —</option>' +
-        list.map(c => '<option value="' + esc(c.id) + '"' + (c.id===currentId?' selected':'') + '>' + esc(c.name || c.id) + '</option>').join('');
-    } else {
-      sel.innerHTML = '<option value="">— couldn’t load campaigns; paste ID below —</option>';
-    }
-  } catch(e) { sel.innerHTML = '<option value="">— couldn’t load campaigns; paste ID below —</option>'; }
+    fillCampaignOptions(sel, list, curId);
+    fillCampaignOptions(bsel, list, curBridgeId);
+  } catch(e) { fillCampaignOptions(sel, [], ''); fillCampaignOptions(bsel, [], ''); }
 }
 async function saveCampaign(){
   const id = (document.getElementById('botdogCampaignId').value || '').trim();
+  const bid = (document.getElementById('botdogBridgesCampaignId').value || '').trim();
   const sel = document.getElementById('botdogCampaignSelect');
+  const bsel = document.getElementById('botdogBridgesCampaignSelect');
   const name = sel && sel.selectedOptions.length ? (sel.selectedOptions[0].textContent||'').trim() : '';
+  const bname = bsel && bsel.selectedOptions.length ? (bsel.selectedOptions[0].textContent||'').trim() : '';
   const status = document.getElementById('campaignStatus');
-  if (!id) { status.textContent = 'Select a campaign or paste its ID.'; return; }
+  if (!id && !bid) { status.textContent = 'Select at least one campaign or paste an ID.'; return; }
   status.textContent = 'Saving…';
   try {
-    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_campaign_id: id, botdog_campaign_name: name }) });
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_campaign_id: id, botdog_campaign_name: name, botdog_bridges_campaign_id: bid, botdog_bridges_campaign_name: bname }) });
     const data = await resp.json();
-    status.textContent = data.saved ? '✓ Campaign saved — new targets will push here.' : 'Error: ' + JSON.stringify(data);
+    status.textContent = data.saved ? '✓ Campaigns saved — targets → targets campaign, bridges → bridges campaign.' : 'Error: ' + JSON.stringify(data);
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
 
