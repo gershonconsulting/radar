@@ -351,7 +351,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.8</div>
+      <div class="ver" id="sideVer">v1.6.9</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -360,6 +360,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <nav class="nav-items">
       <button class="nav-item active" id="nav-dashboard"   onclick="showView('dashboard')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg></span> Dashboard</button>
+      <button class="nav-item"        id="nav-setup"       onclick="showView('setup')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Setup</button>
       <div class="nav-sec">Pipeline</div>
       <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
       <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges <span class="nav-count" id="bridgeNavCount">0</span></button>
@@ -407,7 +408,6 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div id="warningBanner" class="banner" style="display:none">
         WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
       </div>
-      <div id="onboardingWrap"></div>
       <div class="stats">
         <div class="stat clk" onclick="statGo('targets','today')" title="See today's new targets"><div class="num" id="statToday">0</div><div class="label">New today</div></div>
         <div class="stat clk" onclick="statGo('targets','week')" title="See this week's targets"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
@@ -422,13 +422,22 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div class="panel"><h3>Targets per Bridge</h3><div class="chart-wrap"><canvas id="chartBridges"></canvas></div></div>
         <div class="panel"><h3>Targets per Source</h3><div class="chart-wrap"><canvas id="chartSources"></canvas></div></div>
       </div>
-      <div class="panel" style="margin-bottom:18px"><h3>Daily collection trend</h3><div class="chart-wrap"><canvas id="chartTrend"></canvas></div></div>
+      <div class="grid-2">
+        <div class="panel"><h3>ICP grade distribution</h3><div class="chart-wrap"><canvas id="chartGrades"></canvas></div></div>
+        <div class="panel"><h3>Daily collection trend</h3><div class="chart-wrap"><canvas id="chartTrend"></canvas></div></div>
+      </div>
 
       <div class="panel">
         <h3>Source → Bridge → Target flow <span style="font-weight:400;color:#94a3b8;font-size:0.8rem">(click a node to filter)</span></h3>
         <div class="flow" id="flowDiagram"></div>
         <div class="flow-hint" id="flowHint">Click a Source or Bridge to highlight its path.</div>
       </div>
+    </section>
+
+    <!-- ===== Setup ===== -->
+    <section id="view-setup" class="view">
+      <div class="page-head"><h2>Setup</h2><p>Connect Radar to LinkedIn Sales Navigator and Botdog to start collecting targets.</p></div>
+      <div id="onboardingWrap"></div>
     </section>
 
     <!-- ===== Targets ===== -->
@@ -1638,6 +1647,23 @@ function renderCharts(){
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:12, font:{size:11}}}} }
   });
 
+  // ICP grade distribution (A+ / A / B / C / D)
+  try {
+    if (ROWS && ROWS.length) {
+      const order = ['A+','A','B','C','D'];
+      const gradeCounts = { 'A+':0, 'A':0, 'B':0, 'C':0, 'D':0 };
+      ROWS.forEach(r => { const g = icpGrade(cleanTitle(r.title)); if (gradeCounts[g] != null) gradeCounts[g]++; });
+      const gradeColors = { 'A+':'#059669', 'A':'#10b981', 'B':'#3b82f6', 'C':'#f59e0b', 'D':'#94a3b8' };
+      destroyChart('chartGrades');
+      const gEl = document.getElementById('chartGrades');
+      if (gEl) CHARTS.chartGrades = new Chart(gEl, {
+        type:'bar',
+        data:{ labels:order, datasets:[{ label:'Targets', data:order.map(g=>gradeCounts[g]), backgroundColor:order.map(g=>gradeColors[g]), borderRadius:4 }] },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+      });
+    }
+  } catch(e) { /* keep dashboard resilient if grading fails */ }
+
   // Daily trend
   const byDay = {};
   ROWS.forEach(r => { const k = dayKey(r.collected_date); if (k) byDay[k] = (byDay[k]||0)+1; });
@@ -1728,6 +1754,8 @@ function showView(name){
   document.getElementById('nav-' + name).classList.add('active');
   // charts need a resize nudge when their container becomes visible
   if (name === 'dashboard') Object.values(CHARTS).forEach(c => { try{ c.resize(); }catch(e){} });
+  // (re)populate the onboarding checklist when the Setup view opens
+  if (name === 'setup') { try { renderOnboarding(); } catch(e){} }
   // refresh bridge candidates each time the Bridges view is opened
   if (name === 'bridges') { loadBridges().then(renderBridges); }
   // load the current collection schedule from the extension when Settings opens
