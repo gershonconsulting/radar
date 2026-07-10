@@ -37,6 +37,14 @@
         });
       } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-schedule-saved', { detail: { ok: false, error: String(e) } })); }
     });
+    // let the Radar web app hand the extension the Botdog key + bridges campaign,
+    // so its sync can invite non-1st-degree bridges into the dedicated campaign.
+    window.addEventListener('radar-ext-set-botdog', function (ev) {
+      try {
+        var d = (ev && ev.detail) || {};
+        chrome.runtime.sendMessage({ action: 'setBotdogConfig', key: d.key, campaign: d.campaign }, function () {});
+      } catch (e) {}
+    });
     // let the Radar web app trigger a collection run without opening the popup.
     window.addEventListener('radar-ext-sync', function () {
       try {

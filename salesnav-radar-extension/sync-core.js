@@ -112,6 +112,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     applySchedule(msg.schedule).then(s => sendResponse({ ok: true, schedule: s })).catch(e => sendResponse({ ok: false, error: String(e) }));
     return true;
   }
+  if (msg.action === 'setBotdogConfig') {
+    // Store the Botdog key + bridges campaign so the sync can invite bridges directly.
+    const upd = {};
+    if (msg.key) upd.radar_botdog_key = msg.key;
+    if (msg.campaign) upd.radar_bridges_campaign = msg.campaign;
+    chrome.storage.local.set(upd).then(() => sendResponse({ ok: true })).catch(e => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
 });
 
 // Forward the run log to the hub so it's visible server-side (for debugging).
@@ -219,6 +227,9 @@ async function runSync() {
     const resolved = await resolvePublicUrls(allLeads);
     await log('info', 'resolve:done', { resolvedCount: resolved.filter(l => l.linkedin_url).length });
 
+    // Invite non-1st-degree bridges into the dedicated Botdog campaign (best-effort; never blocks the run).
+    try { await pushBridgesToBotdog(); } catch (e) { await log('warn', 'bridge-push:error', { error: String(e) }); }
+
     if (!WEBAPP_URL || WEBAPP_URL === '__WEBAPP_URL__') { await log('warn', 'WEBAPP_URL not set'); return { status: 'no-webapp-url' }; }
 
     try {
@@ -258,6 +269,76 @@ async function getSources() {
 async function getBridges() {
   const data = await fetchHubJsonp('getBridges');
   return (data && data.bridges) ? data.bridges : [];
+}
+
+// ─── Bridge invites → dedicated Botdog campaign ─────────────────────────────
+// Every sync, invite the bridges you are NOT connected to (not 1st-degree) into the
+// dedicated "bridges" Botdog campaign, so they become 1st-degree and their networks
+// open up. enricherPro fills the public /in/ URL when it's missing. Deduped via storage.
+const BRIDGES_CAMPAIGN_ID_DEFAULT = '3e07e3ee-8144-4429-b73a-1751d1466d35';
+const ENRICHER_BASE = 'https://enricherpro.com';
+const BOTDOG_CONTACTS_URL = 'https://api.botdog.io/v1/campaigns/contacts';
+const MAX_BRIDGE_PUSH_PER_RUN = 25;
+
+// Strip LinkedIn status suffixes / trailing emoji from a name (for enricherPro lookups).
+function cleanPersonName(raw) {
+  let s = String(raw || '').replace(/\s+/g, ' ').trim();
+  const cut = s.match(/\s+(?:is|was)\s+(?:reachable|last active|open to work|a group member|hiring|online|out of office)\b/i);
+  if (cut && cut.index >= 0) s = s.slice(0, cut.index);
+  s = s.replace(/\s*[•·]\s*.*$/, '');
+  s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{1F1E6}-\u{1F1FF}].*$/u, '');
+  return s.replace(/\s+/g, ' ').replace(/^[\s.,;:•·\-]+|[\s.,;:•·\-]+$/g, '').trim();
+}
+
+// Resolve a public linkedin.com/in/ URL from name+company via enricherPro.
+async function enricherResolve(firstName, lastName, company, title) {
+  try {
+    const resp = await fetch(ENRICHER_BASE + '/api/enrich', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ firstName, lastName, company, title })
+    });
+    if (!resp.ok) return '';
+    const o = await resp.json();
+    const url = o.linkedInUrl || o.linkedin_url || '';
+    if (url && /linkedin\.com\/in\//i.test(url) && o.linkedInValidated !== false) return String(url).split('?')[0];
+  } catch (e) {}
+  return '';
+}
+
+async function pushBridgesToBotdog() {
+  const cfg = await chrome.storage.local.get(['radar_botdog_key', 'radar_bridges_campaign', 'radar_bridges_pushed']);
+  const key = cfg.radar_botdog_key;
+  const campaign = cfg.radar_bridges_campaign || BRIDGES_CAMPAIGN_ID_DEFAULT;
+  if (!key) { await log('info', 'bridge-push:skip', { reason: 'no Botdog key — set it in Settings' }); return; }
+  const pushed = new Set(cfg.radar_bridges_pushed || []);
+  let bridges = [];
+  try { bridges = await getBridges(); } catch (e) { return; }
+  const is1st = b => /1st|^1\b/i.test(String(b.connection || ''));
+  const todo = bridges.filter(b => b && b.urn && !is1st(b) && !pushed.has(b.urn));
+  await log('info', 'bridge-push:start', { candidates: todo.length, campaign });
+  let sent = 0;
+  for (const b of todo) {
+    if (sent >= MAX_BRIDGE_PUSH_PER_RUN) break;
+    let url = String(b.linkedin_url || '');
+    if (!/linkedin\.com\/in\//i.test(url)) {
+      const name = cleanPersonName(b.name || '');
+      const parts = name.split(/\s+/);
+      url = await enricherResolve(parts.shift() || '', parts.join(' '), b.source || '', b.title || '');
+      await sleep(400);
+    }
+    if (!/linkedin\.com\/in\//i.test(url)) continue;   // no public URL yet — try again next run
+    try {
+      const resp = await fetch(BOTDOG_CONTACTS_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({ campaign_id: campaign, profiles: [{ linkedin_url: url.split('?')[0] }] })
+      });
+      if (resp.ok) { pushed.add(b.urn); sent++; }
+    } catch (e) {}
+    await sleep(600);
+  }
+  await chrome.storage.local.set({ radar_bridges_pushed: [...pushed] });
+  await log('info', 'bridge-push:done', { sent });
+  if (sent) notify('Bridges invited', sent + ' bridge(s) added to your Botdog invite campaign.');
 }
 
 // POST candidate bridges to the hub. Server dedupes by urn and sets active=false for new ones.
