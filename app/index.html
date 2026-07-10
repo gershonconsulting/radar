@@ -351,7 +351,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.7</div>
+      <div class="ver" id="sideVer">v1.6.8</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -362,8 +362,8 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <button class="nav-item active" id="nav-dashboard"   onclick="showView('dashboard')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg></span> Dashboard</button>
       <div class="nav-sec">Pipeline</div>
       <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
-      <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges</button>
-      <button class="nav-item"        id="nav-sources"     onclick="showView('sources')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v17"/><path d="M14 9h3a1 1 0 0 1 1 1v11"/><line x1="9" y1="7" x2="10" y2="7"/><line x1="9" y1="11" x2="10" y2="11"/><line x1="9" y1="15" x2="10" y2="15"/></svg></span> Sources</button>
+      <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges <span class="nav-count" id="bridgeNavCount">0</span></button>
+      <button class="nav-item"        id="nav-sources"     onclick="showView('sources')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v17"/><path d="M14 9h3a1 1 0 0 1 1 1v11"/><line x1="9" y1="7" x2="10" y2="7"/><line x1="9" y1="11" x2="10" y2="11"/><line x1="9" y1="15" x2="10" y2="15"/></svg></span> Sources <span class="nav-count" id="sourceNavCount">0</span></button>
       <div class="nav-sec">Activity</div>
       <button class="nav-item"        id="nav-log"         onclick="showView('log')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg></span> Log</button>
       <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span> Collections</button>
@@ -590,14 +590,14 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <select id="botdogCampaignSelect" onchange="onCampaignSelect()">
             <option value="">— loading your campaigns… —</option>
           </select>
-          <input type="text" id="botdogCampaignId" placeholder="targets campaign id" style="margin-top:6px">
+          <input type="text" id="botdogCampaignId" placeholder="paste campaign URL or ID" style="margin-top:6px">
         </div>
         <div class="field">
           <label>Bridges campaign <span style="color:#94a3b8;font-weight:400">(invitations to bridges)</span></label>
           <select id="botdogBridgesCampaignSelect" onchange="onBridgesCampaignSelect()">
             <option value="">— loading your campaigns… —</option>
           </select>
-          <input type="text" id="botdogBridgesCampaignId" placeholder="bridges campaign id" style="margin-top:6px">
+          <input type="text" id="botdogBridgesCampaignId" placeholder="paste campaign URL or ID" style="margin-top:6px">
         </div>
         <button class="btn-save" onclick="saveCampaign()">Save Campaigns</button>
         <div id="campaignStatus" style="margin-top:8px;font-size:0.85rem"></div>
@@ -1156,6 +1156,8 @@ function renderStats(){
   document.getElementById('statBridges').textContent   = activeBridgeCount;
   document.getElementById('statSources').textContent   = activeSourceCount || STORED_SOURCES.length;
   document.getElementById('leadCount').textContent     = rows.length;
+  const bnc = document.getElementById('bridgeNavCount'); if (bnc) bnc.textContent = BRIDGES.length;
+  const snc = document.getElementById('sourceNavCount'); if (snc) snc.textContent = STORED_SOURCES.length;
 }
 
 // ----- Sync Now (web app drives the extension) -----
@@ -1856,9 +1858,17 @@ async function loadCampaigns(){
     fillCampaignOptions(bsel, list, curBridgeId);
   } catch(e) { fillCampaignOptions(sel, [], ''); fillCampaignOptions(bsel, [], ''); }
 }
+// Accept a full Botdog campaign URL (e.g. app.botdog.co/campaigns/<uuid>/sequence) or a bare ID.
+function parseCampaignId(v){
+  const s = String(v || '').trim();
+  const m = s.match(/campaigns\/([0-9a-f-]{16,})/i) || s.match(/\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i);
+  return m ? m[1] : s;
+}
 async function saveCampaign(){
-  const id = (document.getElementById('botdogCampaignId').value || '').trim();
-  const bid = (document.getElementById('botdogBridgesCampaignId').value || '').trim();
+  const id = parseCampaignId(document.getElementById('botdogCampaignId').value);
+  const bid = parseCampaignId(document.getElementById('botdogBridgesCampaignId').value);
+  document.getElementById('botdogCampaignId').value = id;
+  document.getElementById('botdogBridgesCampaignId').value = bid;
   const sel = document.getElementById('botdogCampaignSelect');
   const bsel = document.getElementById('botdogBridgesCampaignSelect');
   const name = sel && sel.selectedOptions.length ? (sel.selectedOptions[0].textContent||'').trim() : '';
