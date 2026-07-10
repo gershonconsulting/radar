@@ -351,7 +351,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.9</div>
+      <div class="ver" id="sideVer">v1.6.10</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -1823,6 +1823,8 @@ async function saveSettings() {
     const data = await resp.json();
     status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
     if (data.saved) await loadKeyStatus();
+    // Also hand the Botdog key to the Chrome extension so its sync can invite bridges.
+    if (botdog) { try { window.dispatchEvent(new CustomEvent('radar-ext-set-botdog', { detail:{ key: botdog } })); } catch(e) {} }
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
 
@@ -1908,6 +1910,8 @@ async function saveCampaign(){
     const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_campaign_id: id, botdog_campaign_name: name, botdog_bridges_campaign_id: bid, botdog_bridges_campaign_name: bname }) });
     const data = await resp.json();
     status.textContent = data.saved ? '✓ Campaigns saved — targets → targets campaign, bridges → bridges campaign.' : 'Error: ' + JSON.stringify(data);
+    // Hand the bridges campaign id to the Chrome extension so its sync invites bridges there.
+    if (bid) { try { window.dispatchEvent(new CustomEvent('radar-ext-set-botdog', { detail:{ campaign: bid } })); } catch(e) {} }
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
 
