@@ -351,7 +351,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.10</div>
+      <div class="ver" id="sideVer">v1.6.12</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -415,6 +415,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div class="stat clk" onclick="statGo('targets','nolink')" title="See targets still missing a LinkedIn URL"><div class="num" id="statLinkedPct">0%</div><div class="label">Have LinkedIn link</div><div class="sub" id="statLinkedSub">0 of 0</div></div>
         <div class="stat clk" onclick="statGo('targets','pushed')" title="See targets pushed to Botdog"><div class="num" id="statPushedPct">0%</div><div class="label">On Botdog</div><div class="sub" id="statPushedSub">0 of 0</div></div>
         <div class="stat clk" onclick="statGo('bridges','')" title="See active bridges"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
+        <div class="stat clk" onclick="statGo('bridges','')" title="Bridges you're already 1st-degree connected to"><div class="num" id="statBridgesConn">0%</div><div class="label">Bridges connected</div><div class="sub" id="statBridgesConnSub">0 of 0</div></div>
         <div class="stat clk" onclick="statGo('sources','')" title="See sources"><div class="num" id="statSources">0</div><div class="label">Sources active</div></div>
       </div>
 
@@ -475,8 +476,12 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     <section id="view-bridges" class="view">
       <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
         <div><h2>Bridges</h2><p>Well-connected people who introduce you to targets.</p></div>
-        <button class="sync-btn" onclick="downloadBridgesCsv()" title="Export bridges as CSV (for a Botdog invitation campaign)">⬇ Download CSV</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="sync-btn" onclick="downloadBridgesCsv()" title="Export bridges as CSV">⬇ Download CSV</button>
+          <button class="sync-btn" id="inviteBridgesBtn" onclick="triggerBridgePush()" title="Invite the bridges you're not connected to into your Botdog bridges campaign">📨 Invite to Botdog</button>
+        </div>
       </div>
+      <div id="bridgePushStatus" class="sync-status" style="display:none"></div>
       <div class="bridges-note">
         Toggle a candidate <strong>Active</strong> to have the extension collect that person's ICP connections as Targets.
       </div>
@@ -1163,6 +1168,11 @@ function renderStats(){
   document.getElementById('statPushedPct').textContent = pct(pushed);
   document.getElementById('statPushedSub').textContent = pushed + ' of ' + selCount + ' selected';
   document.getElementById('statBridges').textContent   = activeBridgeCount;
+  // % of bridges you're already 1st-degree connected to.
+  const totalB = BRIDGES.length;
+  const connB = BRIDGES.filter(b => /1st|^1\b/i.test(String(b.connection || ''))).length;
+  document.getElementById('statBridgesConn').textContent = totalB ? Math.round(connB / totalB * 100) + '%' : '0%';
+  document.getElementById('statBridgesConnSub').textContent = connB + ' of ' + totalB;
   document.getElementById('statSources').textContent   = activeSourceCount || STORED_SOURCES.length;
   document.getElementById('leadCount').textContent     = rows.length;
   const bnc = document.getElementById('bridgeNavCount'); if (bnc) bnc.textContent = BRIDGES.length;
@@ -1357,6 +1367,33 @@ function setBridgeFilter(f){
   BRIDGE_FILTER = f;
   document.querySelectorAll('#bridgeFilterSeg button').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
   renderBridges();
+}
+
+// Trigger the extension to invite non-1st-degree bridges into the Botdog bridges campaign now.
+let BRIDGE_PUSH_RUNNING = false;
+function triggerBridgePush(){
+  const st = document.getElementById('bridgePushStatus');
+  const btn = document.getElementById('inviteBridgesBtn');
+  const show = (t, k) => { if (st) { st.style.display='block'; st.className='sync-status '+(k||'info'); st.textContent=t; } };
+  if (!document.documentElement.getAttribute('data-radar-ext')) { show('Chrome extension not detected — install/reload the Radar extension, then try again.', 'err'); return; }
+  if (BRIDGE_PUSH_RUNNING) return;
+  BRIDGE_PUSH_RUNNING = true;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Inviting…'; }
+  show('Inviting your non-1st-degree bridges into the Botdog campaign… enricherPro is resolving their LinkedIn URLs. This can take a couple of minutes.', 'info');
+  let done = false;
+  const onResult = (e) => {
+    if (done) return; done = true;
+    window.removeEventListener('radar-ext-push-bridges-result', onResult);
+    BRIDGE_PUSH_RUNNING = false;
+    if (btn) { btn.disabled = false; btn.textContent = '📨 Invite to Botdog'; }
+    const d = (e && e.detail) || {}, r = d.result || {};
+    if (!d.ok) { show('Couldn’t run: ' + (d.error || 'unknown') + '.', 'err'); return; }
+    if (r.reason === 'no-key') { show('Set your Botdog API key in Settings first (it’s handed to the extension when you save it).', 'err'); return; }
+    show('✓ Invited ' + (r.sent != null ? r.sent : 0) + ' bridge(s) this run (out of ' + (r.candidates != null ? r.candidates : '?') + ' not-yet-connected). It runs again on each sync to work through the rest.', 'ok');
+  };
+  window.addEventListener('radar-ext-push-bridges-result', onResult);
+  window.dispatchEvent(new CustomEvent('radar-ext-push-bridges'));
+  setTimeout(() => { if (done) return; done = true; window.removeEventListener('radar-ext-push-bridges-result', onResult); BRIDGE_PUSH_RUNNING = false; if (btn) { btn.disabled = false; btn.textContent = '📨 Invite to Botdog'; } show('Still running in the background — check the extension log (bridge-push:done) in a few minutes.', 'info'); }, 180000);
 }
 
 // Export bridges to CSV: FirstName, LastName, Title, Company Name, LinkedIn link.
