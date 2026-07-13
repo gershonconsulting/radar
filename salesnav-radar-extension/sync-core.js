@@ -120,6 +120,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.storage.local.set(upd).then(() => sendResponse({ ok: true })).catch(e => sendResponse({ ok: false, error: String(e) }));
     return true;
   }
+  if (msg.action === 'pushBridgesNow') {
+    // Triggered from the dashboard — invite non-1st bridges to the Botdog campaign now.
+    pushBridgesToBotdog().then(async r => { await pushLog(); sendResponse({ ok: true, result: r }); })
+      .catch(async e => { await pushLog(); sendResponse({ ok: false, error: String(e) }); });
+    return true;
+  }
 });
 
 // Forward the run log to the hub so it's visible server-side (for debugging).
@@ -309,10 +315,10 @@ async function pushBridgesToBotdog() {
   const cfg = await chrome.storage.local.get(['radar_botdog_key', 'radar_bridges_campaign', 'radar_bridges_pushed']);
   const key = cfg.radar_botdog_key;
   const campaign = cfg.radar_bridges_campaign || BRIDGES_CAMPAIGN_ID_DEFAULT;
-  if (!key) { await log('info', 'bridge-push:skip', { reason: 'no Botdog key — set it in Settings' }); return; }
+  if (!key) { await log('info', 'bridge-push:skip', { reason: 'no Botdog key — set it in Settings' }); return { ok: false, reason: 'no-key' }; }
   const pushed = new Set(cfg.radar_bridges_pushed || []);
   let bridges = [];
-  try { bridges = await getBridges(); } catch (e) { return; }
+  try { bridges = await getBridges(); } catch (e) { return { ok: false, reason: 'bridges-fetch-failed' }; }
   const is1st = b => /1st|^1\b/i.test(String(b.connection || ''));
   const todo = bridges.filter(b => b && b.urn && !is1st(b) && !pushed.has(b.urn));
   await log('info', 'bridge-push:start', { candidates: todo.length, campaign });
@@ -339,6 +345,7 @@ async function pushBridgesToBotdog() {
   await chrome.storage.local.set({ radar_bridges_pushed: [...pushed] });
   await log('info', 'bridge-push:done', { sent });
   if (sent) notify('Bridges invited', sent + ' bridge(s) added to your Botdog invite campaign.');
+  return { ok: true, sent, candidates: todo.length };
 }
 
 // POST candidate bridges to the hub. Server dedupes by urn and sets active=false for new ones.

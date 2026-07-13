@@ -45,6 +45,17 @@
         chrome.runtime.sendMessage({ action: 'setBotdogConfig', key: d.key, campaign: d.campaign }, function () {});
       } catch (e) {}
     });
+    // let the Radar web app trigger the bridge-invite push on demand (from the Bridges page).
+    window.addEventListener('radar-ext-push-bridges', function () {
+      try {
+        chrome.runtime.sendMessage({ action: 'pushBridgesNow' }, function (resp) {
+          var detail = (!chrome.runtime.lastError && resp && resp.ok)
+            ? { ok: true, result: resp.result }
+            : { ok: false, error: (resp && resp.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message) };
+          window.dispatchEvent(new CustomEvent('radar-ext-push-bridges-result', { detail: detail }));
+        });
+      } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-push-bridges-result', { detail: { ok: false, error: String(e) } })); }
+    });
     // let the Radar web app trigger a collection run without opening the popup.
     window.addEventListener('radar-ext-sync', function () {
       try {
