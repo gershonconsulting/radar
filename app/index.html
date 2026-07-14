@@ -69,6 +69,14 @@ body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; backgr
 .foot-domain{ text-align:center; font-size:0.72rem; color:#94a3b8; padding:6px 0 8px; }
 .main{ flex:1; min-width:0; display:flex; flex-direction:column; }
 .topbar{ display:none; }
+/* LinkedIn live-connection badge */
+.li-status{ display:flex; align-items:center; gap:7px; margin:8px 14px 4px; padding:7px 11px; border-radius:999px; font-size:0.82rem; font-weight:600; line-height:1; border:1px solid transparent; }
+.li-status svg{ width:15px; height:15px; flex:0 0 15px; }
+.li-status.li-connected{ background:#eaf3fb; color:#0a66c2; border-color:#bcdcf7; }
+.li-status.li-disconnected{ background:#fdecea; color:#c0341d; border-color:#f5c6bf; cursor:pointer; }
+.li-status.li-checking{ background:#f1f5f9; color:#64748b; border-color:#e2e8f0; }
+.li-status.li-connected::after{ content:""; width:7px; height:7px; border-radius:50%; background:#16a34a; margin-left:auto; box-shadow:0 0 0 0 rgba(22,163,74,.5); animation:liPulse 2s infinite; }
+@keyframes liPulse{ 0%{ box-shadow:0 0 0 0 rgba(22,163,74,.5);} 70%{ box-shadow:0 0 0 5px rgba(22,163,74,0);} 100%{ box-shadow:0 0 0 0 rgba(22,163,74,0);} }
 .content{ padding:28px 32px; max-width:1280px; width:100%; margin:0 auto; }
 
 /* ---------- Mobile ---------- */
@@ -351,12 +359,16 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.14</div>
+      <div class="ver" id="sideVer">v1.6.15</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
       <div class="avatar" id="userAvatar">?</div>
       <span class="uname" id="userName">—</span>
+    </div>
+    <div class="li-status li-checking" id="liStatus" title="LinkedIn connection status">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z"/></svg>
+      <span id="liStatusText">Checking…</span>
     </div>
     <nav class="nav-items">
       <button class="nav-item active" id="nav-dashboard"   onclick="showView('dashboard')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg></span> Dashboard</button>
@@ -2011,22 +2023,35 @@ async function saveCampaign(){
 // ===== Auth gate =====
 // On load, check the session (/api/me). Show the sign-in overlay if not authenticated;
 // reveal the app and boot it if authenticated. The proxy enforces access server-side too.
+// Reflect the *verified* LinkedIn session in the sidebar badge. States: checking → connected / disconnected.
+function setLiStatus(state, name){
+  const el = document.getElementById('liStatus'); const tx = document.getElementById('liStatusText');
+  if (!el || !tx) return;
+  el.classList.remove('li-checking','li-connected','li-disconnected');
+  if (state === 'connected'){ el.classList.add('li-connected'); tx.textContent = name ? ('Connected · ' + name) : 'LinkedIn Connected'; el.onclick = null; el.title = 'LinkedIn session is live'; }
+  else if (state === 'disconnected'){ el.classList.add('li-disconnected'); tx.textContent = 'Not connected — sign in'; el.title = 'Click to reconnect LinkedIn'; el.onclick = function(){ window.location.href = '/api/auth/linkedin/login'; }; }
+  else { el.classList.add('li-checking'); tx.textContent = 'Checking…'; }
+}
+
 async function initAuth(){
   const params = new URLSearchParams(window.location.search);
   const overlay = document.getElementById('signinOverlay');
+  setLiStatus('checking');
   if (params.get('denied') === '1') {
     const d = document.getElementById('signinDenied'); if (d) d.classList.add('show');
     if (overlay) overlay.classList.remove('hidden');
+    setLiStatus('disconnected');
     return;
   }
   let me;
   try { const resp = await fetch('/api/me', { credentials: 'same-origin' }); me = await resp.json(); }
   catch(e) { me = { ok:false }; }
-  if (!me || !me.ok) { if (overlay) overlay.classList.remove('hidden'); return; }
+  if (!me || !me.ok) { if (overlay) overlay.classList.remove('hidden'); setLiStatus('disconnected'); return; }
   const user = me.user || {};
   const nm = document.getElementById('userName'); if (nm) nm.textContent = user.name || user.email || '';
   const av = document.getElementById('userAvatar'); if (av) av.textContent = ((user.name || user.email || '?').charAt(0) || '?').toUpperCase();
   const chip = document.getElementById('userChip'); if (chip) chip.style.display = 'flex';
+  setLiStatus('connected', (user.name || '').split(' ')[0] || '');
   if (overlay) overlay.classList.add('hidden');
   const shell = document.getElementById('appShell'); if (shell) shell.style.display = 'flex';
   // Boot the app
