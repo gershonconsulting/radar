@@ -359,7 +359,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.15</div>
+      <div class="ver" id="sideVer">v1.6.16</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -617,6 +617,10 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div class="field">
           <label>Resend API Key</label>
           <input type="password" id="inputResend" placeholder="paste key…">
+        </div>
+        <div class="field">
+          <label>Pappers API Key <span style="color:#94a3b8;font-weight:400">(French company data — enriches ICP scoring)</span></label>
+          <input type="password" id="inputPappers" placeholder="paste key…">
         </div>
         <label class="excl-toggle" style="margin-bottom:8px"><input type="checkbox" id="showKeys" onchange="toggleKeyVisibility(this.checked)"> Show keys</label>
         <button class="btn-save" onclick="saveSettings()">Save Keys</button>
@@ -1906,23 +1910,25 @@ function saveSchedule(){
 async function saveSettings() {
   const botdog = document.getElementById('inputBotdog').value.trim();
   const resend = document.getElementById('inputResend').value.trim();
+  const pappersEl = document.getElementById('inputPappers');
+  const pappers = pappersEl ? pappersEl.value.trim() : '';
   const status = document.getElementById('saveStatus');
-  if (!botdog && !resend) { status.textContent = 'Enter at least one key.'; return; }
+  if (!botdog && !resend && !pappers) { status.textContent = 'Enter at least one key.'; return; }
   status.textContent = 'Saving…';
   try {
-    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_api_key: botdog, resend_api_key: resend }) });
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_api_key: botdog, resend_api_key: resend, pappers_api_key: pappers }) });
     const data = await resp.json();
     status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
     if (data.saved) await loadKeyStatus();
     // Also hand the Botdog key to the Chrome extension so its sync can invite bridges.
     if (botdog) { try { window.dispatchEvent(new CustomEvent('radar-ext-set-botdog', { detail:{ key: botdog } })); } catch(e) {} }
     // Remember the keys in this browser so the fields repopulate and you can see them later.
-    try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if(botdog)cur.botdog=botdog; if(resend)cur.resend=resend; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
+    try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if(botdog)cur.botdog=botdog; if(resend)cur.resend=resend; if(pappers)cur.pappers=pappers; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
 // Show/hide the API key fields.
 function toggleKeyVisibility(show){
-  ['inputBotdog','inputResend'].forEach(id => { const el = document.getElementById(id); if (el) el.type = show ? 'text' : 'password'; });
+  ['inputBotdog','inputResend','inputPappers'].forEach(id => { const el = document.getElementById(id); if (el) el.type = show ? 'text' : 'password'; });
 }
 // Repopulate key fields from what was entered before (stored in this browser).
 function loadSavedKeys(){
@@ -1930,6 +1936,7 @@ function loadSavedKeys(){
     const k = JSON.parse(localStorage.getItem('radar_keys') || '{}');
     const b = document.getElementById('inputBotdog'); if (b && k.botdog && !b.value) b.value = k.botdog;
     const r = document.getElementById('inputResend'); if (r && k.resend && !r.value) r.value = k.resend;
+    const p = document.getElementById('inputPappers'); if (p && k.pappers && !p.value) p.value = k.pappers;
   } catch(e) {}
 }
 
