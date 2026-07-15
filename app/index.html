@@ -385,7 +385,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.18</div>
+      <div class="ver" id="sideVer">v1.6.19</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -398,16 +398,19 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <nav class="nav-items">
       <button class="nav-item active" id="nav-dashboard"   onclick="showView('dashboard')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg></span> Dashboard</button>
-      <button class="nav-item"        id="nav-setup"       onclick="showView('setup')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Setup</button>
       <div class="nav-sec">Pipeline</div>
+      <button class="nav-item"        id="nav-sources"     onclick="showView('sources')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v17"/><path d="M14 9h3a1 1 0 0 1 1 1v11"/><line x1="9" y1="7" x2="10" y2="7"/><line x1="9" y1="11" x2="10" y2="11"/><line x1="9" y1="15" x2="10" y2="15"/></svg></span> Sources <span class="nav-count" id="sourceNavCount">0</span></button>
+      <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges <span class="nav-count" id="bridgeNavCount">0</span></button>
       <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
       <button class="nav-item"        id="nav-leads"       onclick="showView('leads')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span> Leads <span class="nav-count" id="leadsCount">0</span></button>
-      <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges <span class="nav-count" id="bridgeNavCount">0</span></button>
-      <button class="nav-item"        id="nav-sources"     onclick="showView('sources')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v17"/><path d="M14 9h3a1 1 0 0 1 1 1v11"/><line x1="9" y1="7" x2="10" y2="7"/><line x1="9" y1="11" x2="10" y2="11"/><line x1="9" y1="15" x2="10" y2="15"/></svg></span> Sources <span class="nav-count" id="sourceNavCount">0</span></button>
       <div class="nav-sec">Activity</div>
-      <button class="nav-item"        id="nav-log"         onclick="showView('log')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg></span> Log</button>
+      <button class="nav-item"        id="nav-setup"       onclick="showView('setup')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Setup</button>
       <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span> Collections</button>
+      <button class="nav-item"        id="nav-log"         onclick="showView('log')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg></span> Log</button>
       <button class="nav-item"        id="nav-settings"    onclick="showView('settings')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings</button>
+      <button class="nav-item"        id="nav-billing"     onclick="showView('billing')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span> Billing</button>
+      <button class="nav-item"        id="nav-referrals"   onclick="showView('referrals')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> Referrals</button>
+      <button class="nav-item"        id="nav-feedback"    onclick="showView('feedback')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></span> Feedback</button>
       <a class="nav-item" id="nav-admin" href="/admin" style="display:none;text-decoration:none"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Admin</a>
     </nav>
     <div class="foot">
@@ -704,6 +707,43 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <h2>Key Status</h2>
         <p>Current backend key status.</p>
         <div id="keyStatus" class="key-status">Loading…</div>
+      </div>
+    </section>
+
+    <section id="view-billing" class="view">
+      <div class="page-head"><h2>Billing</h2><p>Manage your Radar subscription, payment method and invoices.</p></div>
+      <div class="settings-card">
+        <h2>Your plan</h2>
+        <p id="billingPlan">Radar — early access.</p>
+        <p style="margin-top:10px"><a id="billingLink" class="btn-save" style="display:inline-block;text-decoration:none" href="#" onclick="return openBilling(event)">Manage billing ↗</a></p>
+        <div id="billingNote" style="margin-top:10px;font-size:0.85rem;color:#64748b">Billing is handled securely by Stripe. You'll be taken to Stripe's customer portal.</div>
+      </div>
+    </section>
+
+    <section id="view-referrals" class="view">
+      <div class="page-head"><h2>Referrals</h2><p>Invite someone to Radar. Share your link — we'll credit you when they join.</p></div>
+      <div class="settings-card">
+        <h2>Your referral link</h2>
+        <div class="field"><input id="refLink" type="text" readonly value="—"></div>
+        <button class="btn-save" onclick="copyRefLink()">Copy link</button>
+        <div id="refStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+    </section>
+
+    <section id="view-feedback" class="view">
+      <div class="page-head"><h2>Feedback</h2><p>Found a bug or have an idea? Tell us — it goes straight to the team.</p></div>
+      <div class="settings-card">
+        <h2>Share a bug or suggestion</h2>
+        <div class="field">
+          <label>Type</label>
+          <select id="fbType"><option value="bug">🐞 Bug — something's broken</option><option value="idea">💡 Suggestion — an idea to improve Radar</option><option value="other">💬 Something else</option></select>
+        </div>
+        <div class="field">
+          <label>Details</label>
+          <textarea id="fbBody" rows="6" placeholder="What happened, or what would you like to see? The more detail the better." style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;resize:vertical"></textarea>
+        </div>
+        <button class="btn-save" onclick="sendFeedback()">Send feedback</button>
+        <div id="fbStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
     </section>
 
@@ -1973,6 +2013,8 @@ function showView(name){
   if (name === 'leads') { loadLeads().then(renderLeads); }
   // load the current collection schedule from the extension when Settings opens
   if (name === 'settings') { try { loadSchedule(); } catch(e){} try { loadSavedKeys(); } catch(e){} }
+  // fill the referral link with the signed-in user's code
+  if (name === 'referrals') { try { const el = document.getElementById('refLink'); if (el) el.value = buildRefLink(); } catch(e){} }
 }
 
 // ===== Collection schedule (lives in the extension — Radar is self-contained) =====
@@ -2044,6 +2086,57 @@ async function saveSettings() {
     try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if(botdog)cur.botdog=botdog; if(resend)cur.resend=resend; if(pappers)cur.pappers=pappers; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
+// ===== Billing / Referrals / Feedback =====
+// Stripe customer-portal link. Set STRIPE_BILLING_URL once Olivier provides it.
+const STRIPE_BILLING_URL = '';
+function openBilling(ev){
+  ev.preventDefault();
+  if (!STRIPE_BILLING_URL) {
+    document.getElementById('billingNote').innerHTML = '<strong>Billing isn’t connected yet.</strong> The Stripe portal link hasn’t been added — once it is, this button opens your subscription, payment method and invoices.';
+    return false;
+  }
+  window.open(STRIPE_BILLING_URL, '_blank', 'noopener');
+  return false;
+}
+// Referral link keyed to the signed-in user so joins can be credited.
+function buildRefLink(){
+  const who = (window.__ME && (window.__ME.user && (window.__ME.user.sub || window.__ME.user.email))) || '';
+  const code = who ? btoa(String(who)).replace(/=+$/,'').slice(0, 12) : '';
+  return location.origin + (code ? ('/?ref=' + encodeURIComponent(code)) : '/');
+}
+function copyRefLink(){
+  const el = document.getElementById('refLink');
+  const st = document.getElementById('refStatus');
+  if (el) el.value = buildRefLink();
+  try {
+    navigator.clipboard.writeText(el.value);
+    st.textContent = '✓ Link copied — send it to whoever you’d like to invite.';
+  } catch(e) {
+    el.select(); st.textContent = 'Press Ctrl/Cmd+C to copy.';
+  }
+}
+// Feedback: bugs + suggestions. Posts to the hub; falls back to a mail draft.
+async function sendFeedback(){
+  const type = document.getElementById('fbType').value;
+  const body = (document.getElementById('fbBody').value || '').trim();
+  const st = document.getElementById('fbStatus');
+  if (!body) { st.textContent = 'Tell us a bit about the bug or idea first.'; return; }
+  st.textContent = 'Sending…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, credentials:'same-origin',
+      body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'feedback', type: type, body: body, page: location.pathname, ua: navigator.userAgent }) });
+    const d = await resp.json();
+    if (d && (d.saved || d.ok)) {
+      st.textContent = '✓ Thank you — this went to the team.';
+      document.getElementById('fbBody').value = '';
+    } else {
+      st.innerHTML = 'Couldn’t send from here. <a href="mailto:olivier@attia.com?subject=' + encodeURIComponent('Radar feedback: ' + type) + '&body=' + encodeURIComponent(body) + '">Send it by email instead</a>.';
+    }
+  } catch(e) {
+    st.innerHTML = 'Couldn’t send from here. <a href="mailto:olivier@attia.com?subject=' + encodeURIComponent('Radar feedback: ' + type) + '&body=' + encodeURIComponent(body) + '">Send it by email instead</a>.';
+  }
+}
+
 // Show/hide the API key fields. Sweep every key input in the card so newly added
 // keys are covered automatically (no hardcoded list to forget to update).
 function toggleKeyVisibility(show){
@@ -2186,6 +2279,7 @@ async function initAuth(){
   const nm = document.getElementById('userName'); if (nm) nm.textContent = user.name || user.email || '';
   const av = document.getElementById('userAvatar'); if (av) av.textContent = ((user.name || user.email || '?').charAt(0) || '?').toUpperCase();
   const chip = document.getElementById('userChip'); if (chip) chip.style.display = 'flex';
+  window.__ME = me;   // used by the referral link builder
   setLiStatus('connected', (user.name || '').split(' ')[0] || '');
   // Only admins see the Admin link (server enforces this too).
   if (me.isAdmin || user.isAdmin) { const a = document.getElementById('nav-admin'); if (a) a.style.display = 'flex'; }
