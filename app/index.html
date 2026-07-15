@@ -359,7 +359,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.16</div>
+      <div class="ver" id="sideVer">v1.6.17</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -381,6 +381,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <button class="nav-item"        id="nav-log"         onclick="showView('log')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg></span> Log</button>
       <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span> Collections</button>
       <button class="nav-item"        id="nav-settings"    onclick="showView('settings')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings</button>
+      <a class="nav-item" id="nav-admin" href="/admin" style="display:none;text-decoration:none"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Admin</a>
     </nav>
     <div class="foot">
       <button class="foot-btn primary" data-on="0" onclick="toggleDemo(this)"><span class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 15l.7 1.9L20.6 18l-1.9.7L18 20.6l-.7-1.9L15.4 18l1.9-.7z"/></svg></span> <span class="lbl">Demo Mode</span></button>
@@ -1926,9 +1927,17 @@ async function saveSettings() {
     try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if(botdog)cur.botdog=botdog; if(resend)cur.resend=resend; if(pappers)cur.pappers=pappers; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
-// Show/hide the API key fields.
+// Show/hide the API key fields. Sweep every key input in the card so newly added
+// keys are covered automatically (no hardcoded list to forget to update).
 function toggleKeyVisibility(show){
-  ['inputBotdog','inputResend','inputPappers'].forEach(id => { const el = document.getElementById(id); if (el) el.type = show ? 'text' : 'password'; });
+  const box = document.getElementById('showKeys');
+  const on = (typeof show === 'boolean') ? show : !!(box && box.checked);
+  const card = box ? box.closest('.settings-card') : null;
+  const scope = card || document;
+  scope.querySelectorAll('input[type="password"], input[data-key="1"]').forEach(el => {
+    el.setAttribute('data-key','1');
+    el.type = on ? 'text' : 'password';
+  });
 }
 // Repopulate key fields from what was entered before (stored in this browser).
 function loadSavedKeys(){
@@ -1938,6 +1947,8 @@ function loadSavedKeys(){
     const r = document.getElementById('inputResend'); if (r && k.resend && !r.value) r.value = k.resend;
     const p = document.getElementById('inputPappers'); if (p && k.pappers && !p.value) p.value = k.pappers;
   } catch(e) {}
+  // Re-apply the show/hide state after fields repopulate.
+  try { toggleKeyVisibility(); } catch(e) {}
 }
 
 async function loadKeyStatus() {
@@ -2059,6 +2070,8 @@ async function initAuth(){
   const av = document.getElementById('userAvatar'); if (av) av.textContent = ((user.name || user.email || '?').charAt(0) || '?').toUpperCase();
   const chip = document.getElementById('userChip'); if (chip) chip.style.display = 'flex';
   setLiStatus('connected', (user.name || '').split(' ')[0] || '');
+  // Only admins see the Admin link (server enforces this too).
+  if (me.isAdmin || user.isAdmin) { const a = document.getElementById('nav-admin'); if (a) a.style.display = 'flex'; }
   if (overlay) overlay.classList.add('hidden');
   const shell = document.getElementById('appShell'); if (shell) shell.style.display = 'flex';
   // Boot the app
