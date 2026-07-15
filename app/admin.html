@@ -105,6 +105,13 @@
   .last-login{ color:#475569; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .last-login .never{ color:#94a3b8; }
 
+  /* ---------- Numeric stat cells ---------- */
+  .num-cell{ font-variant-numeric:tabular-nums; font-weight:600; color:#334155; }
+  .num-cell.zero{ color:#cbd5e1; font-weight:500; }
+  .li-link{ color:var(--brand-ink); text-decoration:none; font-weight:600; font-size:0.82rem; }
+  .li-link:hover{ text-decoration:underline; }
+  .li-none{ color:#cbd5e1; font-size:0.82rem; }
+
   .empty{ text-align:center; color:#94a3b8; padding:26px; font-size:0.9rem; }
 
   @media (max-width:760px){
@@ -154,10 +161,11 @@
 
   <div class="invite">
     <h3>Invite a user</h3>
-    <div class="hint">Adds the person as <strong>invited</strong>. They gain access after they sign in with LinkedIn.</div>
+    <div class="hint">Adds the person by their <strong>LinkedIn profile URL</strong>. They gain access once they sign in with LinkedIn.</div>
     <div class="invite-row">
-      <div class="fld"><label>Email</label><input type="email" id="invEmail" placeholder="person@company.com"></div>
+      <div class="fld"><label>LinkedIn profile URL *</label><input type="url" id="invUrl" placeholder="https://linkedin.com/in/username"></div>
       <div class="fld"><label>Name</label><input type="text" id="invName" placeholder="Full name"></div>
+      <div class="fld"><label>Email</label><input type="email" id="invEmail" placeholder="person@company.com"></div>
       <button class="btn-primary" id="invBtn" onclick="inviteUser()">+ Invite user</button>
     </div>
     <div class="invite-status" id="invStatus"></div>
@@ -167,16 +175,18 @@
     <table>
       <thead>
         <tr>
-          <th>User</th>
-          <th>Status</th>
-          <th class="hide-sm">Role</th>
-          <th>Onboarding</th>
+          <th>Name</th>
+          <th class="hide-sm">Email</th>
+          <th>LinkedIn</th>
+          <th>Sources</th>
+          <th>Bridges</th>
+          <th>Targets</th>
           <th class="hide-sm">Last login</th>
-          <th>Actions</th>
+          <th class="hide-sm">Logins</th>
         </tr>
       </thead>
       <tbody id="usersBody">
-        <tr><td colspan="6" class="empty">Loading users…</td></tr>
+        <tr><td colspan="8" class="empty">Loading users…</td></tr>
       </tbody>
     </table>
   </div>
@@ -273,9 +283,9 @@ async function boot(){
   await loadUsers();
 }
 
-// ---- Load users ----
+// ---- Load users (Supabase-backed) ----
 async function loadUsers(){
-  var res = await apiFetch('/api/admin?action=getUsers');
+  var res = await apiFetch('/api/admin-users');
   if (res.notDeployed) {
     document.getElementById('backendNote').style.display = 'block';
     USERS = [];
@@ -296,7 +306,7 @@ function renderStats(){
     var st = String(u.status||'').toLowerCase();
     if (st === 'active') active++;
     if (st === 'invited' || st === 'pending') invited++;
-    if (loggedInLast7(u.last_login)) last7++;
+    if (loggedInLast7(u.last_login_at)) last7++;
   });
   var cards = [
     { num: total,   label: 'Total users' },
@@ -309,125 +319,95 @@ function renderStats(){
   }).join('');
 }
 
-// ---- Onboarding checklist ----
-function checklist(u){
-  var items = [
-    { label: 'LinkedIn',  on: true },                          // logged in → always done
-    { label: 'Sales Nav', on: truthy(u.sales_nav_ok) },
-    { label: 'Extension', on: truthy(u.extension_ok) },
-    { label: 'Botdog',    on: truthy(u.botdog_ok) }
-  ];
-  return '<div class="checklist">' + items.map(function(it){
-    var cls = it.on ? 'on' : 'off';
-    var mk  = it.on ? '&#10003;' : '&#8211;';
-    return '<span class="chk ' + cls + '"><span class="mk">' + mk + '</span>' + esc(it.label) + '</span>';
-  }).join('') + '</div>';
+// ---- Cells ----
+function numCell(n){
+  var v = Number(n) || 0;
+  return '<td class="num-cell' + (v === 0 ? ' zero' : '') + '">' + v + '</td>';
+}
+function liCell(url){
+  if (!url) return '<td><span class="li-none">&#8211;</span></td>';
+  // Show the handle rather than the full URL — the column stays narrow.
+  var handle = String(url).replace(/\/+$/,'').split('/in/')[1] || 'profile';
+  return '<td><a class="li-link" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">'
+       + esc(handle) + '</a></td>';
 }
 
 // ---- Render users ----
 function renderUsers(){
   var body = document.getElementById('usersBody');
   if (!USERS.length) {
-    body.innerHTML = '<tr><td colspan="6" class="empty">No users yet.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" class="empty">No users yet.</td></tr>';
     return;
   }
   body.innerHTML = USERS.map(function(u){
     var email = u.email || '';
-    var name  = u.name || email || '(no name)';
+    var name  = u.display_name || email || '(no name)';
     var st    = String(u.status||'').toLowerCase() || 'unknown';
-    var role  = String(u.role||'user').toLowerCase();
-    var roleCls = role === 'admin' ? 'admin' : '';
-    var isActive = st === 'active';
-    var isSusp   = st === 'suspended';
-    var isAdmin  = role === 'admin';
-    var key = esc(email);
+    var stats = u.stats || {};
 
-    var actions =
-        '<button class="act approve" ' + (isActive?'disabled':'') + ' onclick="setStatus(this,\'' + key + '\',\'active\')">Approve</button>'
-      + '<button class="act suspend" ' + (isSusp?'disabled':'') + ' onclick="setStatus(this,\'' + key + '\',\'suspended\')">Suspend</button>'
-      + '<button class="act admin" '   + (isAdmin?'disabled':'') + ' onclick="makeAdmin(this,\'' + key + '\')">Make admin</button>';
-
-    return '<tr data-email="' + key + '">'
-      + '<td><div class="u-name">' + esc(name) + '</div><div class="u-email">' + esc(email) + '</div></td>'
-      + '<td><span class="badge ' + statusClass(st) + '">' + esc(st) + '</span></td>'
-      + '<td class="hide-sm"><span class="role-pill ' + roleCls + '">' + esc(role) + '</span></td>'
-      + '<td>' + checklist(u) + '</td>'
-      + '<td class="hide-sm last-login">' + fmtLastLogin(u.last_login) + '</td>'
-      + '<td><div class="actions">' + actions + '</div></td>'
+    return '<tr data-owner="' + esc(u.owner_key||'') + '">'
+      + '<td><div class="u-name">' + esc(name) + '</div>'
+        + '<span class="badge ' + statusClass(st) + '">' + esc(st) + '</span>'
+        + (u.is_admin ? ' <span class="role-pill admin">admin</span>' : '')
+        + '</td>'
+      + '<td class="hide-sm"><span class="u-email">' + (email ? esc(email) : '&#8211;') + '</span></td>'
+      + liCell(u.linkedin_url)
+      + numCell(stats.sources)
+      + numCell(stats.bridges)
+      + numCell(stats.targets)
+      + '<td class="hide-sm last-login">' + fmtLastLogin(u.last_login_at) + '</td>'
+      + '<td class="hide-sm num-cell' + ((Number(u.login_count)||0)===0 ? ' zero' : '') + '">' + (Number(u.login_count)||0) + '</td>'
       + '</tr>';
   }).join('');
 }
 
-// ---- Actions (POST /api/admin) ----
-async function postAdmin(payload){
-  var res = await apiFetch('/api/admin', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  return res;
-}
-
-function findUser(email){
-  for (var i=0;i<USERS.length;i++){ if ((USERS[i].email||'') === email) return USERS[i]; }
-  return null;
-}
-
-async function setStatus(btn, email, status){
-  var u = findUser(email);
-  if (!u) return;
-  var prev = u.status;
-  u.status = status;                 // optimistic
-  renderStats(); renderUsers();
-  var res = await postAdmin({ action:'setUserStatus', email: email, status: status });
-  if (res.notDeployed) {
-    document.getElementById('backendNote').style.display = 'block';
-    u.status = prev; renderStats(); renderUsers();
-    return;
-  }
-  await loadUsers();               // reload to reflect authoritative state
-}
-
-async function makeAdmin(btn, email){
-  var u = findUser(email);
-  if (!u) return;
-  var prev = u.role;
-  u.role = 'admin';                  // optimistic
-  renderUsers();
-  var res = await postAdmin({ action:'setUserRole', email: email, role:'admin' });
-  if (res.notDeployed) {
-    document.getElementById('backendNote').style.display = 'block';
-    u.role = prev; renderUsers();
-    return;
-  }
-  await loadUsers();
-}
-
-// ---- Invite ----
+// ---- Invite (POST /api/admin-users) ----
 async function inviteUser(){
-  var emailEl = document.getElementById('invEmail');
+  var urlEl   = document.getElementById('invUrl');
   var nameEl  = document.getElementById('invName');
+  var emailEl = document.getElementById('invEmail');
   var btn     = document.getElementById('invBtn');
   var st      = document.getElementById('invStatus');
-  var email = (emailEl.value||'').trim();
+
+  var url   = (urlEl.value||'').trim();
   var name  = (nameEl.value||'').trim();
+  var email = (emailEl.value||'').trim();
+
   st.className = 'invite-status';
-  if (!email || email.indexOf('@') === -1) { st.className='invite-status err'; st.textContent = 'Enter a valid email address.'; return; }
+  if (!/linkedin\.com\/in\//i.test(url)) {
+    st.className='invite-status err';
+    st.textContent = 'Enter a LinkedIn profile URL (linkedin.com/in/…).';
+    return;
+  }
+  if (email && email.indexOf('@') === -1) {
+    st.className='invite-status err'; st.textContent = 'Enter a valid email address (or leave it blank).';
+    return;
+  }
+
   btn.disabled = true; st.textContent = 'Inviting…';
-  var res = await postAdmin({ action:'upsertUser', email: email, name: name, status:'invited' });
+  var res = await apiFetch('/api/admin-users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ linkedin_url: url, display_name: name, email: email })
+  });
   btn.disabled = false;
+
   if (res.notDeployed) {
     document.getElementById('backendNote').style.display = 'block';
     st.className='invite-status err'; st.textContent = 'Admin backend not deployed yet — invite not saved.';
     return;
   }
-  if (res.ok && res.json && (res.json.success || res.json.saved)) {
-    st.className='invite-status ok'; st.textContent = '✓ Invited ' + email + '.';
-    emailEl.value = ''; nameEl.value = '';
+  if (res.ok && res.json && res.json.ok) {
+    var who = name || email || url;
+    st.className='invite-status ok';
+    st.textContent = res.json.existing
+      ? '✓ ' + who + ' was already invited.'
+      : '✓ Invited ' + who + '.';
+    urlEl.value = ''; nameEl.value = ''; emailEl.value = '';
     await loadUsers();
   } else {
     st.className='invite-status err';
-    st.textContent = 'Could not invite: ' + esc((res.json && (res.json.error||res.json.message)) || ('HTTP ' + res.status));
+    st.textContent = 'Could not invite: ' + ((res.json && res.json.error) || ('HTTP ' + res.status));
   }
 }
 

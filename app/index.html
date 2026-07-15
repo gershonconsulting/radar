@@ -10,7 +10,33 @@
   --primary:#1e40af; --accent:#3b82f6; --bg:#f8fafc; --ink:#1e293b; --muted:#64748b;
   --line:#e2e8f0; --card:#ffffff; --sidebar:#0f1e3d;
   --brand:#6366f1; --brand-ink:#4f46e5; --brand-soft:#eef0fe; --side-line:#eef0f4;
+  /* Pipeline stage colours (pastel): Sources=green, Bridges=orange, Targets=blue, Leads=red */
+  --src-bg:#eafaf0;  --src-ink:#15803d;  --src-line:#bbe8cd;
+  --brg-bg:#fff3e6;  --brg-ink:#c2610a;  --brg-line:#ffd9b0;
+  --tgt-bg:#e8f2fe;  --tgt-ink:#1d4ed8;  --tgt-line:#bcd9fb;
+  --led-bg:#feecec;  --led-ink:#be2f2f;  --led-line:#f9c9c9;
 }
+/* Stage-coloured page headers + nav accents */
+.stage-sources .page-head, .view-tint.stage-sources{ background:var(--src-bg); border-color:var(--src-line); }
+.stage-bridges .page-head, .view-tint.stage-bridges{ background:var(--brg-bg); border-color:var(--brg-line); }
+.stage-targets .page-head, .view-tint.stage-targets{ background:var(--tgt-bg); border-color:var(--tgt-line); }
+.stage-leads   .page-head, .view-tint.stage-leads  { background:var(--led-bg); border-color:var(--led-line); }
+.view-tint{ border:1px solid; border-radius:14px; padding:16px 18px; margin-bottom:16px; }
+.view-tint h2{ margin:0 0 4px; }
+.stage-sources h2{ color:var(--src-ink); } .stage-bridges h2{ color:var(--brg-ink); }
+.stage-targets h2{ color:var(--tgt-ink); } .stage-leads h2{ color:var(--led-ink); }
+/* Nav dots so the sidebar reads the same colour language */
+#nav-sources .ico{ color:var(--src-ink); } #nav-bridges .ico{ color:var(--brg-ink); }
+#nav-targets .ico{ color:var(--tgt-ink); } #nav-leads .ico{ color:var(--led-ink); }
+#nav-sources.active{ background:var(--src-bg); color:var(--src-ink); }
+#nav-bridges.active{ background:var(--brg-bg); color:var(--brg-ink); }
+#nav-targets.active{ background:var(--tgt-bg); color:var(--tgt-ink); }
+#nav-leads.active{ background:var(--led-bg); color:var(--led-ink); }
+/* Stat tiles tinted by stage */
+.stat.s-src{ background:var(--src-bg); border-color:var(--src-line); }
+.stat.s-brg{ background:var(--brg-bg); border-color:var(--brg-line); }
+.stat.s-tgt{ background:var(--tgt-bg); border-color:var(--tgt-line); }
+.stat.s-led{ background:var(--led-bg); border-color:var(--led-line); }
 *{ box-sizing:border-box; margin:0; padding:0; }
 html,body{ height:100%; }
 body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--ink); }
@@ -359,7 +385,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.17</div>
+      <div class="ver" id="sideVer">v1.6.18</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -375,6 +401,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <button class="nav-item"        id="nav-setup"       onclick="showView('setup')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Setup</button>
       <div class="nav-sec">Pipeline</div>
       <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
+      <button class="nav-item"        id="nav-leads"       onclick="showView('leads')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span> Leads <span class="nav-count" id="leadsCount">0</span></button>
       <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges <span class="nav-count" id="bridgeNavCount">0</span></button>
       <button class="nav-item"        id="nav-sources"     onclick="showView('sources')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v17"/><path d="M14 9h3a1 1 0 0 1 1 1v11"/><line x1="9" y1="7" x2="10" y2="7"/><line x1="9" y1="11" x2="10" y2="11"/><line x1="9" y1="15" x2="10" y2="15"/></svg></span> Sources <span class="nav-count" id="sourceNavCount">0</span></button>
       <div class="nav-sec">Activity</div>
@@ -422,14 +449,15 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
       </div>
       <div class="stats">
-        <div class="stat clk" onclick="statGo('targets','today')" title="See today's new targets"><div class="num" id="statToday">0</div><div class="label">New today</div></div>
-        <div class="stat clk" onclick="statGo('targets','week')" title="See this week's targets"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
-        <div class="stat clk" onclick="statGo('targets','')" title="See all targets"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
-        <div class="stat clk" onclick="statGo('targets','nolink')" title="See targets still missing a LinkedIn URL"><div class="num" id="statLinkedPct">0%</div><div class="label">Have LinkedIn link</div><div class="sub" id="statLinkedSub">0 of 0</div></div>
-        <div class="stat clk" onclick="statGo('targets','pushed')" title="See targets pushed to Botdog"><div class="num" id="statPushedPct">0%</div><div class="label">On Botdog</div><div class="sub" id="statPushedSub">0 of 0</div></div>
-        <div class="stat clk" onclick="statGo('bridges','')" title="See active bridges"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
-        <div class="stat clk" onclick="statGo('bridges','')" title="Bridges you're already 1st-degree connected to"><div class="num" id="statBridgesConn">0%</div><div class="label">Bridges connected</div><div class="sub" id="statBridgesConnSub">0 of 0</div></div>
-        <div class="stat clk" onclick="statGo('sources','')" title="See sources"><div class="num" id="statSources">0</div><div class="label">Sources active</div></div>
+        <div class="stat clk s-tgt" onclick="statGo('targets','today')" title="See today's new targets"><div class="num" id="statToday">0</div><div class="label">New today</div></div>
+        <div class="stat clk s-tgt" onclick="statGo('targets','week')" title="See this week's targets"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
+        <div class="stat clk s-tgt" onclick="statGo('targets','')" title="See all targets"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
+        <div class="stat clk s-tgt" onclick="statGo('targets','nolink')" title="See targets still missing a LinkedIn URL"><div class="num" id="statLinkedPct">0%</div><div class="label">Have LinkedIn link</div><div class="sub" id="statLinkedSub">0 of 0</div></div>
+        <div class="stat clk s-tgt" onclick="statGo('targets','pushed')" title="See targets pushed to Botdog"><div class="num" id="statPushedPct">0%</div><div class="label">On Botdog</div><div class="sub" id="statPushedSub">0 of 0</div></div>
+        <div class="stat clk s-led" onclick="statGo('leads','')" title="Targets who replied on Botdog"><div class="num" id="statLeads">0</div><div class="label">Leads (replied)</div></div>
+        <div class="stat clk s-brg" onclick="statGo('bridges','')" title="See active bridges"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
+        <div class="stat clk s-brg" onclick="statGo('bridges','')" title="Bridges you're already 1st-degree connected to"><div class="num" id="statBridgesConn">0%</div><div class="label">Bridges connected</div><div class="sub" id="statBridgesConnSub">0 of 0</div></div>
+        <div class="stat clk s-src" onclick="statGo('sources','')" title="See sources"><div class="num" id="statSources">0</div><div class="label">Sources active</div></div>
       </div>
 
       <div class="grid-2">
@@ -455,7 +483,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </section>
 
     <!-- ===== Targets ===== -->
-    <section id="view-targets" class="view">
+    <section id="view-targets" class="view stage-targets">
       <div class="page-head"><h2>Targets</h2><p>Every connection collected through your bridges.</p></div>
       <div class="table-controls">
         <input type="text" id="tSearch" placeholder="Search name, title, company…" oninput="renderTargets()">
@@ -485,8 +513,33 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
     </section>
 
+    <!-- ===== Leads ===== -->
+    <section id="view-leads" class="view stage-leads">
+      <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div><h2>Leads</h2><p>Targets who replied to you on Botdog — the end of the pipeline.</p></div>
+        <button class="sync-btn" id="leadsSyncBtn" onclick="syncLeads()" title="Ask Botdog who has replied and refresh this list">🔄 Sync replies</button>
+      </div>
+      <div id="leadsStatus" class="sync-status" style="display:none"></div>
+      <div class="table-controls">
+        <input type="text" id="lSearch" placeholder="Search name, company…" oninput="renderLeads()">
+        <span class="result-count" id="lCount">0 leads</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th title="ICP fit: A+ (brings foreign companies into the US) → D">Grade</th>
+            <th>Name</th>
+            <th>Company</th>
+            <th>Replied</th>
+            <th>LinkedIn</th>
+          </tr></thead>
+          <tbody id="leadsBody"><tr><td colspan="5" class="empty">No leads yet</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- ===== Bridges ===== -->
-    <section id="view-bridges" class="view">
+    <section id="view-bridges" class="view stage-bridges">
       <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
         <div><h2>Bridges</h2><p>Well-connected people who introduce you to targets.</p></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
@@ -522,7 +575,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </section>
 
     <!-- ===== Sources ===== -->
-    <section id="view-sources" class="view">
+    <section id="view-sources" class="view stage-sources">
       <div class="page-head"><h2>Sources</h2><p>Organizations you watch and collect connections from.</p></div>
       <div class="settings-card" style="max-width:620px">
         <h2>Add a Source</h2>
@@ -1843,6 +1896,68 @@ function setFlowFilter(type, value){
 }
 
 // ===== Navigation =====
+// ===== Leads (stage 4: targets who replied on Botdog) =====
+// Reads from Supabase via /api/leads. "Sync replies" (POST /api/leads/sync) is what
+// asks Botdog who answered; this list itself never depends on Botdog being up.
+let LEADS = [];
+
+async function loadLeads(){
+  try {
+    const resp = await fetch('/api/leads', { credentials: 'same-origin' });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    LEADS = (data && data.leads) || [];
+    const nc = document.getElementById('leadsCount'); if (nc) nc.textContent = LEADS.length;
+  } catch(e){}
+}
+
+function renderLeads(){
+  const q = ((document.getElementById('lSearch')||{}).value || '').toLowerCase().trim();
+  let list = LEADS.slice();
+  if (q) list = list.filter(l => ((l.name||'') + ' ' + (l.company||'')).toLowerCase().includes(q));
+
+  const body = document.getElementById('leadsBody');
+  if (!body) return;
+  body.innerHTML = list.length ? list.map(l => {
+    const g = l.grade || 'D';
+    const gradePill = '<span class="icp-grade g-' + g.replace('+','plus') + '" title="ICP fit">' + g + '</span>';
+    return '<tr>' +
+      '<td style="text-align:center">' + gradePill + '</td>' +
+      '<td>' + esc(l.name) + '</td>' +
+      '<td>' + esc(l.company) + '</td>' +
+      '<td>' + fmtDate(l.first_reply_at) + '</td>' +
+      '<td>' + (l.linkedin_url ? '<a href="' + esc(l.linkedin_url) + '" target="_blank" rel="noopener">↗</a>' : '—') +
+      '</td></tr>';
+  }).join('') : '<tr><td colspan="5" class="empty">No leads yet — replies show up here after a sync.</td></tr>';
+
+  const c = document.getElementById('lCount');
+  if (c) c.textContent = list.length + ' lead' + (list.length===1?'':'s');
+}
+
+async function syncLeads(){
+  const btn = document.getElementById('leadsSyncBtn');
+  const el  = document.getElementById('leadsStatus');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Syncing…'; }
+  if (el) { el.style.display = 'block'; el.textContent = 'Asking Botdog who replied…'; }
+  try {
+    const resp = await fetch('/api/leads/sync', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'sync failed');
+    await loadLeads();
+    renderLeads();
+    if (el) el.textContent = 'Done — ' + data.inserted + ' new, ' + data.updated + ' updated' +
+      (data.unmatched ? ', ' + data.unmatched + ' replied but not in your targets' : '') + '.';
+  } catch(e){
+    if (el) el.textContent = 'Sync failed: ' + (e.message || e);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 Sync replies'; }
+}
+
 function showView(name){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -1854,6 +1969,8 @@ function showView(name){
   if (name === 'setup') { try { renderOnboarding(); } catch(e){} }
   // refresh bridge candidates each time the Bridges view is opened
   if (name === 'bridges') { loadBridges().then(renderBridges); }
+  // pull the latest replies each time the Leads view is opened
+  if (name === 'leads') { loadLeads().then(renderLeads); }
   // load the current collection schedule from the extension when Settings opens
   if (name === 'settings') { try { loadSchedule(); } catch(e){} try { loadSavedKeys(); } catch(e){} }
 }
