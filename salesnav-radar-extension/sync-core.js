@@ -112,6 +112,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     applySchedule(msg.schedule).then(s => sendResponse({ ok: true, schedule: s })).catch(e => sendResponse({ ok: false, error: String(e) }));
     return true;
   }
+  if (msg.action === 'setBridgeInvites') {
+    // The dashboard says which non-1st-degree bridges the user wants invited.
+    chrome.storage.local.set({ radar_bridge_invites: msg.urns || [] })
+      .then(() => sendResponse({ ok: true, count: (msg.urns || []).length }))
+      .catch(e => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
   if (msg.action === 'setBotdogConfig') {
     // Store the Botdog key + bridges campaign so the sync can invite bridges directly.
     const upd = {};
@@ -283,7 +290,9 @@ async function getBridges() {
 // open up. enricherPro fills the public /in/ URL when it's missing. Deduped via storage.
 const BRIDGES_CAMPAIGN_ID_DEFAULT = '3e07e3ee-8144-4429-b73a-1751d1466d35';
 const ENRICHER_BASE = 'https://enricherpro.com';
-const BOTDOG_CONTACTS_URL = 'https://api.botdog.io/v1/campaigns/contacts';
+// Verified against Botdog's live OpenAPI spec (api.botdog.co/docs): the host is
+// api.botdog.CO (.io does not resolve) and auth is the x-api-key header, NOT Bearer.
+const BOTDOG_CONTACTS_URL = 'https://api.botdog.co/v1/campaigns/contacts';
 const MAX_BRIDGE_PUSH_PER_RUN = 25;
 
 // Strip LinkedIn status suffixes / trailing emoji from a name (for enricherPro lookups).
@@ -312,15 +321,19 @@ async function enricherResolve(firstName, lastName, company, title) {
 }
 
 async function pushBridgesToBotdog() {
-  const cfg = await chrome.storage.local.get(['radar_botdog_key', 'radar_bridges_campaign', 'radar_bridges_pushed']);
+  const cfg = await chrome.storage.local.get(['radar_botdog_key', 'radar_bridges_campaign', 'radar_bridges_pushed', 'radar_bridge_invites']);
   const key = cfg.radar_botdog_key;
   const campaign = cfg.radar_bridges_campaign || BRIDGES_CAMPAIGN_ID_DEFAULT;
   if (!key) { await log('info', 'bridge-push:skip', { reason: 'no Botdog key — set it in Settings' }); return { ok: false, reason: 'no-key' }; }
   const pushed = new Set(cfg.radar_bridges_pushed || []);
+  // Only invite the bridges the user ticked "invite" on in the dashboard.
+  // Empty queue = invite nobody (explicit opt-in, no surprise invitations).
+  const queued = new Set((cfg.radar_bridge_invites || []).map(String));
   let bridges = [];
   try { bridges = await getBridges(); } catch (e) { return { ok: false, reason: 'bridges-fetch-failed' }; }
   const is1st = b => /1st|^1\b/i.test(String(b.connection || ''));
-  const todo = bridges.filter(b => b && b.urn && !is1st(b) && !pushed.has(b.urn));
+  const todo = bridges.filter(b => b && b.urn && !is1st(b) && !pushed.has(b.urn) && queued.has(String(b.urn)));
+  if (!todo.length) { await log('info', 'bridge-push:skip', { reason: 'no bridges ticked for invite in the dashboard' }); return { ok: true, sent: 0, candidates: 0, reason: 'none-queued' }; }
   await log('info', 'bridge-push:start', { candidates: todo.length, campaign });
   let sent = 0;
   for (const b of todo) {
@@ -335,7 +348,7 @@ async function pushBridgesToBotdog() {
     if (!/linkedin\.com\/in\//i.test(url)) continue;   // no public URL yet — try again next run
     try {
       const resp = await fetch(BOTDOG_CONTACTS_URL, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': key },
         body: JSON.stringify({ campaign_id: campaign, profiles: [{ linkedin_url: url.split('?')[0] }] })
       });
       if (resp.ok) { pushed.add(b.urn); sent++; }

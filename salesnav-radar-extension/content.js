@@ -45,6 +45,13 @@
         chrome.runtime.sendMessage({ action: 'setBotdogConfig', key: d.key, campaign: d.campaign }, function () {});
       } catch (e) {}
     });
+    // let the Radar web app say WHICH non-1st-degree bridges should get a connection invite.
+    window.addEventListener('radar-ext-set-bridge-invites', function (ev) {
+      try {
+        var d = (ev && ev.detail) || {};
+        chrome.runtime.sendMessage({ action: 'setBridgeInvites', urns: d.urns || [] }, function () {});
+      } catch (e) {}
+    });
     // let the Radar web app trigger the bridge-invite push on demand (from the Bridges page).
     window.addEventListener('radar-ext-push-bridges', function () {
       try {

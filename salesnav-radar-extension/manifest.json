@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Radar — Sales Nav Collector",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Collects Sales Navigator connections and syncs to Radar sheet",
   "permissions": ["alarms", "storage", "scripting", "tabs", "notifications"],
   "host_permissions": [
@@ -10,7 +10,8 @@
     "https://radar.gershoncrm.com/*",
     "https://enricherpro.com/*",
     "https://*.sandbox.novita.ai/*",
-    "https://api.botdog.io/*"
+    "https://api.botdog.io/*",
+    "https://api.botdog.co/*"
   ],
   "content_scripts": [
     {
