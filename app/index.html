@@ -32,11 +32,29 @@
 #nav-bridges.active{ background:var(--brg-bg); color:var(--brg-ink); }
 #nav-targets.active{ background:var(--tgt-bg); color:var(--tgt-ink); }
 #nav-leads.active{ background:var(--led-bg); color:var(--led-ink); }
+/* Dashboard split into the 3 pipeline sections */
+.dash-sec{ border:1px solid var(--line); border-left:5px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:18px; background:#fff; }
+.dash-sec.stage-sources{ border-left-color:var(--src-ink); }
+.dash-sec.stage-bridges{ border-left-color:var(--brg-ink); }
+.dash-sec.stage-targets{ border-left-color:var(--tgt-ink); }
+.dash-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:14px; }
+.dash-head h3{ font-size:1.05rem; font-weight:800; display:inline; }
+.dash-head p{ font-size:0.82rem; color:var(--muted); margin-top:3px; }
+.dash-head .dot{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:8px; vertical-align:middle; }
+.stage-sources .dash-head .dot{ background:var(--src-ink); } .stage-sources .dash-head h3{ color:var(--src-ink); }
+.stage-bridges .dash-head .dot{ background:var(--brg-ink); } .stage-bridges .dash-head h3{ color:var(--brg-ink); }
+.stage-targets .dash-head .dot{ background:var(--tgt-ink); } .stage-targets .dash-head h3{ color:var(--tgt-ink); }
+.dash-go{ background:#f8fafc; border:1px solid var(--line); color:#334155; font-size:0.78rem; font-weight:600;
+  padding:7px 12px; border-radius:8px; cursor:pointer; white-space:nowrap; }
+.dash-go:hover{ background:#f1f5f9; }
+.dash-sec .stats{ margin-bottom:14px; }
+.panel h3 .hint{ font-weight:400; color:#94a3b8; font-size:0.78rem; }
 /* "invite" checkbox on non-connected bridges */
 .invite-chk{ display:inline-flex; align-items:center; gap:5px; background:var(--brg-bg); color:var(--brg-ink); border:1px solid var(--brg-line);
   font-size:0.72rem; font-weight:600; padding:2px 8px; border-radius:999px; cursor:pointer; user-select:none; }
 .invite-chk input{ margin:0; cursor:pointer; }
 .invite-chk:hover{ filter:brightness(0.97); }
+.invite-chk.off{ background:#f1f5f9; color:#94a3b8; border-color:#e2e8f0; }
 /* Per-source count tiles (bridges + targets) */
 .src-counts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
 .src-count{ border:1px solid; border-radius:10px; padding:10px 12px; cursor:pointer; transition:transform .1s, box-shadow .1s; }
@@ -398,7 +416,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.20</div>
+      <div class="ver" id="sideVer">v1.6.21</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -415,7 +433,6 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <button class="nav-item"        id="nav-sources"     onclick="showView('sources')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v17"/><path d="M14 9h3a1 1 0 0 1 1 1v11"/><line x1="9" y1="7" x2="10" y2="7"/><line x1="9" y1="11" x2="10" y2="11"/><line x1="9" y1="15" x2="10" y2="15"/></svg></span> Sources <span class="nav-count" id="sourceNavCount">0</span></button>
       <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges <span class="nav-count" id="bridgeNavCount">0</span></button>
       <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
-      <button class="nav-item"        id="nav-leads"       onclick="showView('leads')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span> Leads <span class="nav-count" id="leadsCount">0</span></button>
       <div class="nav-sec">Activity</div>
       <button class="nav-item"        id="nav-setup"       onclick="showView('setup')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Setup</button>
       <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span> Collections</button>
@@ -464,25 +481,54 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div id="warningBanner" class="banner" style="display:none">
         WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
       </div>
-      <div class="stats">
-        <div class="stat clk s-tgt" onclick="statGo('targets','today')" title="See today's new targets"><div class="num" id="statToday">0</div><div class="label">New today</div></div>
-        <div class="stat clk s-tgt" onclick="statGo('targets','week')" title="See this week's targets"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
-        <div class="stat clk s-tgt" onclick="statGo('targets','')" title="See all targets"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
-        <div class="stat clk s-tgt" onclick="statGo('targets','nolink')" title="See targets still missing a LinkedIn URL"><div class="num" id="statLinkedPct">0%</div><div class="label">Have LinkedIn link</div><div class="sub" id="statLinkedSub">0 of 0</div></div>
-        <div class="stat clk s-tgt" onclick="statGo('targets','pushed')" title="See targets pushed to Botdog"><div class="num" id="statPushedPct">0%</div><div class="label">On Botdog</div><div class="sub" id="statPushedSub">0 of 0</div></div>
-        <div class="stat clk s-led" onclick="statGo('leads','')" title="Targets who replied on Botdog"><div class="num" id="statLeads">0</div><div class="label">Leads (replied)</div></div>
-        <div class="stat clk s-brg" onclick="statGo('bridges','')" title="See active bridges"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div></div>
-        <div class="stat clk s-brg" onclick="statGo('bridges','')" title="Bridges you're already 1st-degree connected to"><div class="num" id="statBridgesConn">0%</div><div class="label">Bridges connected</div><div class="sub" id="statBridgesConnSub">0 of 0</div></div>
-        <div class="stat clk s-src" onclick="statGo('sources','')" title="See sources"><div class="num" id="statSources">0</div><div class="label">Sources active</div></div>
+      <!-- ========= 1. SOURCES ========= -->
+      <div class="dash-sec stage-sources">
+        <div class="dash-head">
+          <div><span class="dot"></span><h3>1 · Sources</h3><p>Organizations you watch. Each one should produce bridges.</p></div>
+          <button class="dash-go" onclick="showView('sources')">Manage sources →</button>
+        </div>
+        <div class="stats">
+          <div class="stat clk s-src" onclick="statGo('sources','')" title="All sources you're tracking"><div class="num" id="statSources">0</div><div class="label">Sources tracked</div></div>
+          <div class="stat clk s-src" onclick="statGo('sources','')" title="Sources that have produced at least one bridge"><div class="num" id="statSrcProducing">0</div><div class="label">Producing bridges</div><div class="sub" id="statSrcProducingSub">0 of 0</div></div>
+          <div class="stat clk s-src" onclick="statGo('sources','')" title="Sources that have produced no bridges yet — they need attention"><div class="num" id="statSrcIdle">0</div><div class="label">Idle — no bridges</div><div class="sub">need a look</div></div>
+          <div class="stat clk s-src" onclick="statGo('sources','')" title="Average targets produced per source"><div class="num" id="statSrcAvg">0</div><div class="label">Avg targets / source</div></div>
+        </div>
+        <div class="panel"><h3>Targets per Source <span class="hint">— which organizations actually pay off</span></h3><div class="chart-wrap"><canvas id="chartSources"></canvas></div></div>
       </div>
 
-      <div class="grid-2">
-        <div class="panel"><h3>Targets per Bridge</h3><div class="chart-wrap"><canvas id="chartBridges"></canvas></div></div>
-        <div class="panel"><h3>Targets per Source</h3><div class="chart-wrap"><canvas id="chartSources"></canvas></div></div>
+      <!-- ========= 2. BRIDGES ========= -->
+      <div class="dash-sec stage-bridges">
+        <div class="dash-head">
+          <div><span class="dot"></span><h3>2 · Bridges</h3><p>People inside those organizations who open the door to targets.</p></div>
+          <button class="dash-go" onclick="showView('bridges')">Manage bridges →</button>
+        </div>
+        <div class="stats">
+          <div class="stat clk s-brg" onclick="statGo('bridges','')" title="Bridges switched on for collection"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div><div class="sub" id="statBridgesSub">of 0 found</div></div>
+          <div class="stat clk s-brg" onclick="statGo('bridges','')" title="Bridges you're already 1st-degree connected to"><div class="num" id="statBridgesConn">0%</div><div class="label">Already connected</div><div class="sub" id="statBridgesConnSub">0 of 0</div></div>
+          <div class="stat clk s-brg" onclick="statGo('bridges','')" title="Active bridges that have produced at least one target"><div class="num" id="statBrgProducing">0</div><div class="label">Producing targets</div><div class="sub" id="statBrgProducingSub">0 of 0</div></div>
+          <div class="stat clk s-brg" onclick="statGo('bridges','')" title="Bridges not yet connected — tick “invite” to reach them"><div class="num" id="statBrgNeedInvite">0</div><div class="label">Need an invite</div><div class="sub">2nd / 3rd degree</div></div>
+        </div>
+        <div class="panel"><h3>Targets per Bridge <span class="hint">— your most valuable relationships</span></h3><div class="chart-wrap"><canvas id="chartBridges"></canvas></div></div>
       </div>
-      <div class="grid-2">
-        <div class="panel"><h3>ICP grade distribution</h3><div class="chart-wrap"><canvas id="chartGrades"></canvas></div></div>
-        <div class="panel"><h3>Daily collection trend</h3><div class="chart-wrap"><canvas id="chartTrend"></canvas></div></div>
+
+      <!-- ========= 3. TARGETS ========= -->
+      <div class="dash-sec stage-targets">
+        <div class="dash-head">
+          <div><span class="dot"></span><h3>3 · Targets</h3><p>The prospects themselves — graded, deduplicated, ready for outreach.</p></div>
+          <button class="dash-go" onclick="showView('targets')">Manage targets →</button>
+        </div>
+        <div class="stats">
+          <div class="stat clk s-tgt" onclick="statGo('targets','')" title="All targets collected"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','today')" title="Collected today"><div class="num" id="statToday">0</div><div class="label">New today</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','week')" title="Collected in the last 7 days"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','nolink')" title="Targets still missing a LinkedIn URL — they can't be contacted"><div class="num" id="statLinkedPct">0%</div><div class="label">Have LinkedIn link</div><div class="sub" id="statLinkedSub">0 of 0</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','pushed')" title="Targets pushed to your outreach campaign"><div class="num" id="statPushedPct">0%</div><div class="label">On Botdog</div><div class="sub" id="statPushedSub">0 of 0</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','')" title="A+ and A graded targets — your best fits"><div class="num" id="statTopGrade">0</div><div class="label">A+ / A grade</div><div class="sub" id="statTopGradeSub">best fits</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="panel"><h3>ICP grade distribution <span class="hint">— quality of what you're collecting</span></h3><div class="chart-wrap"><canvas id="chartGrades"></canvas></div></div>
+          <div class="panel"><h3>Daily collection trend <span class="hint">— is the engine running?</span></h3><div class="chart-wrap"><canvas id="chartTrend"></canvas></div></div>
+        </div>
       </div>
 
       <div class="panel">
@@ -530,29 +576,6 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </section>
 
     <!-- ===== Leads ===== -->
-    <section id="view-leads" class="view stage-leads">
-      <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
-        <div><h2>Leads</h2><p>Targets who replied to you on Botdog — the end of the pipeline.</p></div>
-        <button class="sync-btn" id="leadsSyncBtn" onclick="syncLeads()" title="Ask Botdog who has replied and refresh this list">🔄 Sync replies</button>
-      </div>
-      <div id="leadsStatus" class="sync-status" style="display:none"></div>
-      <div class="table-controls">
-        <input type="text" id="lSearch" placeholder="Search name, company…" oninput="renderLeads()">
-        <span class="result-count" id="lCount">0 leads</span>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th title="ICP fit: A+ (brings foreign companies into the US) → D">Grade</th>
-            <th>Name</th>
-            <th>Company</th>
-            <th>Replied</th>
-            <th>LinkedIn</th>
-          </tr></thead>
-          <tbody id="leadsBody"><tr><td colspan="5" class="empty">No leads yet</td></tr></tbody>
-        </table>
-      </div>
-    </section>
 
     <!-- ===== Bridges ===== -->
     <section id="view-bridges" class="view stage-bridges">
@@ -1333,16 +1356,42 @@ function renderStats(){
   document.getElementById('statLinkedSub').textContent = linked + ' of ' + selCount + ' selected';
   document.getElementById('statPushedPct').textContent = pct(pushed);
   document.getElementById('statPushedSub').textContent = pushed + ' of ' + selCount + ' selected';
-  document.getElementById('statBridges').textContent   = activeBridgeCount;
-  // % of bridges you're already 1st-degree connected to.
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+  // ---------- 3. TARGETS ----------
+  const grades = rows.map(r => icpGrade(cleanTitle(r.title)));
+  const topGrade = grades.filter(g => g === 'A+' || g === 'A').length;
+  set('statTopGrade', topGrade);
+  set('statTopGradeSub', total ? Math.round(topGrade / total * 100) + '% of all targets' : 'best fits');
+
+  // ---------- 2. BRIDGES ----------
   const totalB = BRIDGES.length;
-  const connB = BRIDGES.filter(b => /1st|^1\b/i.test(String(b.connection || ''))).length;
-  document.getElementById('statBridgesConn').textContent = totalB ? Math.round(connB / totalB * 100) + '%' : '0%';
-  document.getElementById('statBridgesConnSub').textContent = connB + ' of ' + totalB;
-  document.getElementById('statSources').textContent   = activeSourceCount || STORED_SOURCES.length;
-  document.getElementById('leadCount').textContent     = rows.length;
-  const bnc = document.getElementById('bridgeNavCount'); if (bnc) bnc.textContent = BRIDGES.length;
-  const snc = document.getElementById('sourceNavCount'); if (snc) snc.textContent = STORED_SOURCES.length;
+  const connB  = BRIDGES.filter(b => /1st|^1\b/i.test(String(b.connection || ''))).length;
+  set('statBridges', activeBridgeCount);
+  set('statBridgesSub', 'of ' + totalB + ' found');
+  set('statBridgesConn', totalB ? Math.round(connB / totalB * 100) + '%' : '0%');
+  set('statBridgesConnSub', connB + ' of ' + totalB);
+  // Bridges that have actually produced at least one target.
+  const producedBy = new Set(rows.map(r => _norm(r.radar_person)).filter(Boolean));
+  const brgProducing = activeBridges.filter(b => producedBy.has(_norm(b.name))).length;
+  set('statBrgProducing', brgProducing);
+  set('statBrgProducingSub', brgProducing + ' of ' + activeBridgeCount + ' active');
+  set('statBrgNeedInvite', totalB - connB);
+
+  // ---------- 1. SOURCES ----------
+  const srcTotal = STORED_SOURCES.length || activeSourceCount;
+  const srcWithBridges = new Set(BRIDGES.map(b => _norm(b.source)).filter(Boolean));
+  const srcProducing = STORED_SOURCES.filter(s => srcWithBridges.has(_norm(s.name))).length;
+  set('statSources', srcTotal);
+  set('statSrcProducing', srcProducing);
+  set('statSrcProducingSub', srcProducing + ' of ' + srcTotal);
+  set('statSrcIdle', Math.max(0, srcTotal - srcProducing));
+  set('statSrcAvg', srcTotal ? Math.round(total / srcTotal) : 0);
+
+  // nav counts
+  set('leadCount', rows.length);
+  set('bridgeNavCount', BRIDGES.length);
+  set('sourceNavCount', STORED_SOURCES.length);
 }
 
 // ----- Sync Now (web app drives the extension) -----
@@ -1645,13 +1694,13 @@ function renderBridges(){
       const urnAttr = esc(b.urn);
       const is1st = _norm(b.connection) === '1st';
       const lvl  = connBadge(b.connection);
-      // Not connected yet -> let Olivier queue this person into the dedicated
-      // bridges Botdog campaign so they get a connection invite.
-      const queued = !!b.invite_queued;
+      // Not connected yet -> invited into the dedicated bridges campaign BY DEFAULT.
+      // Untick to skip this person (opt-out, remembered).
+      const willInvite = b.invite_queued !== false;
       const hint = is1st ? ''
-        : '<label class="invite-chk" title="Add to the Botdog bridges campaign so they receive a connection invite">' +
-            '<input type="checkbox"' + (queued ? ' checked' : '') +
-            ' onchange="onBridgeInviteToggle(this,\'' + jsq(b.urn) + '\')"> invite' +
+        : '<label class="invite-chk' + (willInvite ? '' : ' off') + '" title="Ticked = this bridge is sent a connection invite via the Botdog bridges campaign. Untick to skip them.">' +
+            '<input type="checkbox"' + (willInvite ? ' checked' : '') +
+            ' onchange="onBridgeInviteToggle(this,\'' + jsq(b.urn) + '\')"> ' + (willInvite ? 'invite' : 'skipped') +
           '</label>';
       const grade = icpGrade(b.title);
       const gradeBadge = '<span class="icp-grade g-' + grade.replace('+','plus') + '" title="ICP fit">' + grade + '</span>';
@@ -1681,33 +1730,36 @@ function renderBridges(){
   if (countEl) countEl.textContent = totalActive + ' of ' + BRIDGES.length + ' active';
 }
 
-// "invite" checkbox on a non-1st-degree bridge: queue them for the dedicated Botdog
-// bridges campaign. Stored per-browser and handed to the extension, which does the push
-// (the extension holds the Botdog key and calls the API directly).
-function inviteQueue(){
-  try { return JSON.parse(localStorage.getItem('radar_bridge_invites') || '[]'); } catch(e){ return []; }
+// Every non-1st-degree bridge is invited into the dedicated Botdog bridges campaign
+// BY DEFAULT. This list holds the ones you've explicitly chosen to SKIP.
+function inviteSkips(){
+  try { return JSON.parse(localStorage.getItem('radar_bridge_invite_skips') || '[]'); } catch(e){ return []; }
 }
 function onBridgeInviteToggle(inputEl, urn){
-  const on = inputEl.checked;
+  const on = inputEl.checked;                 // ticked = invite, unticked = skip
   const rec = BRIDGES.find(b => String(b.urn) === String(urn));
   if (rec) rec.invite_queued = on;
-  let q = inviteQueue().filter(u => String(u) !== String(urn));
-  if (on) q.push(urn);
-  try { localStorage.setItem('radar_bridge_invites', JSON.stringify(q)); } catch(e){}
-  // Tell the extension which bridges are queued so the next push only invites these.
-  try { window.dispatchEvent(new CustomEvent('radar-ext-set-bridge-invites', { detail: { urns: q } })); } catch(e){}
+  let skips = inviteSkips().filter(u => String(u) !== String(urn));
+  if (!on) skips.push(urn);
+  try { localStorage.setItem('radar_bridge_invite_skips', JSON.stringify(skips)); } catch(e){}
+  // Hand the skip list to the extension; it invites everyone else.
+  try { window.dispatchEvent(new CustomEvent('radar-ext-set-bridge-invites', { detail: { skips: skips } })); } catch(e){}
+  const lbl = inputEl.closest('.invite-chk');
+  if (lbl) { lbl.classList.toggle('off', !on); lbl.lastChild.textContent = ' ' + (on ? 'invite' : 'skipped'); }
   const note = document.getElementById('bridgePushStatus');
   if (note) {
+    const willGo = BRIDGES.filter(b => _norm(b.connection) !== '1st' && b.invite_queued !== false).length;
     note.style.display = 'block';
-    note.textContent = q.length
-      ? q.length + ' bridge' + (q.length===1?'':'s') + ' queued for a connection invite — click “Invite to Botdog” to send them.'
-      : 'No bridges queued for invites.';
+    note.textContent = willGo + ' not-yet-connected bridge' + (willGo===1?'':'s') + ' will be invited'
+      + (skips.length ? ' · ' + skips.length + ' skipped' : '') + '. Click “Invite to Botdog” to send them.';
   }
 }
-// Re-apply queued state onto freshly loaded bridges.
+// Re-apply skip state onto freshly loaded bridges (default = invite).
 function applyInviteQueue(){
-  const q = new Set(inviteQueue().map(String));
-  BRIDGES.forEach(b => { b.invite_queued = q.has(String(b.urn)); });
+  const skips = new Set(inviteSkips().map(String));
+  BRIDGES.forEach(b => { b.invite_queued = !skips.has(String(b.urn)); });
+  // keep the extension's copy in sync on every load
+  try { window.dispatchEvent(new CustomEvent('radar-ext-set-bridge-invites', { detail: { skips: [...skips] } })); } catch(e){}
 }
 
 // Toggle handler: optimistic UI + POST
@@ -1997,64 +2049,11 @@ function setFlowFilter(type, value){
 // ===== Leads (stage 4: targets who replied on Botdog) =====
 // Reads from Supabase via /api/leads. "Sync replies" (POST /api/leads/sync) is what
 // asks Botdog who answered; this list itself never depends on Botdog being up.
-let LEADS = [];
-
-async function loadLeads(){
-  try {
-    const resp = await fetch('/api/leads', { credentials: 'same-origin' });
-    if (!resp.ok) return;
-    const data = await resp.json();
-    LEADS = (data && data.leads) || [];
-    const nc = document.getElementById('leadsCount'); if (nc) nc.textContent = LEADS.length;
-  } catch(e){}
-}
-
-function renderLeads(){
-  const q = ((document.getElementById('lSearch')||{}).value || '').toLowerCase().trim();
-  let list = LEADS.slice();
-  if (q) list = list.filter(l => ((l.name||'') + ' ' + (l.company||'')).toLowerCase().includes(q));
-
-  const body = document.getElementById('leadsBody');
-  if (!body) return;
-  body.innerHTML = list.length ? list.map(l => {
-    const g = l.grade || 'D';
-    const gradePill = '<span class="icp-grade g-' + g.replace('+','plus') + '" title="ICP fit">' + g + '</span>';
-    return '<tr>' +
-      '<td style="text-align:center">' + gradePill + '</td>' +
-      '<td>' + esc(l.name) + '</td>' +
-      '<td>' + esc(l.company) + '</td>' +
-      '<td>' + fmtDate(l.first_reply_at) + '</td>' +
-      '<td>' + (l.linkedin_url ? '<a href="' + esc(l.linkedin_url) + '" target="_blank" rel="noopener">↗</a>' : '—') +
-      '</td></tr>';
-  }).join('') : '<tr><td colspan="5" class="empty">No leads yet — replies show up here after a sync.</td></tr>';
-
-  const c = document.getElementById('lCount');
-  if (c) c.textContent = list.length + ' lead' + (list.length===1?'':'s');
-}
-
-async function syncLeads(){
-  const btn = document.getElementById('leadsSyncBtn');
-  const el  = document.getElementById('leadsStatus');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Syncing…'; }
-  if (el) { el.style.display = 'block'; el.textContent = 'Asking Botdog who replied…'; }
-  try {
-    const resp = await fetch('/api/leads/sync', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    });
-    const data = await resp.json();
-    if (!data.ok) throw new Error(data.error || 'sync failed');
-    await loadLeads();
-    renderLeads();
-    if (el) el.textContent = 'Done — ' + data.inserted + ' new, ' + data.updated + ' updated' +
-      (data.unmatched ? ', ' + data.unmatched + ' replied but not in your targets' : '') + '.';
-  } catch(e){
-    if (el) el.textContent = 'Sync failed: ' + (e.message || e);
-  }
-  if (btn) { btn.disabled = false; btn.textContent = '🔄 Sync replies'; }
-}
+// ===== Leads (Botdog replies) — REMOVED FROM THE UI 2026-07-16 =====
+// Pulled because Botdog exposes no reply timestamp (only hasReplied), so "when they
+// replied" could only ever mean "when Radar noticed". The backend (functions/api/leads/*)
+// and the Supabase `leads` table are still in place. Restore this view once the webhook
+// question in CHARLES-LEADS.md is answered. Do not ship a Leads tab that cannot be trusted.
 
 function showView(name){
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -2068,7 +2067,6 @@ function showView(name){
   // refresh bridge candidates each time the Bridges view is opened
   if (name === 'bridges') { loadBridges().then(() => { try { applyInviteQueue(); } catch(e){} renderBridges(); }); }
   // pull the latest replies each time the Leads view is opened
-  if (name === 'leads') { loadLeads().then(renderLeads); }
   // load the current collection schedule from the extension when Settings opens
   if (name === 'settings') { try { loadSchedule(); } catch(e){} try { loadSavedKeys(); } catch(e){} }
   // fill the referral link with the signed-in user's code
@@ -2367,3 +2365,4 @@ initAuth();
 </script>
 </body>
 </html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
