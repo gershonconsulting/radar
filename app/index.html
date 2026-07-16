@@ -32,6 +32,19 @@
 #nav-bridges.active{ background:var(--brg-bg); color:var(--brg-ink); }
 #nav-targets.active{ background:var(--tgt-bg); color:var(--tgt-ink); }
 #nav-leads.active{ background:var(--led-bg); color:var(--led-ink); }
+/* "invite" checkbox on non-connected bridges */
+.invite-chk{ display:inline-flex; align-items:center; gap:5px; background:var(--brg-bg); color:var(--brg-ink); border:1px solid var(--brg-line);
+  font-size:0.72rem; font-weight:600; padding:2px 8px; border-radius:999px; cursor:pointer; user-select:none; }
+.invite-chk input{ margin:0; cursor:pointer; }
+.invite-chk:hover{ filter:brightness(0.97); }
+/* Per-source count tiles (bridges + targets) */
+.src-counts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.src-count{ border:1px solid; border-radius:10px; padding:10px 12px; cursor:pointer; transition:transform .1s, box-shadow .1s; }
+.src-count:hover{ transform:translateY(-1px); box-shadow:0 2px 8px rgba(15,23,42,.08); }
+.src-count .n{ font-size:1.45rem; font-weight:700; line-height:1.1; }
+.src-count .l{ font-size:0.74rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; opacity:.75; }
+.src-count.c-brg{ background:var(--brg-bg); border-color:var(--brg-line); color:var(--brg-ink); }
+.src-count.c-tgt{ background:var(--tgt-bg); border-color:var(--tgt-line); color:var(--tgt-ink); }
 /* Stat tiles tinted by stage */
 .stat.s-src{ background:var(--src-bg); border-color:var(--src-line); }
 .stat.s-brg{ background:var(--brg-bg); border-color:var(--brg-line); }
@@ -385,7 +398,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.19</div>
+      <div class="ver" id="sideVer">v1.6.20</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -731,9 +744,10 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </section>
 
     <section id="view-feedback" class="view">
-      <div class="page-head"><h2>Feedback</h2><p>Found a bug or have an idea? Tell us — it goes straight to the team.</p></div>
+      <div class="page-head"><h2>Feedback</h2><p>Found a bug or have an idea? Tell us — it goes to support@gershonconsulting.com.</p></div>
       <div class="settings-card">
         <h2>Share a bug or suggestion</h2>
+        <p style="margin-bottom:10px;color:#64748b;font-size:0.88rem">This opens an email to <strong>support@gershonconsulting.com</strong> with your message and the technical details we need to reproduce it. Press Send in your mail app to deliver it.</p>
         <div class="field">
           <label>Type</label>
           <select id="fbType"><option value="bug">🐞 Bug — something's broken</option><option value="idea">💡 Suggestion — an idea to improve Radar</option><option value="other">💬 Something else</option></select>
@@ -1631,7 +1645,14 @@ function renderBridges(){
       const urnAttr = esc(b.urn);
       const is1st = _norm(b.connection) === '1st';
       const lvl  = connBadge(b.connection);
-      const hint = is1st ? '' : '<span class="conn-hint">connect first</span>';
+      // Not connected yet -> let Olivier queue this person into the dedicated
+      // bridges Botdog campaign so they get a connection invite.
+      const queued = !!b.invite_queued;
+      const hint = is1st ? ''
+        : '<label class="invite-chk" title="Add to the Botdog bridges campaign so they receive a connection invite">' +
+            '<input type="checkbox"' + (queued ? ' checked' : '') +
+            ' onchange="onBridgeInviteToggle(this,\'' + jsq(b.urn) + '\')"> invite' +
+          '</label>';
       const grade = icpGrade(b.title);
       const gradeBadge = '<span class="icp-grade g-' + grade.replace('+','plus') + '" title="ICP fit">' + grade + '</span>';
       const connect = b.linkedin_url
@@ -1658,6 +1679,35 @@ function renderBridges(){
 
   body.innerHTML = html || '<div class="empty">No active bridges yet — toggle a candidate on above.</div>';
   if (countEl) countEl.textContent = totalActive + ' of ' + BRIDGES.length + ' active';
+}
+
+// "invite" checkbox on a non-1st-degree bridge: queue them for the dedicated Botdog
+// bridges campaign. Stored per-browser and handed to the extension, which does the push
+// (the extension holds the Botdog key and calls the API directly).
+function inviteQueue(){
+  try { return JSON.parse(localStorage.getItem('radar_bridge_invites') || '[]'); } catch(e){ return []; }
+}
+function onBridgeInviteToggle(inputEl, urn){
+  const on = inputEl.checked;
+  const rec = BRIDGES.find(b => String(b.urn) === String(urn));
+  if (rec) rec.invite_queued = on;
+  let q = inviteQueue().filter(u => String(u) !== String(urn));
+  if (on) q.push(urn);
+  try { localStorage.setItem('radar_bridge_invites', JSON.stringify(q)); } catch(e){}
+  // Tell the extension which bridges are queued so the next push only invites these.
+  try { window.dispatchEvent(new CustomEvent('radar-ext-set-bridge-invites', { detail: { urns: q } })); } catch(e){}
+  const note = document.getElementById('bridgePushStatus');
+  if (note) {
+    note.style.display = 'block';
+    note.textContent = q.length
+      ? q.length + ' bridge' + (q.length===1?'':'s') + ' queued for a connection invite — click “Invite to Botdog” to send them.'
+      : 'No bridges queued for invites.';
+  }
+}
+// Re-apply queued state onto freshly loaded bridges.
+function applyInviteQueue(){
+  const q = new Set(inviteQueue().map(String));
+  BRIDGES.forEach(b => { b.invite_queued = q.has(String(b.urn)); });
 }
 
 // Toggle handler: optimistic UI + POST
@@ -1734,10 +1784,18 @@ function renderSources(){
          : (info.org_id ? 'ready — no bridges yet (use “Find Bridges Now” in the extension)'
                         : 'add a Sales Nav Org ID to enable bridge discovery'));
     const btn = '<button class="btn-secondary" onclick="requestBridges(this,\'' + jsq(s) + '\')">🧭 Find Bridges</button>';
+    // Two headline counts per source: bridges (orange) and targets (blue), clickable through.
+    const counts =
+      '<div class="src-counts">' +
+        '<div class="src-count c-brg" onclick="statGo(\'bridges\',\'\')" title="Bridges found inside ' + esc(s) + '">' +
+          '<div class="n">' + nb + '</div><div class="l">bridge' + (nb===1?'':'s') + '</div></div>' +
+        '<div class="src-count c-tgt" onclick="statGo(\'targets\',\'\')" title="Targets collected via ' + esc(s) + '">' +
+          '<div class="n">' + info.leads + '</div><div class="l">target' + (info.leads===1?'':'s') + '</div></div>' +
+      '</div>';
     return '<div class="entity-card"><div class="top"><div><h3><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:' + sourceColor(s) + ';margin-right:8px;vertical-align:middle"></span>' + esc(s) + '</h3>' + (link?('<p>'+link+'</p>'):'') +
       '</div><span class="pill ' + cat + '">' + cat + '</span></div>' +
-      '<p style="margin-top:10px"><span class="big">' + info.leads + '</span> <small>targets</small></p>' +
-      '<p style="margin-top:6px">' + via + '</p>' +
+      counts +
+      '<p style="margin-top:8px;font-size:0.84rem;color:#64748b">' + via + '</p>' +
       '<div style="margin-top:12px">' + btn + '<div class="src-bridge-note" data-note style="display:none"></div></div></div>';
   }).join('') : '<div class="empty">No sources yet — add one above.</div>';
 }
@@ -2008,7 +2066,7 @@ function showView(name){
   // (re)populate the onboarding checklist when the Setup view opens
   if (name === 'setup') { try { renderOnboarding(); } catch(e){} }
   // refresh bridge candidates each time the Bridges view is opened
-  if (name === 'bridges') { loadBridges().then(renderBridges); }
+  if (name === 'bridges') { loadBridges().then(() => { try { applyInviteQueue(); } catch(e){} renderBridges(); }); }
   // pull the latest replies each time the Leads view is opened
   if (name === 'leads') { loadLeads().then(renderLeads); }
   // load the current collection schedule from the extension when Settings opens
@@ -2115,26 +2173,36 @@ function copyRefLink(){
     el.select(); st.textContent = 'Press Ctrl/Cmd+C to copy.';
   }
 }
-// Feedback: bugs + suggestions. Posts to the hub; falls back to a mail draft.
-async function sendFeedback(){
+// Feedback: bugs + suggestions -> opens a pre-filled email to support.
+// Mail is the primary path (always works, no backend needed); we also log it to the
+// hub best-effort so the team has a record even if the user never hits Send.
+const SUPPORT_EMAIL = 'support@gershonconsulting.com';
+function buildFeedbackMail(type, body){
+  const label = { bug: 'Bug', idea: 'Suggestion', other: 'Feedback' }[type] || 'Feedback';
+  const who = (window.__ME && window.__ME.user && (window.__ME.user.email || window.__ME.user.name)) || 'unknown user';
+  const subject = 'Radar ' + label + ' — ' + who;
+  const lines = [
+    body, '', '---', 'Type: ' + label, 'From: ' + who,
+    'Version: ' + ((document.getElementById('sideVer') || {}).textContent || ''),
+    'Page: ' + location.href, 'Browser: ' + navigator.userAgent,
+    'When: ' + new Date().toISOString()
+  ];
+  return 'mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(lines.join('\n'));
+}
+function sendFeedback(){
   const type = document.getElementById('fbType').value;
   const body = (document.getElementById('fbBody').value || '').trim();
   const st = document.getElementById('fbStatus');
   if (!body) { st.textContent = 'Tell us a bit about the bug or idea first.'; return; }
-  st.textContent = 'Sending…';
+  const mail = buildFeedbackMail(type, body);
+  // Best-effort server-side log; never blocks the email.
   try {
-    const resp = await fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, credentials:'same-origin',
-      body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'feedback', type: type, body: body, page: location.pathname, ua: navigator.userAgent }) });
-    const d = await resp.json();
-    if (d && (d.saved || d.ok)) {
-      st.textContent = '✓ Thank you — this went to the team.';
-      document.getElementById('fbBody').value = '';
-    } else {
-      st.innerHTML = 'Couldn’t send from here. <a href="mailto:olivier@attia.com?subject=' + encodeURIComponent('Radar feedback: ' + type) + '&body=' + encodeURIComponent(body) + '">Send it by email instead</a>.';
-    }
-  } catch(e) {
-    st.innerHTML = 'Couldn’t send from here. <a href="mailto:olivier@attia.com?subject=' + encodeURIComponent('Radar feedback: ' + type) + '&body=' + encodeURIComponent(body) + '">Send it by email instead</a>.';
-  }
+    fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, credentials:'same-origin',
+      body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'feedback', type: type, body: body, page: location.href, ua: navigator.userAgent }) }).catch(function(){});
+  } catch(e) {}
+  window.location.href = mail;
+  st.innerHTML = '✉️ Opening your email app with this addressed to <strong>' + SUPPORT_EMAIL + '</strong> — press Send to deliver it. ' +
+                 'Nothing happened? <a href="' + mail + '">Open it manually</a> or email ' + SUPPORT_EMAIL + ' directly.';
 }
 
 // Show/hide the API key fields. Sweep every key input in the card so newly added
