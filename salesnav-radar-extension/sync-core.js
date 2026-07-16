@@ -113,9 +113,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg.action === 'setBridgeInvites') {
-    // The dashboard says which non-1st-degree bridges the user wants invited.
-    chrome.storage.local.set({ radar_bridge_invites: msg.urns || [] })
-      .then(() => sendResponse({ ok: true, count: (msg.urns || []).length }))
+    // Every non-1st-degree bridge is invited by default; this is the opt-out list.
+    chrome.storage.local.set({ radar_bridge_invite_skips: msg.skips || [] })
+      .then(() => sendResponse({ ok: true, skips: (msg.skips || []).length }))
       .catch(e => sendResponse({ ok: false, error: String(e) }));
     return true;
   }
@@ -293,7 +293,9 @@ const ENRICHER_BASE = 'https://enricherpro.com';
 // Verified against Botdog's live OpenAPI spec (api.botdog.co/docs): the host is
 // api.botdog.CO (.io does not resolve) and auth is the x-api-key header, NOT Bearer.
 const BOTDOG_CONTACTS_URL = 'https://api.botdog.co/v1/campaigns/contacts';
-const MAX_BRIDGE_PUSH_PER_RUN = 25;
+// Adding contacts to a campaign is not the same as sending invites — Botdog paces the
+// actual connection requests itself. So this cap only limits how many we enqueue per run.
+const MAX_BRIDGE_PUSH_PER_RUN = 100;
 
 // Strip LinkedIn status suffixes / trailing emoji from a name (for enricherPro lookups).
 function cleanPersonName(raw) {
@@ -321,19 +323,19 @@ async function enricherResolve(firstName, lastName, company, title) {
 }
 
 async function pushBridgesToBotdog() {
-  const cfg = await chrome.storage.local.get(['radar_botdog_key', 'radar_bridges_campaign', 'radar_bridges_pushed', 'radar_bridge_invites']);
+  const cfg = await chrome.storage.local.get(['radar_botdog_key', 'radar_bridges_campaign', 'radar_bridges_pushed', 'radar_bridge_invite_skips']);
   const key = cfg.radar_botdog_key;
   const campaign = cfg.radar_bridges_campaign || BRIDGES_CAMPAIGN_ID_DEFAULT;
   if (!key) { await log('info', 'bridge-push:skip', { reason: 'no Botdog key — set it in Settings' }); return { ok: false, reason: 'no-key' }; }
   const pushed = new Set(cfg.radar_bridges_pushed || []);
-  // Only invite the bridges the user ticked "invite" on in the dashboard.
-  // Empty queue = invite nobody (explicit opt-in, no surprise invitations).
-  const queued = new Set((cfg.radar_bridge_invites || []).map(String));
+  // Invite EVERY not-yet-connected bridge into the dedicated bridges campaign,
+  // except the ones explicitly unticked in the dashboard.
+  const skips = new Set((cfg.radar_bridge_invite_skips || []).map(String));
   let bridges = [];
   try { bridges = await getBridges(); } catch (e) { return { ok: false, reason: 'bridges-fetch-failed' }; }
   const is1st = b => /1st|^1\b/i.test(String(b.connection || ''));
-  const todo = bridges.filter(b => b && b.urn && !is1st(b) && !pushed.has(b.urn) && queued.has(String(b.urn)));
-  if (!todo.length) { await log('info', 'bridge-push:skip', { reason: 'no bridges ticked for invite in the dashboard' }); return { ok: true, sent: 0, candidates: 0, reason: 'none-queued' }; }
+  const todo = bridges.filter(b => b && b.urn && !is1st(b) && !pushed.has(b.urn) && !skips.has(String(b.urn)));
+  if (!todo.length) { await log('info', 'bridge-push:skip', { reason: 'every not-connected bridge is already invited' }); return { ok: true, sent: 0, candidates: 0, reason: 'all-done' }; }
   await log('info', 'bridge-push:start', { candidates: todo.length, campaign });
   let sent = 0;
   for (const b of todo) {
