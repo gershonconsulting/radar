@@ -32,6 +32,13 @@
 #nav-bridges.active{ background:var(--brg-bg); color:var(--brg-ink); }
 #nav-targets.active{ background:var(--tgt-bg); color:var(--tgt-ink); }
 #nav-leads.active{ background:var(--led-bg); color:var(--led-ink); }
+/* Growth view controls */
+.growth-controls{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+.seg{ display:inline-flex; background:#f1f5f9; border:1px solid var(--line); border-radius:10px; padding:3px; gap:2px; }
+.seg-btn{ border:none; background:none; font:inherit; font-size:0.82rem; font-weight:600; color:#64748b; padding:7px 14px; border-radius:8px; cursor:pointer; }
+.seg-btn:hover{ color:#334155; }
+.seg-btn.active{ background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(15,23,42,.08); }
+.seg-btn.s-tgt.active{ color:var(--tgt-ink); } .seg-btn.s-brg.active{ color:var(--brg-ink); } .seg-btn.s-src.active{ color:var(--src-ink); }
 /* Dashboard split into the 3 pipeline sections */
 .dash-sec{ border:1px solid var(--line); border-left:5px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:18px; background:#fff; }
 .dash-sec.stage-sources{ border-left-color:var(--src-ink); }
@@ -416,7 +423,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.6.21</div>
+      <div class="ver" id="sideVer">v1.6.22</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -434,6 +441,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges <span class="nav-count" id="bridgeNavCount">0</span></button>
       <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
       <div class="nav-sec">Activity</div>
+      <button class="nav-item"        id="nav-growth"      onclick="showView('growth')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span> Growth</button>
       <button class="nav-item"        id="nav-setup"       onclick="showView('setup')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Setup</button>
       <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span> Collections</button>
       <button class="nav-item"        id="nav-log"         onclick="showView('log')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg></span> Log</button>
@@ -743,6 +751,41 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <h2>Key Status</h2>
         <p>Current backend key status.</p>
         <div id="keyStatus" class="key-status">Loading…</div>
+      </div>
+    </section>
+
+    <section id="view-growth" class="view">
+      <div class="page-head"><h2>Growth</h2><p>How your pipeline is building over time — sources, bridges and targets added by day, week and month.</p></div>
+
+      <div class="growth-controls">
+        <div class="seg" id="growthMetric">
+          <button class="seg-btn s-tgt active" data-metric="targets" onclick="setGrowthMetric('targets')">Targets</button>
+          <button class="seg-btn s-brg" data-metric="bridges" onclick="setGrowthMetric('bridges')">Bridges</button>
+          <button class="seg-btn s-src" data-metric="sources" onclick="setGrowthMetric('sources')">Sources</button>
+        </div>
+        <div class="seg" id="growthGrain">
+          <button class="seg-btn active" data-grain="day" onclick="setGrowthGrain('day')">Day</button>
+          <button class="seg-btn" data-grain="week" onclick="setGrowthGrain('week')">Week</button>
+          <button class="seg-btn" data-grain="month" onclick="setGrowthGrain('month')">Month</button>
+        </div>
+      </div>
+
+      <div class="stats" id="growthKpis">
+        <div class="stat"><div class="num" id="gTotal">0</div><div class="label" id="gTotalLbl">Total</div></div>
+        <div class="stat"><div class="num" id="gThis">0</div><div class="label" id="gThisLbl">This period</div></div>
+        <div class="stat"><div class="num" id="gDelta">0%</div><div class="label">vs previous period</div><div class="sub" id="gDeltaSub"></div></div>
+        <div class="stat"><div class="num" id="gBest">0</div><div class="label">Best period</div><div class="sub" id="gBestSub"></div></div>
+        <div class="stat"><div class="num" id="gAvg">0</div><div class="label" id="gAvgLbl">Avg / active period</div></div>
+      </div>
+
+      <div class="panel">
+        <h3 id="growthChartTitle">New targets per day <span class="hint">— bars = added that period, line = running total</span></h3>
+        <div class="chart-wrap" style="height:320px"><canvas id="chartGrowth"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <h3>All three, side by side <span class="hint">— cumulative totals over time</span></h3>
+        <div class="chart-wrap" style="height:300px"><canvas id="chartGrowthAll"></canvas></div>
       </div>
     </section>
 
@@ -2071,6 +2114,115 @@ function showView(name){
   if (name === 'settings') { try { loadSchedule(); } catch(e){} try { loadSavedKeys(); } catch(e){} }
   // fill the referral link with the signed-in user's code
   if (name === 'referrals') { try { const el = document.getElementById('refLink'); if (el) el.value = buildRefLink(); } catch(e){} }
+  // build the growth charts when the Growth view opens
+  if (name === 'growth') { try { renderGrowth(); } catch(e){} }
+}
+
+// ===== Growth (sources / bridges / targets added over time) =====
+let GROWTH_METRIC = 'targets';
+let GROWTH_GRAIN  = 'day';
+function setGrowthMetric(m){ GROWTH_METRIC = m; document.querySelectorAll('#growthMetric .seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.metric===m)); renderGrowth(); }
+function setGrowthGrain(g){ GROWTH_GRAIN = g; document.querySelectorAll('#growthGrain .seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.grain===g)); renderGrowth(); }
+
+// Pull the timestamp list for a metric from data already loaded in the app.
+function growthDates(metric){
+  if (metric === 'targets') return ROWS.map(r => r.collected_date).filter(Boolean);
+  if (metric === 'bridges') return BRIDGES.map(b => b.added_date).filter(Boolean);
+  return STORED_SOURCES.map(s => s.added_date).filter(Boolean);
+}
+// Bucket a date into a period key + a short label, by grain.
+function periodKey(d, grain){
+  const dt = new Date(d); if (isNaN(dt)) return null;
+  if (grain === 'day')  return dt.toISOString().slice(0,10);
+  if (grain === 'month')return dt.toISOString().slice(0,7);
+  // ISO week: Monday-anchored
+  const t = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()));
+  const day = (t.getUTCDay() + 6) % 7; t.setUTCDate(t.getUTCDate() - day);
+  return t.toISOString().slice(0,10);
+}
+function periodLabel(key, grain){
+  if (grain === 'month'){ const [y,m]=key.split('-'); return new Date(y,m-1,1).toLocaleString('en-US',{month:'short',year:'2-digit'}); }
+  const dt = new Date(key);
+  const s = dt.toLocaleString('en-US',{month:'short',day:'numeric'});
+  return grain === 'week' ? ('wk of '+s) : s;
+}
+// Build an ordered series of {key,label,count,cumulative} filling gaps between first & last period.
+function growthSeries(metric, grain){
+  const counts = {};
+  growthDates(metric).forEach(d => { const k = periodKey(d, grain); if (k) counts[k] = (counts[k]||0)+1; });
+  const keys = Object.keys(counts).sort();
+  if (!keys.length) return [];
+  // fill gaps so the trend line is honest about quiet periods
+  const stepDays = grain==='day'?1:grain==='week'?7:0;
+  const out = []; let cum = 0;
+  if (grain === 'month'){
+    let [sy,sm] = keys[0].split('-').map(Number); const [ey,em] = keys[keys.length-1].split('-').map(Number);
+    while (sy<ey || (sy===ey && sm<=em)){ const k = sy+'-'+String(sm).padStart(2,'0'); cum += (counts[k]||0); out.push({key:k,label:periodLabel(k,grain),count:counts[k]||0,cumulative:cum}); sm++; if(sm>12){sm=1;sy++;} }
+  } else {
+    let cur = new Date(keys[0]); const end = new Date(keys[keys.length-1]);
+    while (cur <= end){ const k = cur.toISOString().slice(0,10); cum += (counts[k]||0); out.push({key:k,label:periodLabel(k,grain),count:counts[k]||0,cumulative:cum}); cur.setUTCDate(cur.getUTCDate()+stepDays); }
+  }
+  return out;
+}
+const GROWTH_COLORS = { targets:{ink:'#1d4ed8',soft:'rgba(29,78,216,.15)'}, bridges:{ink:'#c2610a',soft:'rgba(194,97,10,.15)'}, sources:{ink:'#15803d',soft:'rgba(21,128,61,.15)'} };
+function renderGrowth(){
+  const grainWord = { day:'day', week:'week', month:'month' }[GROWTH_GRAIN];
+  const series = growthSeries(GROWTH_METRIC, GROWTH_GRAIN);
+  const labels = series.map(s=>s.label);
+  const counts = series.map(s=>s.count);
+  const cum    = series.map(s=>s.cumulative);
+  const col    = GROWTH_COLORS[GROWTH_METRIC];
+  const cap = GROWTH_METRIC.charAt(0).toUpperCase()+GROWTH_METRIC.slice(1);
+
+  // ---- KPIs ----
+  const total = counts.reduce((a,b)=>a+b,0);
+  const thisP = counts.length ? counts[counts.length-1] : 0;
+  const prevP = counts.length>1 ? counts[counts.length-2] : 0;
+  const delta = prevP ? Math.round((thisP-prevP)/prevP*100) : (thisP?100:0);
+  const active = counts.filter(c=>c>0);
+  let bestIdx = -1, bestVal = -1; counts.forEach((c,i)=>{ if(c>bestVal){bestVal=c;bestIdx=i;} });
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('gTotalLbl','Total '+GROWTH_METRIC); set('gTotal', total);
+  set('gThisLbl','This '+grainWord); set('gThis', thisP);
+  set('gDelta', (delta>0?'+':'')+delta+'%'); set('gDeltaSub','was '+prevP+' last '+grainWord);
+  set('gBest', bestVal<0?0:bestVal); set('gBestSub', bestIdx>=0 ? series[bestIdx].label : '');
+  set('gAvgLbl','Avg / active '+grainWord); set('gAvg', active.length ? Math.round(total/active.length) : 0);
+  const dEl = document.getElementById('gDelta'); if (dEl) dEl.style.color = delta>0?'#15803d':(delta<0?'#c0341d':'');
+
+  // ---- main chart: bars (per period) + line (cumulative) ----
+  set('growthChartTitle', 'New '+GROWTH_METRIC+' per '+grainWord);
+  destroyChart('chartGrowth');
+  const el = document.getElementById('chartGrowth');
+  if (el) CHARTS.chartGrowth = new Chart(el, {
+    data: { labels, datasets:[
+      { type:'bar', label:'New '+GROWTH_METRIC, data:counts, backgroundColor:col.soft, borderColor:col.ink, borderWidth:1, yAxisID:'y', order:2 },
+      { type:'line', label:'Running total', data:cum, borderColor:col.ink, backgroundColor:col.ink, tension:.3, pointRadius:2, yAxisID:'y1', order:1 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      scales:{ y:{beginAtZero:true,title:{display:true,text:'added'}}, y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'cumulative'}} },
+      plugins:{ legend:{display:true,position:'bottom'} } }
+  });
+
+  // ---- comparison chart: all three cumulative ----
+  destroyChart('chartGrowthAll');
+  const el2 = document.getElementById('chartGrowthAll');
+  if (el2){
+    // build a shared timeline across the three metrics at the current grain
+    const all = ['sources','bridges','targets'].map(m=>({m, s:growthSeries(m,GROWTH_GRAIN)}));
+    const keySet = new Set(); all.forEach(a=>a.s.forEach(p=>keySet.add(p.key)));
+    const keys = [...keySet].sort();
+    const lbls = keys.map(k=>periodLabel(k,GROWTH_GRAIN));
+    const ds = all.map(a=>{
+      const byKey={}; a.s.forEach(p=>byKey[p.key]=p.cumulative);
+      let last=0; const data = keys.map(k=>{ if(byKey[k]!=null) last=byKey[k]; return last; });
+      const c = GROWTH_COLORS[a.m];
+      return { label:a.m, data, borderColor:c.ink, backgroundColor:c.soft, tension:.3, pointRadius:0, fill:false };
+    });
+    CHARTS.chartGrowthAll = new Chart(el2, {
+      type:'line', data:{ labels:lbls, datasets:ds },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true}} }
+    });
+  }
 }
 
 // ===== Collection schedule (lives in the extension — Radar is self-contained) =====
