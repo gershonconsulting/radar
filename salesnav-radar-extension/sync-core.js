@@ -5,7 +5,9 @@
 // so the Radar dashboard can display them in real time.
 // =============================================================
 
-const WEBAPP_URL    = 'https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec';
+// Radar hub is now the Supabase-backed Cloudflare Function (the Google Sheet is retired).
+// The extension posts here with the shared INGEST_SECRET; the function maps that to the owner.
+const WEBAPP_URL    = 'https://radar.gershoncrm.com/api/hub';
 const INGEST_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 const MAX_PAGES     = 25;
 const MAX_RESOLVE_PER_RUN = 100;
@@ -305,6 +307,104 @@ function cleanPersonName(raw) {
   s = s.replace(/\s*[•·]\s*.*$/, '');
   s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{1F1E6}-\u{1F1FF}].*$/u, '');
   return s.replace(/\s+/g, ' ').replace(/^[\s.,;:•·\-]+|[\s.,;:•·\-]+$/g, '').trim();
+}
+
+// ---- Country -> primary business language -------------------------------------------
+// Once we know a prospect's country we know which language to write to them in. This is a
+// deliberate simplification: it returns the language you'd open in, not the person's mother
+// tongue. Multilingual countries resolve to the dominant business language.
+const COUNTRY_LANG = {
+  'france':'French','belgium':'French','monaco':'French','luxembourg':'French','senegal':'French',
+  "côte d'ivoire":'French','ivory coast':'French','morocco':'French','tunisia':'French','algeria':'French',
+  'switzerland':'French','cameroon':'French','madagascar':'French','quebec':'French',
+  'united states':'English','united kingdom':'English','ireland':'English','canada':'English',
+  'australia':'English','new zealand':'English','singapore':'English','india':'English',
+  'south africa':'English','nigeria':'English','kenya':'English','uae':'English',
+  'united arab emirates':'English','hong kong':'English','philippines':'English','israel':'English',
+  'spain':'Spanish','mexico':'Spanish','argentina':'Spanish','colombia':'Spanish','chile':'Spanish',
+  'peru':'Spanish','venezuela':'Spanish','ecuador':'Spanish','uruguay':'Spanish','panama':'Spanish',
+  'costa rica':'Spanish','guatemala':'Spanish','dominican republic':'Spanish',
+  'germany':'German','austria':'German','deutschland':'German',
+  'italy':'Italian','portugal':'Portuguese','brazil':'Portuguese',
+  'netherlands':'Dutch','the netherlands':'Dutch',
+  'sweden':'Swedish','norway':'Norwegian','denmark':'Danish','finland':'Finnish',
+  'poland':'Polish','czechia':'Czech','czech republic':'Czech','romania':'Romanian','greece':'Greek',
+  'turkey':'Turkish','russia':'Russian','ukraine':'Ukrainian','china':'Chinese','taiwan':'Chinese',
+  'japan':'Japanese','south korea':'Korean','korea':'Korean','vietnam':'Vietnamese','thailand':'Thai',
+  'indonesia':'Indonesian','malaysia':'Malay','saudi arabia':'Arabic','egypt':'Arabic','qatar':'Arabic'
+};
+function langFromCountry(country) {
+  const c = String(country || '').trim().toLowerCase().replace(/\.$/, '');
+  if (!c) return '';
+  if (COUNTRY_LANG[c]) return COUNTRY_LANG[c];
+  // tolerate "Greater Paris, France" style tails and common variants
+  for (const k in COUNTRY_LANG) { if (c.endsWith(k) || c.indexOf(k) !== -1) return COUNTRY_LANG[k]; }
+  return '';
+}
+
+// ---- Location from a lead's Sales Nav page --------------------------------------------
+// The search-result CARD often omits location; the LEAD PAGE always shows it
+// (e.g. "Région de Brest, France"). Verified live 2026-07-16: Sales Nav exposes
+// data-anonymize="person-name|headline|job-title|company-name" but NOT location, and the
+// location <p>'s classes are hashed and rotate — so anchor on person-name and pattern-match
+// instead of relying on any class.
+async function fetchLeadLocation(urn) {
+  const url = 'https://www.linkedin.com/sales/lead/' + urn + ',NAME_SEARCH,undefined';
+  let tab;
+  try {
+    tab = await chrome.tabs.create({ url, active: false });
+    await new Promise(r => setTimeout(r, 4500));
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const anchor = document.querySelector('[data-anonymize="person-name"]');
+        if (!anchor) return '';
+        let card = anchor;
+        for (let i = 0; i < 8 && card; i++) {
+          const ps = Array.from(card.querySelectorAll('p'))
+            .map(p => (p.textContent || '').replace(/\s+/g, ' ').trim())
+            .filter(t => t && t.length > 2 && t.length < 70 && t.indexOf(',') !== -1);
+          const hit = ps.find(t =>
+            !/\b(chez|at|@)\b/i.test(t) &&            // not "Title chez Company"
+            !/\d{4}/.test(t) &&                        // not a date range
+            /^[A-Za-zÀ-ÿ0-9'’\-\.\s]+$/.test(t)        // plain place text
+          );
+          if (hit) return hit;
+          card = card.parentElement;
+        }
+        return '';
+      }
+    });
+    return (res && res.result) ? String(res.result) : '';
+  } catch (e) {
+    return '';
+  } finally {
+    // Always close the tab — no tab litter. (Olivier's standing complaint.)
+    try { if (tab && tab.id) await chrome.tabs.remove(tab.id); } catch (e) {}
+  }
+}
+
+// Fill in country/city/language for freshly collected targets that have no location yet.
+// Capped per run so a sync never turns into hundreds of page loads.
+const MAX_LOCATION_LOOKUPS_PER_RUN = 30;
+async function enrichLocations(rows) {
+  let done = 0;
+  for (const r of rows) {
+    if (done >= MAX_LOCATION_LOOKUPS_PER_RUN) break;
+    if (!r || !r.lead_id) continue;
+    if (r.country) { if (!r.language) r.language = langFromCountry(r.country); continue; }
+    const loc = await fetchLeadLocation(r.lead_id);
+    done++;
+    if (!loc) continue;
+    const segs = loc.split(',').map(s => s.trim()).filter(Boolean);
+    r.location = loc;
+    r.city = segs[0] || '';
+    r.country = segs[segs.length - 1] || '';
+    r.language = langFromCountry(r.country);
+    await new Promise(res => setTimeout(res, 700));   // be gentle with LinkedIn
+  }
+  if (done) await log('info', 'location-enrich', { looked_up: done });
+  return rows;
 }
 
 // Resolve a public linkedin.com/in/ URL from name+company via enricherPro.
@@ -691,6 +791,10 @@ async function scrapeBridge(bridge) {
     if (pageLeads.length < 25) break;
     await humanDelay(6000, 14000);
   }
+  // Search cards frequently omit location. For anyone still missing a country, open their
+  // lead page once to read it, then derive the language. Runs in the worker (not injected),
+  // caps its own lookups, and closes every tab it opens.
+  try { await enrichLocations(leads); } catch (e) { await log('warn', 'location-enrich:failed', { error: String(e) }); }
   return leads;
 }
 
@@ -830,8 +934,9 @@ async function extractLeadsFromPage(radarPerson, category, source) {
         }
         if (title.length > 200) title = title.slice(0, 200);
 
-        // Language (best-effort): only from the card, never by opening the profile. If the card
-        // (or a descendant) carries a `lang` attribute, use its value; otherwise leave blank.
+        // Language: left blank here on purpose. This function is INJECTED into the page, so it
+        // cannot call langFromCountry() from the service-worker scope. enrichLocations() derives
+        // language from country back in the worker after this returns.
         let language = '';
         try {
           const langEl = card.matches('[lang]') ? card : card.querySelector('[lang]');
