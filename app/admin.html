@@ -161,11 +161,11 @@
 
   <div class="invite">
     <h3>Invite a user</h3>
-    <div class="hint">Adds the person by their <strong>LinkedIn profile URL</strong>. They gain access once they sign in with LinkedIn.</div>
+    <div class="hint"><strong>Email is how Radar recognizes them at sign-in</strong> — use the email tied to their LinkedIn account. The LinkedIn URL is optional (display only). People who sign in uninvited appear below as <em>pending</em> for you to approve.</div>
     <div class="invite-row">
-      <div class="fld"><label>LinkedIn profile URL *</label><input type="url" id="invUrl" placeholder="https://linkedin.com/in/username"></div>
+      <div class="fld"><label>Email *</label><input type="email" id="invEmail" placeholder="person@company.com"></div>
       <div class="fld"><label>Name</label><input type="text" id="invName" placeholder="Full name"></div>
-      <div class="fld"><label>Email</label><input type="email" id="invEmail" placeholder="person@company.com"></div>
+      <div class="fld"><label>LinkedIn profile URL</label><input type="url" id="invUrl" placeholder="https://linkedin.com/in/username"></div>
       <button class="btn-primary" id="invBtn" onclick="inviteUser()">+ Invite user</button>
     </div>
     <div class="invite-status" id="invStatus"></div>
@@ -177,16 +177,17 @@
         <tr>
           <th>Name</th>
           <th class="hide-sm">Email</th>
-          <th>LinkedIn</th>
+          <th class="hide-sm">LinkedIn</th>
+          <th>Onboarding</th>
           <th>Sources</th>
           <th>Bridges</th>
           <th>Targets</th>
           <th class="hide-sm">Last login</th>
-          <th class="hide-sm">Logins</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="usersBody">
-        <tr><td colspan="8" class="empty">Loading users…</td></tr>
+        <tr><td colspan="9" class="empty">Loading users…</td></tr>
       </tbody>
     </table>
   </div>
@@ -196,6 +197,7 @@
 'use strict';
 
 var USERS = [];
+var MY_KEY = null; // caller's owner_key — used to hide self-destructive actions
 
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -294,6 +296,15 @@ async function loadUsers(){
   }
   document.getElementById('backendNote').style.display = 'none';
   USERS = (res.json && res.json.users) ? res.json.users : [];
+  MY_KEY = (res.json && res.json.me && res.json.me.owner_key) || MY_KEY;
+  // Pending access requests first, then active admins/users, newest last.
+  var rank = { pending: 0, invited: 1, active: 2, suspended: 3 };
+  USERS.sort(function(a, b){
+    var ra = rank[String(a.status||'').toLowerCase()] != null ? rank[String(a.status||'').toLowerCase()] : 9;
+    var rb = rank[String(b.status||'').toLowerCase()] != null ? rank[String(b.status||'').toLowerCase()] : 9;
+    if (ra !== rb) return ra - rb;
+    return String(a.created_at||'').localeCompare(String(b.created_at||''));
+  });
   renderStats();
   renderUsers();
 }
@@ -332,11 +343,49 @@ function liCell(url){
        + esc(handle) + '</a></td>';
 }
 
+// ---- Onboarding checklist cell ----
+function onboardingCell(u){
+  var ob = u.onboarding || {};
+  var items = [
+    { key: 'linkedin',  label: 'LI',  on: !!ob.linkedin,  title: 'Signed in with LinkedIn' },
+    { key: 'sales_nav', label: 'SN',  on: !!ob.sales_nav, title: 'Sales Navigator detected' },
+    { key: 'extension', label: 'Ext', on: !!ob.extension, title: 'Chrome extension installed' },
+    { key: 'botdog',    label: 'BD',  on: !!ob.botdog,    title: 'Botdog connected' }
+  ];
+  return '<td><div class="checklist">' + items.map(function(i){
+    return '<span class="chk ' + (i.on ? 'on' : 'off') + '" title="' + esc(i.title) + '">'
+      + '<span class="mk">' + (i.on ? '&#10003;' : '&#183;') + '</span>' + i.label + '</span>';
+  }).join('') + '</div></td>';
+}
+
+// ---- Row actions per status ----
+function actionsCell(u){
+  var st = String(u.status||'').toLowerCase();
+  var isSelf = MY_KEY && u.owner_key === MY_KEY;
+  var k = esc(u.owner_key||'');
+  var who = esc(u.display_name || u.email || 'this user');
+  var acts = [];
+  if (isSelf) return '<td><span class="li-none">you</span></td>';
+  if (st === 'pending') {
+    acts.push('<button class="act approve" onclick="patchUser(\'' + k + '\',{status:\'active\'})">Approve</button>');
+    acts.push('<button class="act" onclick="deleteUser(\'' + k + '\',\'' + who + '\')">Deny</button>');
+  } else if (st === 'suspended') {
+    acts.push('<button class="act approve" onclick="patchUser(\'' + k + '\',{status:\'active\'})">Reactivate</button>');
+    acts.push('<button class="act" onclick="deleteUser(\'' + k + '\',\'' + who + '\')">Delete</button>');
+  } else {
+    acts.push('<button class="act suspend" onclick="patchUser(\'' + k + '\',{status:\'suspended\'})">Suspend</button>');
+    if (u.is_admin) acts.push('<button class="act admin" onclick="patchUser(\'' + k + '\',{is_admin:false})">Remove admin</button>');
+    else acts.push('<button class="act admin" onclick="patchUser(\'' + k + '\',{is_admin:true})">Make admin</button>');
+    if (st === 'invited') acts.push('<button class="act" onclick="deleteUser(\'' + k + '\',\'' + who + '\')">Delete</button>');
+  }
+  return '<td><div class="actions">' + acts.join('') + '</div></td>';
+}
+
 // ---- Render users ----
 function renderUsers(){
   var body = document.getElementById('usersBody');
   if (!USERS.length) {
-    body.innerHTML = '<tr><td colspan="8" class="empty">No users yet.</td></tr>';
+    body.innerHTML = '<tr><td colspan="9" class="empty">No users yet.</td></tr>';
     return;
   }
   body.innerHTML = USERS.map(function(u){
@@ -345,20 +394,43 @@ function renderUsers(){
     var st    = String(u.status||'').toLowerCase() || 'unknown';
     var stats = u.stats || {};
 
-    return '<tr data-owner="' + esc(u.owner_key||'') + '">'
+    return '<tr data-owner="' + esc(u.owner_key||'') + '"' + (st === 'pending' ? ' style="background:#fffbeb"' : '') + '>'
       + '<td><div class="u-name">' + esc(name) + '</div>'
         + '<span class="badge ' + statusClass(st) + '">' + esc(st) + '</span>'
         + (u.is_admin ? ' <span class="role-pill admin">admin</span>' : '')
         + '</td>'
       + '<td class="hide-sm"><span class="u-email">' + (email ? esc(email) : '&#8211;') + '</span></td>'
       + liCell(u.linkedin_url)
+      + onboardingCell(u)
       + numCell(stats.sources)
       + numCell(stats.bridges)
       + numCell(stats.targets)
-      + '<td class="hide-sm last-login">' + fmtLastLogin(u.last_login_at) + '</td>'
-      + '<td class="hide-sm num-cell' + ((Number(u.login_count)||0)===0 ? ' zero' : '') + '">' + (Number(u.login_count)||0) + '</td>'
+      + '<td class="hide-sm last-login" title="' + (Number(u.login_count)||0) + ' logins">' + fmtLastLogin(u.last_login_at) + '</td>'
+      + actionsCell(u)
       + '</tr>';
   }).join('');
+}
+
+// ---- Update / delete users ----
+async function patchUser(ownerKey, patch){
+  var res = await apiFetch('/api/admin-users', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ owner_key: ownerKey }, patch))
+  });
+  if (res.ok && res.json && res.json.ok) { await loadUsers(); return; }
+  alert('Update failed: ' + ((res.json && res.json.error) || ('HTTP ' + res.status)));
+}
+
+async function deleteUser(ownerKey, who){
+  if (!confirm('Remove ' + who + ' from Radar? Their collected data is kept, but they lose access.')) return;
+  var res = await apiFetch('/api/admin-users', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ owner_key: ownerKey })
+  });
+  if (res.ok && res.json && res.json.ok) { await loadUsers(); return; }
+  alert('Delete failed: ' + ((res.json && res.json.error) || ('HTTP ' + res.status)));
 }
 
 // ---- Invite (POST /api/admin-users) ----
@@ -374,13 +446,14 @@ async function inviteUser(){
   var email = (emailEl.value||'').trim();
 
   st.className = 'invite-status';
-  if (!/linkedin\.com\/in\//i.test(url)) {
+  if (!email || email.indexOf('@') === -1) {
     st.className='invite-status err';
-    st.textContent = 'Enter a LinkedIn profile URL (linkedin.com/in/…).';
+    st.textContent = 'Enter the email tied to their LinkedIn account — it’s how Radar recognizes them at sign-in.';
     return;
   }
-  if (email && email.indexOf('@') === -1) {
-    st.className='invite-status err'; st.textContent = 'Enter a valid email address (or leave it blank).';
+  if (url && !/linkedin\.com\/in\//i.test(url)) {
+    st.className='invite-status err';
+    st.textContent = 'The LinkedIn URL should look like linkedin.com/in/username (or leave it blank).';
     return;
   }
 
