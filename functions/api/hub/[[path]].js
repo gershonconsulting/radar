@@ -92,14 +92,22 @@ async function resolveOwner(request, env, payloadSecret) {
   const cookies = parseCookies(request.headers.get('Cookie'));
   const session = await verify(cookies.radar_session, env.SESSION_SECRET);
   if (session && session.sub) {
-    // Map the LinkedIn sub to a stable owner_key via the users table; fall back to solo owner.
+    // Sessions carry owner_key since the multi-user login gate; verify status when possible.
     try {
-      const u = await sb(env, `users?linkedin_sub=eq.${enc(session.sub)}&select=owner_key&limit=1`);
-      if (u && u[0] && u[0].owner_key) return { owner: u[0].owner_key, authed: true };
+      const filter = session.owner_key
+        ? `owner_key=eq.${enc(session.owner_key)}`
+        : `linkedin_sub=eq.${enc(session.sub)}`;
+      const u = await sb(env, `users?${filter}&select=owner_key,status&limit=1`);
+      if (u && u[0] && u[0].owner_key) {
+        if (u[0].status === 'suspended' || u[0].status === 'pending') return { owner: null, authed: false };
+        return { owner: u[0].owner_key, authed: true };
+      }
     } catch (e) {}
-    return { owner: SOLO_OWNER, authed: true };   // single-user today
+    if (session.owner_key) return { owner: session.owner_key, authed: true };
+    return { owner: SOLO_OWNER, authed: true };   // legacy cookie fallback
   }
-  if (payloadSecret && payloadSecret === INGEST_SECRET) return { owner: SOLO_OWNER, authed: true };  // extension
+  // Extension (no cookie): shared secret maps to the solo owner until per-user keys ship.
+  if (payloadSecret && payloadSecret === INGEST_SECRET) return { owner: SOLO_OWNER, authed: true };
   return { owner: null, authed: false };
 }
 
@@ -112,8 +120,8 @@ export async function onRequest({ request, env }) {
     if (request.method === 'GET') {
       const cb = url.searchParams.get('callback') || '_cb';
       const action = url.searchParams.get('action') || '';
-      const { owner } = await resolveOwner(request, env, null);
-      const own = owner || SOLO_OWNER;   // reads are safe to default to the solo owner
+      const { owner } = await resolveOwner(request, env, url.searchParams.get('secret'));
+      const own = owner || SOLO_OWNER;   // legacy fallback: extension GETs carry no cookie (yet)
 
       if (!action) {  // bare call = targets list
         const [rows, excluded] = await Promise.all([readTargets(env, own), readExcluded(env, own)]);
