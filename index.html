@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radar by Gershon.AI — Your next client is one introduction away</title>
+<meta name="description" content="Radar watches the organizations your market trusts, finds the people inside who know your buyers, and turns their networks into a warm pipeline that fills itself — every day.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+  :root{
+    --ink:#0f1e3d; --muted:#64748b; --line:#e2e8f0; --brand:#4f46e5; --brand-2:#6366f1; --brand-soft:#eef0fe;
+    --navy:#0b1230; --navy-2:#111a3f;
+    --src-bg:#eafaf0; --src-ink:#15803d; --src-line:#bbe8cd;
+    --brg-bg:#fff3e6; --brg-ink:#c2610a; --brg-line:#ffd9b0;
+    --tgt-bg:#e8f2fe; --tgt-ink:#1d4ed8; --tgt-line:#bcd9fb;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ scroll-behavior:smooth; }
+  body{ font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; color:var(--ink); background:#fff; -webkit-font-smoothing:antialiased; }
+  a{ color:inherit; text-decoration:none; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 24px; }
+
+  /* ---------- Nav ---------- */
+  nav{ position:sticky; top:0; z-index:50; background:rgba(11,18,48,.85); backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,.08); }
+  .nav-in{ display:flex; align-items:center; justify-content:space-between; height:64px; }
+  .logo{ display:flex; align-items:center; gap:10px; color:#fff; }
+  .logo svg{ width:26px; height:26px; color:#818cf8; }
+  .logo b{ font-size:1.35rem; font-weight:800; letter-spacing:-.02em; }
+  .logo i{ font-style:normal; font-size:.68rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#94a3b8; margin-top:6px; }
+  .nav-links{ display:flex; align-items:center; gap:28px; }
+  .nav-links a{ color:#cbd5e1; font-size:.9rem; font-weight:600; transition:color .2s; }
+  .nav-links a:hover{ color:#fff; }
+  .btn{ display:inline-block; font-weight:800; border-radius:10px; padding:11px 22px; font-size:.92rem; transition:transform .15s, box-shadow .15s; cursor:pointer; }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn-brand{ background:linear-gradient(135deg,var(--brand),var(--brand-2)); color:#fff; box-shadow:0 4px 14px rgba(79,70,229,.35); }
+  .btn-ghost{ background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.18); }
+  .btn-white{ background:#fff; color:var(--brand); }
+  .nav-cta{ padding:9px 18px; font-size:.85rem; }
+  @media (max-width:720px){ .nav-links a:not(.btn){ display:none; } }
+
+  /* ---------- Hero ---------- */
+  .hero{ position:relative; overflow:hidden; background:radial-gradient(1200px 600px at 70% -10%, #24308a 0%, var(--navy) 55%); color:#fff; }
+  .hero-in{ position:relative; z-index:2; padding:96px 0 88px; text-align:center; }
+  .eyebrow{ display:inline-block; font-size:.72rem; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:#a5b4fc; background:rgba(99,102,241,.14); border:1px solid rgba(129,140,248,.35); border-radius:999px; padding:6px 16px; margin-bottom:22px; }
+  .hero h1{ font-size:clamp(2rem,5vw,3.3rem); font-weight:800; letter-spacing:-.03em; line-height:1.12; max-width:820px; margin:0 auto 20px; }
+  .hero h1 .accent{ background:linear-gradient(90deg,#a5b4fc,#818cf8); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero p.sub{ font-size:clamp(1rem,2vw,1.18rem); color:#c7d2fe; max-width:680px; margin:0 auto 34px; }
+  .hero-ctas{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .hero-note{ margin-top:18px; font-size:.8rem; color:#8ea0c9; }
+
+  /* radar sweep */
+  .sweep{ position:absolute; inset:0; z-index:1; opacity:.35; pointer-events:none; }
+  .sweep svg{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:1100px; height:1100px; }
+  .ring{ fill:none; stroke:rgba(129,140,248,.22); stroke-width:1; }
+  .beam{ transform-origin:550px 550px; animation:spin 7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .blip{ fill:#a5b4fc; opacity:0; animation:blip 7s linear infinite; }
+  @keyframes blip{ 0%,4%{opacity:0} 6%{opacity:1} 30%{opacity:.15} 55%{opacity:0} 100%{opacity:0} }
+
+  /* ---------- Chain strip ---------- */
+  .chainbar{ background:var(--navy-2); border-top:1px solid rgba(255,255,255,.06); color:#e2e8f0; padding:18px 0; }
+  .chain{ display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+  .chain span{ font-size:.82rem; font-weight:700; padding:7px 16px; border-radius:999px; }
+  .chain .ar{ background:none; color:#64748b; padding:0; font-weight:800; }
+  .c-src{ background:var(--src-bg); color:var(--src-ink); }
+  .c-brg{ background:var(--brg-bg); color:var(--brg-ink); }
+  .c-tgt{ background:var(--tgt-bg); color:var(--tgt-ink); }
+
+  /* ---------- Sections ---------- */
+  section{ padding:76px 0; }
+  .sec-head{ text-align:center; max-width:640px; margin:0 auto 44px; }
+  .kicker{ font-size:.72rem; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--brand); margin-bottom:10px; }
+  .sec-head h2{ font-size:clamp(1.5rem,3.4vw,2.1rem); font-weight:800; letter-spacing:-.02em; line-height:1.2; margin-bottom:12px; }
+  .sec-head p{ color:var(--muted); font-size:1rem; }
+
+  /* stages */
+  .stages{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  @media (max-width:820px){ .stages{ grid-template-columns:1fr; } }
+  .stage{ border:1.5px solid; border-radius:16px; padding:26px 24px; position:relative; }
+  .stage .badge{ width:30px; height:30px; border-radius:50%; font-size:.85rem; font-weight:800; color:#fff; display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
+  .stage h3{ font-size:1.05rem; font-weight:800; letter-spacing:.02em; }
+  .stage h3 i{ font-size:.78rem; font-style:normal; opacity:.7; font-weight:600; margin-left:6px; }
+  .stage p{ font-size:.9rem; line-height:1.55; color:#334155; margin-top:10px; }
+  .stage p strong{ color:var(--ink); }
+  .stage .eg{ margin-top:14px; padding-top:12px; border-top:1px dashed currentColor; font-size:.82rem; opacity:.9; }
+  .s-src{ background:var(--src-bg); border-color:var(--src-line); color:var(--src-ink); } .s-src .badge{ background:var(--src-ink); }
+  .s-brg{ background:var(--brg-bg); border-color:var(--brg-line); color:var(--brg-ink); } .s-brg .badge{ background:var(--brg-ink); }
+  .s-tgt{ background:var(--tgt-bg); border-color:var(--tgt-line); color:var(--tgt-ink); } .s-tgt .badge{ background:var(--tgt-ink); }
+
+  /* features */
+  .features{ background:#f8fafc; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .feats{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+  @media (max-width:980px){ .feats{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .feats{ grid-template-columns:1fr; } }
+  .feat{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px 18px; transition:box-shadow .2s, transform .2s; }
+  .feat:hover{ box-shadow:0 8px 24px rgba(15,23,42,.08); transform:translateY(-2px); }
+  .feat .ic{ width:34px; height:34px; border-radius:9px; background:var(--brand-soft); color:var(--brand); font-size:.95rem; font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:12px; }
+  .feat b{ font-size:.92rem; font-weight:800; display:block; margin-bottom:5px; }
+  .feat span{ font-size:.82rem; color:var(--muted); line-height:1.5; }
+
+  /* two cards */
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  @media (max-width:720px){ .two{ grid-template-columns:1fr; } }
+  .card{ border:1px solid var(--line); border-radius:16px; padding:26px 28px; }
+  .card h4{ font-size:1.02rem; font-weight:800; margin-bottom:12px; }
+  .card ul{ list-style:none; }
+  .card li{ font-size:.9rem; color:#334155; padding:6px 0 6px 20px; position:relative; line-height:1.5; }
+  .card li:before{ content:"▸"; position:absolute; left:0; color:var(--brand); font-size:.8rem; top:8px; }
+
+  /* CTA band */
+  .cta{ background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%); color:#fff; border-radius:22px; padding:52px 48px; text-align:center; box-shadow:0 18px 50px rgba(79,70,229,.35); }
+  @media (max-width:560px){ .cta{ padding:38px 24px; } }
+  .cta h2{ font-size:clamp(1.4rem,3.2vw,2rem); font-weight:800; letter-spacing:-.02em; margin-bottom:10px; }
+  .cta p{ font-size:1rem; opacity:.92; max-width:560px; margin:0 auto 26px; }
+
+  footer{ border-top:1px solid var(--line); padding:26px 0; }
+  .foot{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; font-size:.82rem; color:var(--muted); }
+  .foot .logo{ color:var(--ink); } .foot .logo svg{ color:var(--brand); } .foot .logo b{ font-size:1rem; }
+
+  /* reveal on scroll */
+  .rv{ opacity:0; transform:translateY(18px); transition:opacity .6s ease, transform .6s ease; }
+  .rv.on{ opacity:1; transform:none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="logo" href="#top">
+      <svg viewBox="0 0 64 64"><defs><linearGradient id="navbeam" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a5b4fc" stop-opacity=".9"/><stop offset="1" stop-color="#a5b4fc" stop-opacity="0"/></linearGradient></defs><circle cx="32" cy="32" r="12" fill="none" stroke="#818cf8" stroke-width="2" opacity=".4"/><circle cx="32" cy="32" r="20" fill="none" stroke="#818cf8" stroke-width="2" opacity=".6"/><circle cx="32" cy="32" r="28" fill="none" stroke="#a5b4fc" stroke-width="2.5"/><path d="M32 32 L32 6 A26 26 0 0 1 54.5 19 Z" fill="url(#navbeam)"/><circle cx="32" cy="32" r="3.5" fill="#c7d2fe"/><circle cx="44" cy="20" r="3" fill="#e0e7ff"/><circle cx="22" cy="42" r="2.4" fill="#a5b4fc"/></svg>
+      <b>Radar</b><i>by Gershon.AI</i>
+    </a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#who">Who it's for</a>
+      <a class="btn btn-brand nav-cta" href="app/">Sign in</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="sweep" aria-hidden="true">
+    <svg viewBox="0 0 1100 1100">
+      <circle class="ring" cx="550" cy="550" r="150"/>
+      <circle class="ring" cx="550" cy="550" r="290"/>
+      <circle class="ring" cx="550" cy="550" r="430"/>
+      <circle class="ring" cx="550" cy="550" r="540"/>
+      <g class="beam">
+        <path d="M550 550 L550 10 A540 540 0 0 1 810 78 Z" fill="url(#g)"/>
+        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="rgba(129,140,248,.5)"/><stop offset="1" stop-color="rgba(129,140,248,0)"/>
+        </linearGradient></defs>
+      </g>
+      <circle class="blip" cx="700" cy="300" r="6" style="animation-delay:.4s"/>
+      <circle class="blip" cx="380" cy="420" r="5" style="animation-delay:2.8s"/>
+      <circle class="blip" cx="640" cy="760" r="6" style="animation-delay:4.6s"/>
+      <circle class="blip" cx="300" cy="700" r="5" style="animation-delay:5.6s"/>
+    </svg>
+  </div>
+  <div class="wrap hero-in">
+    <span class="eyebrow">The LinkedIn lead engine for relationship-led sales</span>
+    <h1>Your next client is already <span class="accent">one introduction away</span>.<br>Radar finds them — every day.</h1>
+    <p class="sub">Radar watches the organizations your market trusts, finds the people inside who know your buyers, and turns their networks into a warm pipeline that fills itself.</p>
+    <div class="hero-ctas">
+      <a class="btn btn-brand" href="app/">Open Radar</a>
+      <a class="btn btn-ghost" href="#how">See how it works</a>
+    </div>
+    <div class="hero-note">Secure sign-in with LinkedIn · Your network, your data</div>
+  </div>
+</header>
+
+<div class="chainbar">
+  <div class="wrap chain">
+    <span class="c-src">an organization you watch</span><span class="ar">→</span>
+    <span class="c-brg">a person inside it who knows your buyers</span><span class="ar">→</span>
+    <span class="c-tgt">the buyers themselves, warm</span>
+  </div>
+</div>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="kicker">How it works</div>
+      <h2>Three stages. One warm path.</h2>
+      <p>Cold outreach is a numbers game you lose. Radar plays a different one — it maps who already trusts you, and who trusts them.</p>
+    </div>
+    <div class="stages">
+      <div class="stage s-src rv">
+        <div class="badge">1</div>
+        <h3>SOURCE<i>an organization</i></h3>
+        <p><strong>A place where your future clients already gather.</strong> A chamber, a trade body, a partner firm, even a competitor. You don't sell to a Source — you watch it, because the people you want are already in its orbit.</p>
+        <div class="eg">e.g. <em>a chamber of commerce, an industry association, a partner firm</em></div>
+      </div>
+      <div class="stage s-brg rv" style="transition-delay:.1s">
+        <div class="badge">2</div>
+        <h3>BRIDGE<i>a person inside it</i></h3>
+        <p><strong>Someone inside it whose network overlaps your market.</strong> A partner, a board member, a director. Not your prospect either — they're the door. Radar sees who you already know, and invites the ones you don't.</p>
+        <div class="eg">e.g. <em>a Partner there, connected to hundreds of founders in your market</em></div>
+      </div>
+      <div class="stage s-tgt rv" style="transition-delay:.2s">
+        <div class="badge">3</div>
+        <h3>TARGET<i>a prospect</i></h3>
+        <p><strong>A real buyer inside a Bridge's network.</strong> Who you actually want to meet — reached via someone you both know, not a cold list. Graded A+ to D on real company data, then pushed to your outreach.</p>
+        <div class="eg">e.g. <em>the CEO of a mid-sized company expanding into your market</em></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="kicker">What Radar does</div>
+      <h2>Set it up once. Wake up to new prospects.</h2>
+    </div>
+    <div class="feats">
+      <div class="feat rv"><div class="ic">1</div><b>Automatic daily collection</b><span>A Chrome extension works your Sales Navigator on a schedule you set. No manual exports, no copy-paste.</span></div>
+      <div class="feat rv" style="transition-delay:.05s"><div class="ic">2</div><b>Bridge discovery</b><span>Point Radar at an organization; it finds the people inside worth knowing — once per source, never repeated.</span></div>
+      <div class="feat rv" style="transition-delay:.1s"><div class="ic">3</div><b>ICP grading A+ to D</b><span>Every Target scored on fit, enriched with real company data: age, headcount, last known revenue, location.</span></div>
+      <div class="feat rv" style="transition-delay:.15s"><div class="ic">4</div><b>Company intelligence</b><span>Official registry lookups tell you which companies are substantial enough to be worth your time.</span></div>
+      <div class="feat rv"><div class="ic">5</div><b>Connection-degree aware</b><span>See instantly who you already know (1st), who's one hop away (2nd), and who needs an introduction.</span></div>
+      <div class="feat rv" style="transition-delay:.05s"><div class="ic">6</div><b>One-click outreach</b><span>Push selected Targets straight into your outreach campaigns — with separate sequences for Bridges and Targets.</span></div>
+      <div class="feat rv" style="transition-delay:.1s"><div class="ic">7</div><b>Bridges get invited too</b><span>Not connected to a Bridge yet? Radar queues them for a connection request, so the door opens by itself.</span></div>
+      <div class="feat rv" style="transition-delay:.15s"><div class="ic">8</div><b>You stay in control</b><span>Unselect anyone. Radar remembers forever and never re-surfaces or contacts them.</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="who">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <div class="kicker">Built for</div>
+      <h2>Made for people who sell through relationships</h2>
+    </div>
+    <div class="two">
+      <div class="card rv">
+        <h4>Who it's for</h4>
+        <ul>
+          <li>Business developers who sell through relationships</li>
+          <li>Consultants and advisors who live off warm introductions</li>
+          <li>Teams entering a new market or geography</li>
+          <li>Anyone whose best deals come from their network</li>
+        </ul>
+      </div>
+      <div class="card rv" style="transition-delay:.1s">
+        <h4>Why it's different</h4>
+        <ul>
+          <li>Warm paths, not cold lists — every target traces to someone who knows them</li>
+          <li>Scored on company reality, not just job titles</li>
+          <li>Your own LinkedIn network, not a purchased database</li>
+          <li>Secure sign-in with LinkedIn; your data stays yours</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="cta rv">
+      <h2>Stop guessing who to contact.</h2>
+      <p>Radar turns the network you already have into a pipeline that fills itself — every single day.</p>
+      <a class="btn btn-white" href="app/">Open Radar</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <a class="logo" href="#top">
+      <svg viewBox="0 0 64 64" style="width:22px;height:22px"><defs><linearGradient id="footbeam" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5" stop-opacity=".85"/><stop offset="1" stop-color="#4f46e5" stop-opacity="0"/></linearGradient></defs><circle cx="32" cy="32" r="12" fill="none" stroke="#4f46e5" stroke-width="2" opacity=".35"/><circle cx="32" cy="32" r="20" fill="none" stroke="#4f46e5" stroke-width="2" opacity=".55"/><circle cx="32" cy="32" r="28" fill="none" stroke="#4f46e5" stroke-width="2.5"/><path d="M32 32 L32 6 A26 26 0 0 1 54.5 19 Z" fill="url(#footbeam)"/><circle cx="32" cy="32" r="3.5" fill="#4f46e5"/><circle cx="44" cy="20" r="3" fill="#6366f1"/><circle cx="22" cy="42" r="2.4" fill="#818cf8"/></svg>
+      <b>Radar</b>
+    </a>
+    <span>Radar by Gershon.AI — LinkedIn lead engine · radar.gershonCRM.com</span>
+    <span>support@gershonconsulting.com</span>
+  </div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add('on'); io.unobserve(e.target); } }), { threshold:.12 });
+  document.querySelectorAll('.rv').forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>
