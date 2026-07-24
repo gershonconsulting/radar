@@ -152,7 +152,7 @@ export async function onRequestGet({ request, env }) {
     return new Response('Userinfo fetch failed: ' + String(err), { status: 502 });
   }
 
-  const deny = (flag) => Response.redirect('https://radar.gershoncrm.com/?' + flag + '=1', 302);
+  const deny = (flag) => Response.redirect('https://radar.gershoncrm.com/app.html?' + flag + '=1', 302);
 
   // ---- Resolve against the users store (invite-only gate) ----
   let user = null;
@@ -212,7 +212,7 @@ export async function onRequestGet({ request, env }) {
     env.SESSION_SECRET
   );
 
-  const headers = new Headers({ Location: 'https://radar.gershoncrm.com/' });
+  const headers = new Headers({ Location: 'https://radar.gershoncrm.com/app.html' });
   headers.append('Set-Cookie', 'li_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
   headers.append('Set-Cookie', `radar_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
   return new Response(null, { status: 302, headers });
