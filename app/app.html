@@ -1,0 +1,2528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radar — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --primary:#1e40af; --accent:#3b82f6; --bg:#f8fafc; --ink:#1e293b; --muted:#64748b;
+  --line:#e2e8f0; --card:#ffffff; --sidebar:#0f1e3d;
+  --brand:#6366f1; --brand-ink:#4f46e5; --brand-soft:#eef0fe; --side-line:#eef0f4;
+  /* Pipeline stage colours (pastel): Sources=green, Bridges=orange, Targets=blue, Leads=red */
+  --src-bg:#eafaf0;  --src-ink:#15803d;  --src-line:#bbe8cd;
+  --brg-bg:#fff3e6;  --brg-ink:#c2610a;  --brg-line:#ffd9b0;
+  --tgt-bg:#e8f2fe;  --tgt-ink:#1d4ed8;  --tgt-line:#bcd9fb;
+  --led-bg:#feecec;  --led-ink:#be2f2f;  --led-line:#f9c9c9;
+}
+/* Stage-coloured page headers + nav accents */
+.stage-sources .page-head, .view-tint.stage-sources{ background:var(--src-bg); border-color:var(--src-line); }
+.stage-bridges .page-head, .view-tint.stage-bridges{ background:var(--brg-bg); border-color:var(--brg-line); }
+.stage-targets .page-head, .view-tint.stage-targets{ background:var(--tgt-bg); border-color:var(--tgt-line); }
+.stage-leads   .page-head, .view-tint.stage-leads  { background:var(--led-bg); border-color:var(--led-line); }
+.view-tint{ border:1px solid; border-radius:14px; padding:16px 18px; margin-bottom:16px; }
+.view-tint h2{ margin:0 0 4px; }
+.stage-sources h2{ color:var(--src-ink); } .stage-bridges h2{ color:var(--brg-ink); }
+.stage-targets h2{ color:var(--tgt-ink); } .stage-leads h2{ color:var(--led-ink); }
+/* Nav dots so the sidebar reads the same colour language */
+#nav-sources .ico{ color:var(--src-ink); } #nav-bridges .ico{ color:var(--brg-ink); }
+#nav-targets .ico{ color:var(--tgt-ink); } #nav-leads .ico{ color:var(--led-ink); }
+#nav-sources.active{ background:var(--src-bg); color:var(--src-ink); }
+#nav-bridges.active{ background:var(--brg-bg); color:var(--brg-ink); }
+#nav-targets.active{ background:var(--tgt-bg); color:var(--tgt-ink); }
+#nav-leads.active{ background:var(--led-bg); color:var(--led-ink); }
+/* Growth view controls */
+.growth-controls{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+.seg{ display:inline-flex; background:#f1f5f9; border:1px solid var(--line); border-radius:10px; padding:3px; gap:2px; }
+.seg-btn{ border:none; background:none; font:inherit; font-size:0.82rem; font-weight:600; color:#64748b; padding:7px 14px; border-radius:8px; cursor:pointer; }
+.seg-btn:hover{ color:#334155; }
+.seg-btn.active{ background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(15,23,42,.08); }
+.seg-btn.s-tgt.active{ color:var(--tgt-ink); } .seg-btn.s-brg.active{ color:var(--brg-ink); } .seg-btn.s-src.active{ color:var(--src-ink); }
+/* Dashboard split into the 3 pipeline sections */
+.dash-sec{ border:1px solid var(--line); border-left:5px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:18px; background:#fff; }
+.dash-sec.stage-sources{ border-left-color:var(--src-ink); }
+.dash-sec.stage-bridges{ border-left-color:var(--brg-ink); }
+.dash-sec.stage-targets{ border-left-color:var(--tgt-ink); }
+.dash-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:14px; }
+.dash-head h3{ font-size:1.05rem; font-weight:800; display:inline; }
+.dash-head p{ font-size:0.82rem; color:var(--muted); margin-top:3px; }
+.dash-head .dot{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:8px; vertical-align:middle; }
+.stage-sources .dash-head .dot{ background:var(--src-ink); } .stage-sources .dash-head h3{ color:var(--src-ink); }
+.stage-bridges .dash-head .dot{ background:var(--brg-ink); } .stage-bridges .dash-head h3{ color:var(--brg-ink); }
+.stage-targets .dash-head .dot{ background:var(--tgt-ink); } .stage-targets .dash-head h3{ color:var(--tgt-ink); }
+.dash-go{ background:#f8fafc; border:1px solid var(--line); color:#334155; font-size:0.78rem; font-weight:600;
+  padding:7px 12px; border-radius:8px; cursor:pointer; white-space:nowrap; }
+.dash-go:hover{ background:#f1f5f9; }
+.dash-sec .stats{ margin-bottom:14px; }
+.panel h3 .hint{ font-weight:400; color:#94a3b8; font-size:0.78rem; }
+/* "invite" checkbox on non-connected bridges */
+.invite-chk{ display:inline-flex; align-items:center; gap:5px; background:var(--brg-bg); color:var(--brg-ink); border:1px solid var(--brg-line);
+  font-size:0.72rem; font-weight:600; padding:2px 8px; border-radius:999px; cursor:pointer; user-select:none; }
+.invite-chk input{ margin:0; cursor:pointer; }
+.invite-chk:hover{ filter:brightness(0.97); }
+.invite-chk.off{ background:#f1f5f9; color:#94a3b8; border-color:#e2e8f0; }
+/* Per-source count tiles (bridges + targets) */
+.src-counts{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.src-count{ border:1px solid; border-radius:10px; padding:10px 12px; cursor:pointer; transition:transform .1s, box-shadow .1s; }
+.src-count:hover{ transform:translateY(-1px); box-shadow:0 2px 8px rgba(15,23,42,.08); }
+.src-count .n{ font-size:1.45rem; font-weight:700; line-height:1.1; }
+.src-count .l{ font-size:0.74rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; opacity:.75; }
+.src-count.c-brg{ background:var(--brg-bg); border-color:var(--brg-line); color:var(--brg-ink); }
+.src-count.c-tgt{ background:var(--tgt-bg); border-color:var(--tgt-line); color:var(--tgt-ink); }
+/* Stat tiles tinted by stage */
+.stat.s-src{ background:var(--src-bg); border-color:var(--src-line); }
+.stat.s-brg{ background:var(--brg-bg); border-color:var(--brg-line); }
+.stat.s-tgt{ background:var(--tgt-bg); border-color:var(--tgt-line); }
+.stat.s-led{ background:var(--led-bg); border-color:var(--led-line); }
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ height:100%; }
+body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--ink); }
+
+/* ---------- Sign-in overlay ---------- */
+#signinOverlay{ position:fixed; inset:0; z-index:9999; background:linear-gradient(135deg,#0f1e3d 0%,#1e3a5f 100%); display:flex; align-items:center; justify-content:center; }
+#signinOverlay.hidden{ display:none; }
+.signin-box{ background:#fff; border-radius:16px; padding:48px 40px; max-width:400px; width:90%; text-align:center; box-shadow:0 24px 64px rgba(0,0,0,0.35); }
+.signin-box .logo{ color:#6366f1; margin-bottom:10px; display:flex; justify-content:center; }
+.signin-box .logo svg{ width:40px; height:40px; }
+.signin-box h1{ font-size:1.5rem; font-weight:800; color:#0f172a; margin-bottom:4px; }
+.signin-box .sub{ color:#6366f1; font-weight:600; font-size:0.8rem; margin-bottom:14px; }
+.signin-box p{ color:#64748b; font-size:0.9rem; margin-bottom:28px; }
+.btn-linkedin{ display:inline-flex; align-items:center; gap:10px; background:#0077b5; color:#fff; font-size:0.95rem; font-weight:600; padding:13px 28px; border-radius:8px; text-decoration:none; transition:background .15s; border:none; cursor:pointer; }
+.btn-linkedin:hover{ background:#005e94; }
+.btn-linkedin svg{ width:20px; height:20px; fill:#fff; flex:0 0 20px; }
+.signin-denied{ margin-top:18px; background:#fee2e2; color:#991b1b; border-radius:8px; padding:10px 14px; font-size:0.85rem; display:none; }
+.signin-denied.show{ display:block; }
+.signin-denied.pending{ background:#fffbeb; color:#92400e; }
+.user-chip{ display:flex; align-items:center; gap:8px; padding:2px 20px 12px; font-size:0.78rem; color:#64748b; }
+.user-chip .avatar{ width:26px; height:26px; border-radius:50%; background:#6366f1; color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; flex:0 0 26px; }
+.user-chip .uname{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ---------- Layout ---------- */
+.app{ display:flex; min-height:100vh; }
+.sidebar{
+  width:250px; flex:0 0 250px; background:#fff; color:#475569;
+  border-right:1px solid var(--side-line);
+  display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
+}
+.sidebar .brand{ display:flex; align-items:center; gap:9px; padding:22px 20px 4px; }
+.sidebar .brand .logo{ display:flex; color:var(--brand); }
+.sidebar .brand .logo svg{ width:24px; height:24px; }
+.sidebar .brand h1{ font-size:1.35rem; font-weight:800; color:var(--brand); letter-spacing:-0.01em; }
+.brand-meta{ padding:6px 20px 16px; margin-bottom:4px; border-bottom:1px solid var(--side-line); }
+.brand-meta .eyebrow{ font-size:0.66rem; font-weight:700; letter-spacing:0.13em; color:#94a3b8; text-transform:uppercase; }
+.brand-meta .ver{ font-size:0.9rem; font-weight:700; color:#334155; margin-top:8px; }
+.brand-meta .ts{ font-size:0.74rem; color:#94a3b8; margin-top:2px; }
+.nav-items{ padding:6px 12px; display:flex; flex-direction:column; gap:2px; flex:1; overflow-y:auto; }
+.nav-sec{ font-size:0.66rem; font-weight:700; letter-spacing:0.13em; color:#94a3b8; text-transform:uppercase; padding:16px 12px 6px; }
+.nav-item{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:9px; border:none; background:none;
+  color:#475569; cursor:pointer; font-size:0.92rem; font-weight:600; text-align:left; width:100%; font-family:inherit; transition:background .15s,color .15s; }
+.nav-item:hover{ background:#f5f6fb; color:#1e293b; }
+.nav-item.active{ background:var(--brand-soft); color:var(--brand-ink); }
+.nav-item .ico{ width:20px; flex:0 0 20px; display:flex; align-items:center; justify-content:center; color:currentColor; }
+.nav-item .ico svg{ width:18px; height:18px; }
+.nav-count{ margin-left:auto; background:#eef2ff; color:var(--brand-ink); font-size:0.66rem; font-weight:700; padding:2px 8px; border-radius:10px; }
+.nav-item.active .nav-count{ background:#fff; }
+.sidebar .foot{ padding:14px 16px 8px; border-top:1px solid var(--side-line); display:flex; flex-direction:column; gap:10px; }
+.foot-btn{ display:flex; align-items:center; justify-content:center; gap:8px; padding:11px 14px; border-radius:11px;
+  font-size:0.9rem; font-weight:700; cursor:pointer; border:1px solid transparent; font-family:inherit; transition:background .15s; }
+.foot-btn .fico{ display:flex; } .foot-btn .fico svg{ width:17px; height:17px; }
+.foot-btn.primary{ background:var(--brand-soft); color:var(--brand-ink); }
+.foot-btn.primary:hover{ background:#e3e6fd; }
+.foot-btn.ghost{ background:#fff; color:#334155; border-color:#e2e8f0; }
+.foot-btn.ghost:hover{ background:#f8fafc; }
+.foot-domain{ text-align:center; font-size:0.72rem; color:#94a3b8; padding:6px 0 8px; }
+.main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.topbar{ display:none; }
+/* LinkedIn live-connection badge */
+.li-status{ display:flex; align-items:center; gap:7px; margin:8px 14px 4px; padding:7px 11px; border-radius:999px; font-size:0.82rem; font-weight:600; line-height:1; border:1px solid transparent; }
+.li-status svg{ width:15px; height:15px; flex:0 0 15px; }
+.li-status.li-connected{ background:#eaf3fb; color:#0a66c2; border-color:#bcdcf7; }
+.li-status.li-disconnected{ background:#fdecea; color:#c0341d; border-color:#f5c6bf; cursor:pointer; }
+.li-status.li-checking{ background:#f1f5f9; color:#64748b; border-color:#e2e8f0; }
+.li-status.li-connected::after{ content:""; width:7px; height:7px; border-radius:50%; background:#16a34a; margin-left:auto; box-shadow:0 0 0 0 rgba(22,163,74,.5); animation:liPulse 2s infinite; }
+@keyframes liPulse{ 0%{ box-shadow:0 0 0 0 rgba(22,163,74,.5);} 70%{ box-shadow:0 0 0 5px rgba(22,163,74,0);} 100%{ box-shadow:0 0 0 0 rgba(22,163,74,0);} }
+.content{ padding:28px 32px; max-width:1280px; width:100%; margin:0 auto; }
+
+/* ---------- Mobile ---------- */
+@media (max-width:880px){
+  .app{ flex-direction:column; }
+  .sidebar{ width:100%; flex:none; height:auto; position:relative; flex-direction:column; border-right:none; border-bottom:1px solid var(--side-line); }
+  .brand-meta{ display:none; }
+  .nav-items{ flex-direction:row; flex-wrap:wrap; padding:8px; }
+  .nav-sec{ display:none; }
+  .nav-item{ width:auto; flex:1 1 auto; justify-content:center; padding:8px 10px; font-size:0.82rem; }
+  .nav-count{ display:none; }
+  .sidebar .foot{ display:none; }
+  .content{ padding:18px 14px; }
+}
+
+/* ---------- Page head ---------- */
+.page-head{ margin-bottom:22px; }
+.page-head h2{ font-size:1.5rem; font-weight:700; color:#0f172a; }
+.page-head p{ color:var(--muted); font-size:0.9rem; margin-top:3px; }
+
+/* ---------- Cards / stats ---------- */
+.stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; margin-bottom:24px; }
+.stat{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.stat .num{ font-size:2rem; font-weight:700; color:var(--primary); line-height:1.1; }
+.stat .label{ color:var(--muted); font-size:0.82rem; margin-top:6px; }
+.stat .sub{ color:#94a3b8; font-size:0.72rem; margin-top:2px; }
+.stat.clk{ cursor:pointer; transition:box-shadow .15s, border-color .15s, transform .05s; }
+.stat.clk:hover{ box-shadow:0 4px 14px rgba(99,102,241,0.14); border-color:#c7cbf5; }
+.stat.clk:active{ transform:translateY(1px); }
+.sync-btn{ flex:0 0 auto; display:inline-flex; align-items:center; gap:8px; background:var(--brand,#4f46e5); color:#fff; border:none; border-radius:10px; padding:10px 18px; font-size:0.92rem; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(79,70,229,0.25); transition:background .15s, transform .05s, opacity .15s; white-space:nowrap; }
+.sync-btn:hover{ background:var(--brand-ink,#4338ca); }
+.sync-btn:active{ transform:translateY(1px); }
+.sync-btn:disabled{ opacity:0.6; cursor:wait; }
+.sync-status{ margin:0 0 14px; padding:10px 14px; border-radius:8px; font-size:0.86rem; font-weight:500; }
+.sync-status.info{ background:#eff6ff; color:#1e40af; }
+.sync-status.ok{ background:#ecfdf5; color:#065f46; }
+.sync-status.err{ background:#fef2f2; color:#991b1b; }
+.excl-toggle{ display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; color:#6b7280; cursor:pointer; user-select:none; }
+.excl-toggle input{ cursor:pointer; }
+.sel-box{ width:16px; height:16px; cursor:pointer; accent-color:var(--brand,#4f46e5); }
+tr.row-excluded{ opacity:0.5; background:#fafafa; }
+tr.row-excluded td{ text-decoration:line-through; text-decoration-color:#cbd5e1; }
+tr.row-excluded td:first-child{ text-decoration:none; }
+.stat-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--brand-soft,#eef0fe); color:var(--brand-ink,#4f46e5); font-size:0.78rem; font-weight:600; padding:3px 10px; border-radius:12px; margin-right:10px; cursor:pointer; }
+.stat-chip .x{ font-weight:700; }
+
+/* ---------- Onboarding ---------- */
+.onboard{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:24px; box-shadow:0 1px 2px rgba(15,23,42,0.04); border-top:3px solid var(--brand); }
+.onboard .ob-head{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+.onboard .ob-head h3{ font-size:1.05rem; font-weight:700; color:#0f172a; }
+.onboard .ob-progress{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+.onboard .ob-count{ font-size:0.8rem; font-weight:700; color:var(--brand-ink); background:var(--brand-soft); padding:3px 11px; border-radius:12px; white-space:nowrap; }
+.onboard .ob-bar{ width:120px; height:6px; border-radius:6px; background:#eef0f4; overflow:hidden; }
+.onboard .ob-bar i{ display:block; height:100%; background:var(--brand); border-radius:6px; transition:width .25s; }
+.ob-step{ display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-top:1px solid #f1f5f9; }
+.ob-step:first-of-type{ border-top:none; }
+.ob-dot{ flex:0 0 22px; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.78rem; font-weight:700; margin-top:1px; }
+.ob-dot.done{ background:#dcfce7; color:#16a34a; }
+.ob-dot.todo{ background:#f1f5f9; color:#94a3b8; border:1px solid var(--line); }
+.ob-body{ flex:1; min-width:0; }
+.ob-body .ob-title{ font-size:0.92rem; font-weight:600; color:#1e293b; }
+.ob-body .ob-title.done{ color:#64748b; }
+.ob-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px; }
+.ob-link{ display:inline-flex; align-items:center; gap:4px; font-size:0.82rem; font-weight:600; color:var(--brand-ink); text-decoration:none; }
+.ob-link:hover{ text-decoration:underline; }
+.ob-btn{ background:var(--brand); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s; }
+.ob-btn:hover{ background:var(--brand-ink); }
+.ob-btn:disabled{ opacity:0.6; cursor:default; }
+.ob-btn.ghost{ background:#fff; color:#334155; border:1px solid var(--line); }
+.ob-btn.ghost:hover{ background:#f8fafc; }
+.ob-field{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+.ob-field input{ flex:1; min-width:200px; padding:8px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:0.85rem; font-family:inherit; }
+.ob-field input:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
+.ob-note{ font-size:0.8rem; color:var(--muted); margin-top:8px; }
+.ob-status{ font-size:0.8rem; margin-top:6px; min-height:1em; }
+.ob-status.ok{ color:#16a34a; font-weight:600; } .ob-status.err{ color:#dc2626; }
+.onboard-done{ display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-left:3px solid #16a34a; border-radius:12px; padding:14px 18px; margin-bottom:24px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.onboard-done .ok-txt{ font-size:0.92rem; font-weight:600; color:#166534; }
+.onboard-done .dismiss{ margin-left:auto; background:none; border:none; color:var(--muted); font-size:0.82rem; font-weight:600; cursor:pointer; font-family:inherit; }
+.onboard-done .dismiss:hover{ color:#334155; text-decoration:underline; }
+.onboard-reopen{ margin-bottom:16px; }
+.onboard-reopen a{ font-size:0.82rem; font-weight:600; color:var(--brand-ink); cursor:pointer; text-decoration:none; }
+.onboard-reopen a:hover{ text-decoration:underline; }
+
+.panel{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.panel h3{ font-size:0.95rem; font-weight:600; color:#334155; margin-bottom:14px; }
+.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
+.grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-bottom:18px; }
+@media (max-width:880px){ .grid-2,.grid-3{ grid-template-columns:1fr; } }
+.chart-wrap{ position:relative; height:260px; }
+
+/* ---------- Table ---------- */
+.table-controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+.table-controls input, .table-controls select{ padding:8px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:0.85rem; background:#fff; }
+.table-controls input[type=text]{ flex:1; min-width:180px; }
+.result-count{ margin-left:auto; color:var(--muted); font-size:0.82rem; }
+.table-wrap{ background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+table{ width:100%; border-collapse:collapse; }
+th{ background:#f1f5f9; padding:10px 12px; text-align:left; font-size:0.74rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; user-select:none; }
+th.sortable{ cursor:pointer; white-space:nowrap; }
+th.sortable:hover{ color:var(--primary); }
+th .arrow{ font-size:0.65rem; opacity:0.5; }
+th.sorted .arrow{ opacity:1; color:var(--primary); }
+td{ padding:10px 12px; border-top:1px solid #f1f5f9; font-size:0.86rem; }
+tr:hover td{ background:#f8fafc; }
+td a{ color:#2563eb; text-decoration:none; }
+td a:hover{ text-decoration:underline; }
+.check{ color:#16a34a; font-weight:700; }
+
+/* ---------- Collection Log ---------- */
+.log-rail{ background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.log-line{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:9px 14px; border-top:1px solid #f1f5f9; font-size:0.85rem; line-height:1.4; }
+.log-line:first-child{ border-top:none; }
+.log-line:hover{ background:#f8fafc; }
+.log-line .lg-date{ color:var(--muted); font-variant-numeric:tabular-nums; font-size:0.78rem; min-width:82px; }
+.log-line .lg-sep{ color:#cbd5e1; }
+.log-line .lg-arrow{ color:#94a3b8; font-weight:700; }
+.log-line .lg-source{ color:var(--primary); font-weight:600; }
+.log-line .lg-bridge{ color:#0f172a; font-weight:500; }
+.log-line .lg-prospect{ color:var(--ink); font-weight:700; }
+.log-line .lg-lvl{ margin-left:auto; padding:1px 9px; border-radius:12px; font-size:0.7rem; font-weight:700; white-space:nowrap; }
+.log-line .lg-lvl.l1{ background:#dcfce7; color:#166534; }
+.log-line .lg-lvl.l2{ background:#fef3c7; color:#92400e; }
+.log-line .lg-lvl.l3{ background:#e2e8f0; color:#475569; }
+.log-line .lg-lvl.l0{ background:#f1f5f9; color:#94a3b8; }
+.log-day{ padding:7px 14px; background:#f1f5f9; font-size:0.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; }
+
+/* ---------- Banner ---------- */
+.banner{ background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.875rem; color:#92400e; }
+
+/* ---------- Views ---------- */
+.view{ display:none; }
+.view.active{ display:block; }
+
+/* ---------- Bridge / Source cards ---------- */
+.card-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+.entity-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.entity-card .top{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.entity-card h3{ font-size:1rem; font-weight:600; margin-bottom:4px; }
+.entity-card p{ color:var(--muted); font-size:0.84rem; line-height:1.5; }
+.entity-card .big{ font-size:1.6rem; font-weight:700; color:var(--primary); }
+.entity-card .big small{ font-size:0.72rem; font-weight:500; color:var(--muted); }
+.pill{ display:inline-block; padding:2px 9px; border-radius:12px; font-size:0.7rem; font-weight:600; }
+.pill.competitor{ background:#fee2e2; color:#991b1b; }
+.pill.partner{ background:#d1fae5; color:#065f46; }
+.pill.organization{ background:#dbeafe; color:#1e40af; }
+.pill.conn{ background:#dcfce7; color:#166534; }
+/* Secondary button (Find Bridges on Source cards) */
+.btn-secondary{ display:inline-flex; align-items:center; gap:5px; background:#f1f5f9; color:#334155; border:1px solid var(--line);
+  font-size:0.78rem; font-weight:600; padding:6px 12px; border-radius:8px; cursor:pointer; font-family:inherit; transition:background .15s,border-color .15s; }
+.btn-secondary:hover{ background:#e2e8f0; border-color:#cbd5e1; }
+.btn-secondary:disabled{ opacity:0.6; cursor:default; }
+.src-bridge-note{ margin-top:8px; font-size:0.78rem; line-height:1.4; }
+.src-bridge-note.ok{ color:#166534; }
+.src-bridge-note.warn{ color:#b45309; }
+.src-bridge-note.err{ color:#dc2626; }
+/* Muted location chip (Log + tables) */
+.loc-chip{ display:inline-block; background:#f1f5f9; color:#64748b; border-radius:6px; padding:1px 7px; font-size:0.72rem; font-weight:500; white-space:nowrap; }
+
+/* ---------- Bridges candidate management ---------- */
+.bridges-note{ background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.86rem; color:#1e40af; line-height:1.5; }
+.bridges-controls{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:18px; }
+.seg{ display:inline-flex; background:#f1f5f9; border:1px solid var(--line); border-radius:8px; padding:2px; }
+.seg button{ border:none; background:none; padding:6px 14px; border-radius:6px; font-size:0.82rem; color:var(--muted); cursor:pointer; font-weight:500; transition:all .12s; }
+.seg button.active{ background:#fff; color:var(--primary); font-weight:600; box-shadow:0 1px 2px rgba(15,23,42,0.08); }
+.bridge-src-section{ margin-bottom:24px; }
+.bridge-src-head{ display:flex; align-items:baseline; gap:10px; padding:0 2px 10px; border-bottom:2px solid var(--line); margin-bottom:12px; }
+.bridge-src-head .nm{ font-size:1rem; font-weight:700; color:#0f172a; letter-spacing:0.02em; }
+.bridge-src-head .meta{ font-size:0.8rem; color:var(--muted); }
+.bridge-src-head .actives{ margin-left:auto; font-size:0.76rem; font-weight:600; color:var(--accent); background:#eff6ff; padding:2px 10px; border-radius:12px; }
+.bridge-list{ display:flex; flex-direction:column; gap:8px; }
+.bridge-row{ display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--line); border-left:3px solid transparent; border-radius:10px; padding:12px 16px; box-shadow:0 1px 2px rgba(15,23,42,0.04); transition:background .15s,border-color .15s; }
+.bridge-row.on{ border-left-color:var(--accent); background:#f5f9ff; }
+.bridge-row .info{ min-width:0; flex:1; }
+.bridge-row .info .nm{ font-size:0.94rem; font-weight:600; color:#1e293b; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.bridge-row .info .ttl{ font-size:0.82rem; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bridge-row .tgtcount{ font-size:0.82rem; color:var(--muted); white-space:nowrap; text-align:right; }
+.bridge-row .tgtcount b{ color:var(--primary); font-weight:700; font-size:0.95rem; }
+.bridge-row .save-status{ font-size:0.74rem; color:#94a3b8; min-width:44px; text-align:right; }
+.bridge-row .save-status.ok{ color:#16a34a; }
+.bridge-row a.li{ font-size:0.78rem; color:#2563eb; text-decoration:none; }
+.bridge-row a.li:hover{ text-decoration:underline; }
+/* Open profile / Connect pill link */
+.bridge-row a.connect{ display:inline-flex; align-items:center; gap:3px; font-size:0.72rem; font-weight:600;
+  color:var(--accent); background:#eff6ff; border:1px solid #bfdbfe; padding:2px 9px; border-radius:12px; text-decoration:none; white-space:nowrap; }
+.bridge-row a.connect:hover{ background:var(--accent); color:#fff; border-color:var(--accent); text-decoration:none; }
+/* "connect first" hint */
+.bridge-row .conn-hint{ font-size:0.7rem; color:var(--muted); font-style:italic; white-space:nowrap; }
+/* Connection-level badge */
+.lvl-badge{ display:inline-block; padding:2px 9px; border-radius:12px; font-size:0.7rem; font-weight:600; white-space:nowrap; }
+.lvl-badge.lvl-1{ background:#dcfce7; color:#166534; }
+.lvl-badge.lvl-2{ background:#fef3c7; color:#92400e; }
+.lvl-badge.lvl-3{ background:#e2e8f0; color:#475569; }
+.lvl-badge.lvl-0{ background:#e2e8f0; color:#64748b; }
+/* ICP-fit grade pill */
+.bridge-row .icp-grade, .icp-grade{ flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  min-width:34px; height:24px; padding:0 8px; border-radius:8px; font-size:0.8rem; font-weight:700;
+  letter-spacing:0.01em; border:1px solid transparent; }
+.dupe-tag{ font-size:0.72rem; font-weight:700; color:#94a3b8; background:#f1f5f9; border-radius:6px; padding:1px 5px; margin-left:4px; }
+.icp-grade.g-Aplus, .icp-grade.g-A{ background:rgba(22,163,74,0.12); color:#15803d; border-color:rgba(22,163,74,0.35); }
+.icp-grade.g-B{ background:#eff6ff; color:var(--primary); border-color:#bfdbfe; }
+.icp-grade.g-C{ background:#fef3c7; color:#b45309; border-color:#fcd34d; }
+.icp-grade.g-D{ background:#f1f5f9; color:#94a3b8; border-color:var(--line); }
+/* Remove (✕) button */
+.bridge-row .remove{ flex:0 0 auto; border:none; background:none; color:#cbd5e1; font-size:0.95rem; line-height:1;
+  cursor:pointer; padding:4px 6px; border-radius:6px; transition:color .12s,background .12s; }
+.bridge-row .remove:hover{ color:#dc2626; background:#fee2e2; }
+.bridge-row .remove:disabled{ opacity:0.4; cursor:default; }
+.bridge-row.removing{ opacity:0.45; }
+
+/* Toggle switch */
+.switch{ position:relative; display:inline-block; width:42px; height:24px; flex:0 0 42px; }
+.switch input{ opacity:0; width:0; height:0; }
+.switch .track{ position:absolute; cursor:pointer; inset:0; background:#cbd5e1; border-radius:24px; transition:background .18s; }
+.switch .track:before{ content:''; position:absolute; height:18px; width:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .18s; box-shadow:0 1px 2px rgba(0,0,0,0.2); }
+.switch input:checked + .track{ background:var(--accent); }
+.switch input:checked + .track:before{ transform:translateX(18px); }
+.switch input:disabled + .track{ opacity:0.55; cursor:default; }
+
+/* ---------- Settings ---------- */
+.settings-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:18px; max-width:560px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.settings-card h2{ font-size:1.05rem; font-weight:600; margin-bottom:4px; }
+.settings-card p{ color:var(--muted); font-size:0.85rem; margin-bottom:16px; }
+.field{ margin-bottom:14px; }
+label{ display:block; font-size:0.78rem; font-weight:600; color:#374151; margin-bottom:5px; text-transform:uppercase; letter-spacing:0.04em; }
+.field input, .field select{ width:100%; padding:9px; border:1px solid #d1d5db; border-radius:8px; font-size:0.9rem; }
+input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
+.key-status{ font-size:0.85rem; line-height:1.7; }
+.btn-save{ background:var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:0.9rem; cursor:pointer; font-weight:500; }
+.btn-save:hover{ background:#1d3a9e; }
+
+/* ---------- Flow diagram ---------- */
+.flow{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; align-items:start; }
+.flow-col{ padding:0 6px; }
+.flow-col .colhead{ font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); font-weight:600; margin-bottom:10px; text-align:center; }
+.flow-node{ background:#f1f5f9; border:1px solid var(--line); border-radius:8px; padding:9px 11px; margin-bottom:8px; cursor:pointer; font-size:0.82rem; transition:all .12s; }
+.flow-node:hover{ border-color:var(--accent); background:#eff6ff; }
+.flow-node.active{ background:var(--accent); color:#fff; border-color:var(--accent); }
+.flow-node.dim{ opacity:0.35; }
+.flow-node .nm{ font-weight:600; }
+.flow-node .ct{ float:right; font-size:0.78rem; opacity:0.8; }
+.flow-node.target{ background:#fff; cursor:default; }
+.flow-node.target:hover{ border-color:var(--line); background:#fff; }
+.flow-hint{ font-size:0.76rem; color:#94a3b8; margin-top:8px; text-align:center; }
+.empty{ text-align:center; color:#94a3b8; padding:24px; }
+
+/* ---------- Collections ---------- */
+.collection-day{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:12px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.collection-day .date{ font-weight:700; font-size:1rem; color:#0f172a; }
+.collection-day .summary{ color:var(--primary); font-weight:600; font-size:0.9rem; margin:4px 0 8px; }
+.collection-day .bridges{ color:var(--muted); font-size:0.84rem; line-height:1.6; }
+.collection-day .bchip{ display:inline-block; background:#f1f5f9; border-radius:6px; padding:2px 8px; margin:2px 4px 2px 0; font-size:0.78rem; }
+.timeline-rail{ border-left:2px solid var(--line); padding-left:18px; margin-left:6px; }
+</style>
+</head>
+<body>
+
+<!-- ===== Sign-in overlay (hidden once authenticated) ===== -->
+<div id="signinOverlay">
+  <div class="signin-box">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+    <h1>Radar</h1>
+    <div class="sub">by Gershon.AI</div>
+    <p>Your Source → Bridge → Target intelligence platform.<br>Sign in to continue.</p>
+    <a href="/api/auth/linkedin/login" class="btn-linkedin">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+      Sign in with LinkedIn
+    </a>
+    <div class="signin-denied" id="signinDenied">Access denied. Your account isn’t on the approved list.<br>Contact the administrator to request access.</div>
+  </div>
+</div>
+
+<div class="app" id="appShell" style="display:none">
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+      <h1>Radar</h1>
+    </div>
+    <div class="brand-meta">
+      <div class="eyebrow">by Gershon.AI</div>
+      <div class="ver" id="sideVer">v1.7.1</div>
+      <div class="ts" id="sideTs"></div>
+    </div>
+    <div class="user-chip" id="userChip" style="display:none">
+      <div class="avatar" id="userAvatar">?</div>
+      <span class="uname" id="userName">—</span>
+    </div>
+    <div class="li-status li-checking" id="liStatus" title="LinkedIn connection status">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z"/></svg>
+      <span id="liStatusText">Checking…</span>
+    </div>
+    <nav class="nav-items">
+      <button class="nav-item active" id="nav-dashboard"   onclick="showView('dashboard')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg></span> Dashboard</button>
+      <div class="nav-sec">Pipeline</div>
+      <button class="nav-item"        id="nav-sources"     onclick="showView('sources')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v17"/><path d="M14 9h3a1 1 0 0 1 1 1v11"/><line x1="9" y1="7" x2="10" y2="7"/><line x1="9" y1="11" x2="10" y2="11"/><line x1="9" y1="15" x2="10" y2="15"/></svg></span> Sources <span class="nav-count" id="sourceNavCount">0</span></button>
+      <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges <span class="nav-count" id="bridgeNavCount">0</span></button>
+      <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
+      <div class="nav-sec">Activity</div>
+      <button class="nav-item"        id="nav-growth"      onclick="showView('growth')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span> Growth</button>
+      <button class="nav-item"        id="nav-setup"       onclick="showView('setup')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Setup</button>
+      <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span> Collections</button>
+      <button class="nav-item"        id="nav-log"         onclick="showView('log')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg></span> Log</button>
+      <button class="nav-item"        id="nav-settings"    onclick="showView('settings')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings</button>
+      <button class="nav-item"        id="nav-billing"     onclick="showView('billing')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span> Billing</button>
+      <button class="nav-item"        id="nav-referrals"   onclick="showView('referrals')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> Referrals</button>
+      <button class="nav-item"        id="nav-feedback"    onclick="showView('feedback')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></span> Feedback</button>
+      <a class="nav-item" id="nav-admin" href="/admin" style="display:none;text-decoration:none"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Admin</a>
+    </nav>
+    <div class="foot">
+      <button class="foot-btn primary" data-on="0" onclick="toggleDemo(this)"><span class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 15l.7 1.9L20.6 18l-1.9.7L18 20.6l-.7-1.9L15.4 18l1.9-.7z"/></svg></span> <span class="lbl">Demo Mode</span></button>
+      <button class="foot-btn ghost" onclick="sideLogout()"><span class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> Logout</button>
+      <div class="foot-domain">radar.gershonCRM.com</div>
+    </div>
+  </aside>
+  <script>
+    (function(){
+      var t = document.getElementById('sideTs');
+      if (t) { try {
+        var now = new Date();
+        var s = now.toLocaleString('en-US', { month:'long', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', hour12:true });
+        var tz = (now.toLocaleTimeString('en-US', { timeZoneName:'short' }).split(' ').pop()) || '';
+        t.textContent = s + ' ' + tz;
+      } catch(e) {} }
+    })();
+    function toggleDemo(btn){
+      var on = btn.getAttribute('data-on') === '1';
+      btn.setAttribute('data-on', on ? '0' : '1');
+      var lbl = btn.querySelector('.lbl'); if (lbl) lbl.textContent = on ? 'Demo Mode' : 'Live Mode';
+    }
+    function sideLogout(){ location.href = '/api/auth/logout'; }
+  </script>
+
+  <!-- ===== Main ===== -->
+  <div class="main">
+  <div class="content">
+
+    <!-- ===== Dashboard ===== -->
+    <section id="view-dashboard" class="view active">
+      <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div><h2>Dashboard</h2><p>Your Source → Bridge → Target pipeline at a glance.</p></div>
+        <button id="syncNowBtn" onclick="triggerSync()" class="sync-btn">🔄 Sync Now</button>
+      </div>
+      <div id="syncStatus" class="sync-status" style="display:none"></div>
+      <div id="warningBanner" class="banner" style="display:none">
+        WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
+      </div>
+      <!-- ========= 1. SOURCES ========= -->
+      <div class="dash-sec stage-sources">
+        <div class="dash-head">
+          <div><span class="dot"></span><h3>1 · Sources</h3><p>Organizations you watch. Each one should produce bridges.</p></div>
+          <button class="dash-go" onclick="showView('sources')">Manage sources →</button>
+        </div>
+        <div class="stats">
+          <div class="stat clk s-src" onclick="statGo('sources','')" title="All sources you're tracking"><div class="num" id="statSources">0</div><div class="label">Sources tracked</div></div>
+          <div class="stat clk s-src" onclick="statGo('sources','')" title="Sources that have produced at least one bridge"><div class="num" id="statSrcProducing">0</div><div class="label">Producing bridges</div><div class="sub" id="statSrcProducingSub">0 of 0</div></div>
+          <div class="stat clk s-src" onclick="statGo('sources','')" title="Sources that have produced no bridges yet — they need attention"><div class="num" id="statSrcIdle">0</div><div class="label">Idle — no bridges</div><div class="sub">need a look</div></div>
+          <div class="stat clk s-src" onclick="statGo('sources','')" title="Average targets produced per source"><div class="num" id="statSrcAvg">0</div><div class="label">Avg targets / source</div></div>
+        </div>
+        <div class="panel"><h3>Targets per Source <span class="hint">— which organizations actually pay off</span></h3><div class="chart-wrap"><canvas id="chartSources"></canvas></div></div>
+      </div>
+
+      <!-- ========= 2. BRIDGES ========= -->
+      <div class="dash-sec stage-bridges">
+        <div class="dash-head">
+          <div><span class="dot"></span><h3>2 · Bridges</h3><p>People inside those organizations who open the door to targets.</p></div>
+          <button class="dash-go" onclick="showView('bridges')">Manage bridges →</button>
+        </div>
+        <div class="stats">
+          <div class="stat clk s-brg" onclick="statGo('bridges','')" title="Bridges switched on for collection"><div class="num" id="statBridges">0</div><div class="label">Bridges active</div><div class="sub" id="statBridgesSub">of 0 found</div></div>
+          <div class="stat clk s-brg" onclick="statGo('bridges','')" title="Bridges you're already 1st-degree connected to"><div class="num" id="statBridgesConn">0%</div><div class="label">Already connected</div><div class="sub" id="statBridgesConnSub">0 of 0</div></div>
+          <div class="stat clk s-brg" onclick="statGo('bridges','')" title="Active bridges that have produced at least one target"><div class="num" id="statBrgProducing">0</div><div class="label">Producing targets</div><div class="sub" id="statBrgProducingSub">0 of 0</div></div>
+          <div class="stat clk s-brg" onclick="statGo('bridges','')" title="Bridges not yet connected — tick “invite” to reach them"><div class="num" id="statBrgNeedInvite">0</div><div class="label">Need an invite</div><div class="sub">2nd / 3rd degree</div></div>
+        </div>
+        <div class="panel"><h3>Targets per Bridge <span class="hint">— your most valuable relationships</span></h3><div class="chart-wrap"><canvas id="chartBridges"></canvas></div></div>
+      </div>
+
+      <!-- ========= 3. TARGETS ========= -->
+      <div class="dash-sec stage-targets">
+        <div class="dash-head">
+          <div><span class="dot"></span><h3>3 · Targets</h3><p>The prospects themselves — graded, deduplicated, ready for outreach.</p></div>
+          <button class="dash-go" onclick="showView('targets')">Manage targets →</button>
+        </div>
+        <div class="stats">
+          <div class="stat clk s-tgt" onclick="statGo('targets','')" title="All targets collected"><div class="num" id="statTotal">0</div><div class="label">Total targets</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','today')" title="Collected today"><div class="num" id="statToday">0</div><div class="label">New today</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','week')" title="Collected in the last 7 days"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','nolink')" title="Targets still missing a LinkedIn URL — they can't be contacted"><div class="num" id="statLinkedPct">0%</div><div class="label">Have LinkedIn link</div><div class="sub" id="statLinkedSub">0 of 0</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','pushed')" title="Targets pushed to your outreach campaign"><div class="num" id="statPushedPct">0%</div><div class="label">On Botdog</div><div class="sub" id="statPushedSub">0 of 0</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','')" title="A+ and A graded targets — your best fits"><div class="num" id="statTopGrade">0</div><div class="label">A+ / A grade</div><div class="sub" id="statTopGradeSub">best fits</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="panel"><h3>ICP grade distribution <span class="hint">— quality of what you're collecting</span></h3><div class="chart-wrap"><canvas id="chartGrades"></canvas></div></div>
+          <div class="panel"><h3>Daily collection trend <span class="hint">— is the engine running?</span></h3><div class="chart-wrap"><canvas id="chartTrend"></canvas></div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Source → Bridge → Target flow <span style="font-weight:400;color:#94a3b8;font-size:0.8rem">(click a node to filter)</span></h3>
+        <div class="flow" id="flowDiagram"></div>
+        <div class="flow-hint" id="flowHint">Click a Source or Bridge to highlight its path.</div>
+      </div>
+    </section>
+
+    <!-- ===== Setup ===== -->
+    <section id="view-setup" class="view">
+      <div class="page-head"><h2>Setup</h2><p>Connect Radar to LinkedIn Sales Navigator and Botdog to start collecting targets.</p></div>
+      <div id="onboardingWrap"></div>
+    </section>
+
+    <!-- ===== Targets ===== -->
+    <section id="view-targets" class="view stage-targets">
+      <div class="page-head"><h2>Targets</h2><p>Every connection collected through your bridges.</p></div>
+      <div class="table-controls">
+        <input type="text" id="tSearch" placeholder="Search name, title, company…" oninput="renderTargets()">
+        <select id="tBridge" onchange="renderTargets()"><option value="">All bridges</option></select>
+        <select id="tSource" onchange="renderTargets()"><option value="">All sources</option></select>
+        <label class="excl-toggle"><input type="checkbox" id="tShowExcluded" onchange="toggleShowExcluded()"> Show unselected</label>
+        <span class="result-count" id="tCount">0 targets</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="tHead">
+            <th title="Selected targets go to Botdog. Uncheck to exclude permanently.">✓</th>
+            <th class="sortable" data-key="grade" title="ICP fit: A+ (brings foreign companies into the US) → D">Grade <span class="arrow"></span></th>
+            <th class="sortable" data-key="name">Name <span class="arrow"></span></th>
+            <th class="sortable" data-key="title">Title <span class="arrow"></span></th>
+            <th class="sortable" data-key="company">Company <span class="arrow"></span></th>
+            <th class="sortable" data-key="location">Location <span class="arrow"></span></th>
+            <th class="sortable" data-key="language">Language <span class="arrow"></span></th>
+            <th class="sortable" data-key="bridge">Bridge <span class="arrow"></span></th>
+            <th class="sortable" data-key="source">Source <span class="arrow"></span></th>
+            <th class="sortable" data-key="date">Date <span class="arrow"></span></th>
+            <th>LinkedIn</th>
+            <th class="sortable" data-key="botdog">Botdog <span class="arrow"></span></th>
+          </tr></thead>
+          <tbody id="targetsBody"><tr><td colspan="11" class="empty">No targets yet</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Leads ===== -->
+
+    <!-- ===== Bridges ===== -->
+    <section id="view-bridges" class="view stage-bridges">
+      <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div><h2>Bridges</h2><p>Well-connected people who introduce you to targets.</p></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="sync-btn" onclick="downloadBridgesCsv()" title="Export bridges as CSV">⬇ Download CSV</button>
+          <button class="sync-btn" id="inviteBridgesBtn" onclick="triggerBridgePush()" title="Invite the bridges you're not connected to into your Botdog bridges campaign">📨 Invite to Botdog</button>
+        </div>
+      </div>
+      <div id="bridgePushStatus" class="sync-status" style="display:none"></div>
+      <details class="settings-card" style="margin-bottom:14px">
+        <summary style="cursor:pointer;font-weight:600">➕ Add a bridge manually</summary>
+        <p style="margin-top:8px">Paste a LinkedIn profile URL to add someone you know as a bridge.</p>
+        <div class="field"><label>Name</label><input id="mbName" placeholder="e.g. Jane Doe"></div>
+        <div class="field"><label>LinkedIn profile URL</label><input id="mbUrl" placeholder="https://www.linkedin.com/in/…"></div>
+        <div class="field"><label>Company / source</label><input id="mbSource" placeholder="e.g. Acme Corp"></div>
+        <div class="field"><label>Title <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="mbTitle" placeholder="e.g. Partner"></div>
+        <div class="field"><label>Your connection</label>
+          <select id="mbConn"><option value="1st">1st — already connected</option><option value="2nd">2nd</option><option value="3rd">3rd</option></select>
+        </div>
+        <button class="btn-save" onclick="addBridgeManual()">+ Add Bridge</button>
+        <div id="mbStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </details>
+      <div class="bridges-note">
+        Toggle a candidate <strong>Active</strong> to have the extension collect that person's ICP connections as Targets.
+      </div>
+      <div class="bridges-controls">
+        <div class="seg" id="bridgeFilterSeg">
+          <button class="active" data-filter="all" onclick="setBridgeFilter('all')">All</button>
+          <button data-filter="active" onclick="setBridgeFilter('active')">Active only</button>
+        </div>
+        <span class="result-count" id="bridgeCount"></span>
+      </div>
+      <div id="bridgesBody"></div>
+    </section>
+
+    <!-- ===== Sources ===== -->
+    <section id="view-sources" class="view stage-sources">
+      <div class="page-head"><h2>Sources</h2><p>Organizations you watch and collect connections from.</p></div>
+      <div class="settings-card" style="max-width:620px">
+        <h2>Add a Source</h2>
+        <p>Add an organization to watch. Paste its LinkedIn company URL — collect its team into Targets next.</p>
+        <div class="field"><label>Source name</label><input id="srcName" placeholder="e.g. Krymkier Law"></div>
+        <div class="field"><label>LinkedIn company URL</label><input id="srcUrl" placeholder="https://www.linkedin.com/company/..."></div>
+        <div class="field"><label>Sales Nav company URL or Org ID <span style="color:#94a3b8;font-weight:400">— enables bridge discovery</span></label><input id="srcOrg" placeholder="…/organization/139070  or  139070"></div>
+        <div class="field"><label>Role / function keyword <span style="color:#94a3b8;font-weight:400">— optional; narrows discovery for large orgs</span></label><input id="srcKeyword" placeholder="e.g. Team France Export"></div>
+        <div class="field"><label>Type</label>
+          <select id="srcCat">
+            <option value="partner">Partner</option>
+            <option value="competitor">Competitor</option>
+            <option value="organization">Organization</option>
+          </select>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;color:#334155;margin:2px 0 12px;cursor:pointer">
+          <input type="checkbox" id="srcDiscoverNow" checked style="width:16px;height:16px"> Collect bridges now <span style="color:#94a3b8">(otherwise on the monthly discovery run)</span>
+        </label>
+        <button class="btn-save" onclick="addSource()">+ Add Source</button>
+        <div id="srcStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="card-grid" id="sourcesBody"></div>
+    </section>
+
+    <!-- ===== Collections ===== -->
+    <section id="view-collections" class="view">
+      <div class="page-head"><h2>Collections</h2><p>When new targets were retrieved from Sales Navigator, by day.</p></div>
+      <div class="timeline-rail" id="collectionsBody"><div class="empty">No collections yet</div></div>
+    </section>
+
+    <!-- ===== Log ===== -->
+    <section id="view-log" class="view">
+      <div class="page-head"><h2>Collection Log</h2><p>Every prospect ever collected — one line each. <strong>Date : Source &rsaquo; Bridge &rsaquo; Prospect</strong> with the connection level relative to you.</p>
+        <p style="margin-top:4px;font-size:0.82rem;color:#94a3b8"><strong>Level</strong> = your LinkedIn connection degree to the prospect — Level 1: you're already connected · Level 2: a connection of yours knows them · Level 3: further out.</p></div>
+      <div class="table-controls">
+        <input type="text" id="logSearch" placeholder="Search source, bridge, or prospect…" oninput="renderLog()">
+        <select id="logLevel" onchange="renderLog()">
+          <option value="">All levels</option>
+          <option value="1st">Level 1</option>
+          <option value="2nd">Level 2</option>
+          <option value="3rd">Level 3</option>
+          <option value="none">No level yet</option>
+        </select>
+        <span class="result-count" id="logCount"></span>
+      </div>
+      <div class="log-rail" id="logBody"><div class="empty">No collections yet</div></div>
+    </section>
+
+    <!-- ===== Settings ===== -->
+    <section id="view-settings" class="view">
+      <div class="page-head"><h2>Settings</h2><p>Collection schedule, API keys, and campaign.</p></div>
+      <div class="settings-card">
+        <h2>Collection Schedule</h2>
+        <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected. Install/reload the Radar extension to change the schedule.</div>
+        <div class="field">
+          <label>Collect new targets (prospects)</label>
+          <select id="schedTargets">
+            <option value="6">Every 6 hours</option>
+            <option value="12">Every 12 hours</option>
+            <option value="24" selected>Once a day</option>
+            <option value="48">Every 2 days</option>
+            <option value="168">Once a week</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Look for new bridges</label>
+          <select id="schedBridgesMode">
+            <option value="new-only" selected>Only for new sources (recommended)</option>
+            <option value="periodic">Refresh on a schedule</option>
+            <option value="manual">Manual only (I'll click Find Bridges)</option>
+          </select>
+        </div>
+        <div class="field" id="schedBridgesEveryWrap" style="display:none">
+          <label>Refresh bridges every</label>
+          <select id="schedBridgesEvery">
+            <option value="7">Week</option>
+            <option value="14">2 weeks</option>
+            <option value="30" selected>Month</option>
+            <option value="90">Quarter</option>
+          </select>
+        </div>
+        <button class="btn-save" onclick="saveSchedule()">Save Schedule</button>
+        <div id="schedStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
+        <h2>API Keys</h2>
+        <p>Saved to the backend, and remembered here in your browser so you can see them.</p>
+        <div class="field">
+          <label>Botdog API Key</label>
+          <input type="password" id="inputBotdog" placeholder="paste key…">
+        </div>
+        <div class="field">
+          <label>Resend API Key</label>
+          <input type="password" id="inputResend" placeholder="paste key…">
+        </div>
+        <div class="field">
+          <label>Pappers API Key <span style="color:#94a3b8;font-weight:400">(French company data — enriches ICP scoring)</span></label>
+          <input type="password" id="inputPappers" placeholder="paste key…">
+        </div>
+        <label class="excl-toggle" style="margin-bottom:8px"><input type="checkbox" id="showKeys" onchange="toggleKeyVisibility(this.checked)"> Show keys</label>
+        <button class="btn-save" onclick="saveSettings()">Save Keys</button>
+        <div id="saveStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
+        <h2>Outreach Campaigns (Botdog)</h2>
+        <p>Two separate campaigns: one to invite &amp; follow up with <strong>bridges</strong> you're not connected to, one for <strong>targets</strong> (prospects). Pick from your campaigns or paste an ID.</p>
+        <div class="field">
+          <label>Targets campaign <span style="color:#94a3b8;font-weight:400">(prospects)</span></label>
+          <select id="botdogCampaignSelect" onchange="onCampaignSelect()">
+            <option value="">— loading your campaigns… —</option>
+          </select>
+          <input type="text" id="botdogCampaignId" placeholder="paste campaign URL or ID" style="margin-top:6px">
+        </div>
+        <div class="field">
+          <label>Bridges campaign <span style="color:#94a3b8;font-weight:400">(invitations to bridges)</span></label>
+          <select id="botdogBridgesCampaignSelect" onchange="onBridgesCampaignSelect()">
+            <option value="">— loading your campaigns… —</option>
+          </select>
+          <input type="text" id="botdogBridgesCampaignId" placeholder="paste campaign URL or ID" style="margin-top:6px">
+        </div>
+        <button class="btn-save" onclick="saveCampaign()">Save Campaigns</button>
+        <div id="campaignStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
+        <h2>Key Status</h2>
+        <p>Current backend key status.</p>
+        <div id="keyStatus" class="key-status">Loading…</div>
+      </div>
+    </section>
+
+    <section id="view-growth" class="view">
+      <div class="page-head"><h2>Growth</h2><p>How your pipeline is building over time — sources, bridges and targets added by day, week and month.</p></div>
+
+      <div class="growth-controls">
+        <div class="seg" id="growthMetric">
+          <button class="seg-btn s-tgt active" data-metric="targets" onclick="setGrowthMetric('targets')">Targets</button>
+          <button class="seg-btn s-brg" data-metric="bridges" onclick="setGrowthMetric('bridges')">Bridges</button>
+          <button class="seg-btn s-src" data-metric="sources" onclick="setGrowthMetric('sources')">Sources</button>
+        </div>
+        <div class="seg" id="growthGrain">
+          <button class="seg-btn active" data-grain="day" onclick="setGrowthGrain('day')">Day</button>
+          <button class="seg-btn" data-grain="week" onclick="setGrowthGrain('week')">Week</button>
+          <button class="seg-btn" data-grain="month" onclick="setGrowthGrain('month')">Month</button>
+        </div>
+      </div>
+
+      <div class="stats" id="growthKpis">
+        <div class="stat"><div class="num" id="gTotal">0</div><div class="label" id="gTotalLbl">Total</div></div>
+        <div class="stat"><div class="num" id="gThis">0</div><div class="label" id="gThisLbl">This period</div></div>
+        <div class="stat"><div class="num" id="gDelta">0%</div><div class="label">vs previous period</div><div class="sub" id="gDeltaSub"></div></div>
+        <div class="stat"><div class="num" id="gBest">0</div><div class="label">Best period</div><div class="sub" id="gBestSub"></div></div>
+        <div class="stat"><div class="num" id="gAvg">0</div><div class="label" id="gAvgLbl">Avg / active period</div></div>
+      </div>
+
+      <div class="panel">
+        <h3 id="growthChartTitle">New targets per day <span class="hint">— bars = added that period, line = running total</span></h3>
+        <div class="chart-wrap" style="height:320px"><canvas id="chartGrowth"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <h3>All three, side by side <span class="hint">— cumulative totals over time</span></h3>
+        <div class="chart-wrap" style="height:300px"><canvas id="chartGrowthAll"></canvas></div>
+      </div>
+    </section>
+
+    <section id="view-billing" class="view">
+      <div class="page-head"><h2>Billing</h2><p>Manage your Radar subscription, payment method and invoices.</p></div>
+      <div class="settings-card">
+        <h2>Your plan</h2>
+        <p id="billingPlan">Radar — early access.</p>
+        <p style="margin-top:10px"><a id="billingLink" class="btn-save" style="display:inline-block;text-decoration:none" href="#" onclick="return openBilling(event)">Manage billing ↗</a></p>
+        <div id="billingNote" style="margin-top:10px;font-size:0.85rem;color:#64748b">Billing is handled securely by Stripe. You'll be taken to Stripe's customer portal.</div>
+      </div>
+    </section>
+
+    <section id="view-referrals" class="view">
+      <div class="page-head"><h2>Referrals</h2><p>Invite someone to Radar. Share your link — we'll credit you when they join.</p></div>
+      <div class="settings-card">
+        <h2>Your referral link</h2>
+        <div class="field"><input id="refLink" type="text" readonly value="—"></div>
+        <button class="btn-save" onclick="copyRefLink()">Copy link</button>
+        <div id="refStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+    </section>
+
+    <section id="view-feedback" class="view">
+      <div class="page-head"><h2>Feedback</h2><p>Found a bug or have an idea? Tell us — it goes to support@gershonconsulting.com.</p></div>
+      <div class="settings-card">
+        <h2>Share a bug or suggestion</h2>
+        <p style="margin-bottom:10px;color:#64748b;font-size:0.88rem">This opens an email to <strong>support@gershonconsulting.com</strong> with your message and the technical details we need to reproduce it. Press Send in your mail app to deliver it.</p>
+        <div class="field">
+          <label>Type</label>
+          <select id="fbType"><option value="bug">🐞 Bug — something's broken</option><option value="idea">💡 Suggestion — an idea to improve Radar</option><option value="other">💬 Something else</option></select>
+        </div>
+        <div class="field">
+          <label>Details</label>
+          <textarea id="fbBody" rows="6" placeholder="What happened, or what would you like to see? The more detail the better." style="width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;resize:vertical"></textarea>
+        </div>
+        <button class="btn-save" onclick="sendFeedback()">Send feedback</button>
+        <div id="fbStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+    </section>
+
+  </div>
+  </div>
+</div>
+
+<script>
+const CONFIG = {
+  // All backend calls route through the Cloudflare Pages proxy (/api/hub). The proxy validates
+  // the LinkedIn session cookie server-side and injects the verified owner + HUB_SECRET, so the
+  // browser never holds the hub secret and data stays scoped per user. Same-origin → cookie sent.
+  WEBAPP_URL: 'https://pkzeeqehwmtnqxdpdesl.supabase.co/functions/v1/hub',
+  // bridge (person) -> the Source organization they represent
+  BRIDGE_SOURCE: {
+    'Elie Cohen':                { source: 'The Triana Group', category: 'partner', results: 55  },
+    'Jabril Bensedrine':         { source: 'The Triana Group', category: 'partner', results: 45  },
+    'Phil Jeudy':                { source: 'The Triana Group', category: 'partner', results: 207 },
+    'Mathias Cohen':             { source: 'The Triana Group', category: 'partner', results: 30  },
+    'Anne Charlotte Le Bourhis': { source: 'The Triana Group', category: 'partner', results: 53  },
+    'Marie-Josée Rodi-Andrieu':  { source: 'The Triana Group', category: 'partner', results: 336 },
+  }
+};
+function _norm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); }
+function bridgeSource(name) {
+  var n = _norm(name);
+  // 1) Real per-record source: discovered candidates (BRIDGES) and collected targets (ROWS)
+  //    both carry the Source they came from — use that, not just the hardcoded seed list.
+  for (var i = 0; i < BRIDGES.length; i++) { if (BRIDGES[i] && BRIDGES[i].source && _norm(BRIDGES[i].name) === n) return BRIDGES[i].source; }
+  for (var j = 0; j < ROWS.length; j++) { if (ROWS[j] && ROWS[j].source && _norm(ROWS[j].radar_person) === n) return ROWS[j].source; }
+  // 2) Fallback: the original hardcoded Triana seed bridges.
+  for (var k in CONFIG.BRIDGE_SOURCE) { if (_norm(k) === n) return CONFIG.BRIDGE_SOURCE[k].source; }
+  return 'Unassigned';
+}
+function leadSource(r) {
+  if (r && r.source) return r.source;
+  return bridgeSource(r && r.radar_person);
+}
+
+// ===== Global state =====
+let ROWS = [];
+let STORED_SOURCES = [];
+let CHARTS = {};
+let SORT = { key: 'date', dir: -1 };       // default: newest first
+let FLOW_FILTER = null;                      // {type:'source'|'bridge', value:''}
+let BRIDGES = [];                            // candidate bridges from getBridges
+let BRIDGE_FILTER = 'all';                   // 'all' | 'active'
+let STAT_FILTER = '';                        // '' | 'today' | 'week' | 'pushed' | 'nolink' — set by clicking a dashboard stat
+
+// ----- Target selection (unselect = exclude from Botdog, kept forever) -----
+// EXCLUDED holds lead_ids the user has unselected. Unselected targets are hidden from the
+// working list, excluded from Botdog, and — because the row stays in the sheet (deduped by
+// lead_id) — are never re-added as "new" on a later collection. Persisted to the hub config
+// (excluded_leads) AND mirrored to localStorage so the choice survives instantly and across
+// devices once the backend stores it.
+let EXCLUDED = new Set();
+let SHOW_EXCLUDED = false;
+const EXCL_LS_KEY = 'radar_excluded_leads';
+function leadKey(r){ return String((r && (r.lead_id || r.linkedin_url)) || '').trim(); }
+function loadExclusions(cfgList){
+  const set = new Set();
+  try { (JSON.parse(localStorage.getItem(EXCL_LS_KEY) || '[]') || []).forEach(v => set.add(String(v))); } catch(e) {}
+  if (Array.isArray(cfgList)) cfgList.forEach(v => set.add(String(v)));
+  EXCLUDED = set;
+}
+function persistExclusions(){
+  const arr = [...EXCLUDED];
+  try { localStorage.setItem(EXCL_LS_KEY, JSON.stringify(arr)); } catch(e) {}
+  // Best-effort sync to the hub so Botdog skips them and other devices see the choice.
+  try {
+    fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ action:'setConfig', excluded_leads: JSON.stringify(arr) }) });
+  } catch(e) {}
+}
+function toggleTargetSelect(lid, box){
+  if (!lid) return;
+  if (box && box.checked) EXCLUDED.delete(String(lid)); else EXCLUDED.add(String(lid));
+  persistExclusions();
+  renderStats();
+  renderTargets();
+}
+function toggleShowExcluded(){
+  const el = document.getElementById('tShowExcluded');
+  SHOW_EXCLUDED = !!(el && el.checked);
+  renderTargets();
+}
+
+// Clicking a dashboard number jumps to the underlying list, filtered.
+function statGo(view, filter){
+  if (view === 'targets') {
+    STAT_FILTER = filter || '';
+    const s = document.getElementById('tSearch'); if (s) s.value = '';
+    const b = document.getElementById('tBridge'); if (b) b.value = '';
+    const so = document.getElementById('tSource'); if (so) so.value = '';
+    showView('targets'); renderTargets();
+  } else if (view === 'bridges') {
+    BRIDGE_FILTER = 'active';
+    showView('bridges'); loadBridges().then(renderBridges);
+  } else {
+    showView(view);
+  }
+}
+function clearStatFilter(){ STAT_FILTER = ''; renderTargets(); }
+const STAT_LABEL = { today: 'New today', week: 'Added this week', pushed: 'On Botdog', nolink: 'Missing LinkedIn link' };
+let BRIDGES_LOADED = false;
+
+// ===== Backend: Sources =====
+async function loadSources() {
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=getSources&_=' + Date.now();
+    const r = await fetch(url); const t = await r.text();
+    const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (j.success) STORED_SOURCES = j.sources || [];
+  } catch(e) { console.error('loadSources', e); }
+}
+async function addSource() {
+  const name = (document.getElementById('srcName').value || '').trim();
+  const url  = (document.getElementById('srcUrl').value || '').trim();
+  const cat  = document.getElementById('srcCat').value;
+  const orgRaw = (document.getElementById('srcOrg').value || '').trim();
+  const keyword = (document.getElementById('srcKeyword').value || '').trim();
+  const discoverNow = document.getElementById('srcDiscoverNow').checked;
+  const st   = document.getElementById('srcStatus');
+  // Pull the numeric org id out of a Sales Nav / company URL, or accept a bare number.
+  const orgId = (orgRaw.match(/(?:organization|company)\/(\d+)/) || orgRaw.match(/^(\d{3,})$/) || [])[1] || '';
+  if (!name) { st.textContent = 'Enter a source name.'; return; }
+  if (discoverNow && !orgId) { st.textContent = 'To collect bridges now, add the Sales Nav company URL or Org ID (or untick the box).'; return; }
+  st.textContent = 'Adding…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: name, linkedin_url: url, category: cat, org_id: orgId, discover_keyword: keyword, discover_now: discoverNow }) });
+    const d = await resp.json();
+    if (d.saved) {
+      st.textContent = discoverNow
+        ? '✓ Added "' + name + '". Bridges queued — they’ll be collected on the next sync, or open the Radar extension and click Discover to run now.'
+        : '✓ Added "' + name + '". Bridges will be found on the monthly discovery run.';
+      document.getElementById('srcName').value = ''; document.getElementById('srcUrl').value = ''; document.getElementById('srcOrg').value = ''; document.getElementById('srcKeyword').value = '';
+      await loadSources(); await load();
+    } else { st.textContent = 'Error: ' + JSON.stringify(d); }
+  } catch(e) { st.textContent = 'Error: ' + e.message; }
+}
+
+async function addBridgeManual() {
+  const name   = (document.getElementById('mbName').value || '').trim();
+  const url     = (document.getElementById('mbUrl').value || '').trim();
+  const source = (document.getElementById('mbSource').value || '').trim();
+  const title  = (document.getElementById('mbTitle').value || '').trim();
+  const conn   = document.getElementById('mbConn').value;
+  const st     = document.getElementById('mbStatus');
+  if (!name) { st.textContent = 'Enter a name.'; return; }
+  if (!/linkedin\.com\/in\//i.test(url)) { st.textContent = 'Enter a linkedin.com/in/… profile URL.'; return; }
+  const publicUrl = url.split('?')[0].replace(/\/+$/, '');
+  const slug = publicUrl.split('/in/')[1] || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const urn = 'manual:' + slug;
+  st.textContent = 'Adding…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addBridges', source: source || 'Manual', bridges: [{ name: name, title: title, urn: urn, linkedin_url: publicUrl, connection: conn, active: true }] }) });
+    const d = await resp.json();
+    if (d && (d.saved || d.added != null || d.success)) {
+      st.textContent = '✓ Bridge "' + name + '" added.';
+      document.getElementById('mbName').value = ''; document.getElementById('mbUrl').value = ''; document.getElementById('mbSource').value = ''; document.getElementById('mbTitle').value = '';
+      await loadBridges(); await load();
+    } else if (d && d.error && /unknown action|addBridges/i.test(JSON.stringify(d))) {
+      st.textContent = '⚠ The backend doesn’t support manual bridges yet (addBridges action not deployed). The form is ready — it will work once that action is live.';
+    } else {
+      st.textContent = 'Error: ' + JSON.stringify(d).slice(0, 160);
+    }
+  } catch(e) { st.textContent = 'Error: ' + e.message; }
+}
+
+// ===== Backend: Bridge candidates =====
+async function loadBridges() {
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=getBridges&_=' + Date.now();
+    const r = await fetch(url); const t = await r.text();
+    const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (j.success) { BRIDGES = j.bridges || []; BRIDGES_LOADED = true; }
+  } catch(e) { console.error('loadBridges', e); }
+}
+async function setBridgeActive(urn, active, statusEl) {
+  if (statusEl) { statusEl.textContent = 'saving…'; statusEl.classList.remove('ok'); }
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setBridgeActive', urn: urn, active: active })
+    });
+    const d = await resp.json();
+    if (d && (d.saved || d.success)) {
+      if (statusEl) { statusEl.textContent = '✓'; statusEl.classList.add('ok'); setTimeout(() => { if (statusEl.textContent === '✓') statusEl.textContent = ''; }, 1600); }
+      return true;
+    }
+    if (statusEl) { statusEl.textContent = 'error'; }
+    return false;
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'error';
+    return false;
+  }
+}
+async function deleteBridge(urn){
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'deleteBridge', urn: urn })
+    });
+    const d = await resp.json();
+    return !!(d && (d.saved || d.success || d.deleted));
+  } catch(e) {
+    return false;
+  }
+}
+
+// ===== Backend: main data load =====
+async function load() {
+  if (!CONFIG.WEBAPP_URL || CONFIG.WEBAPP_URL === '__WEBAPP_URL__') {
+    document.getElementById('warningBanner').style.display = 'block'; return;
+  }
+  loadExclusions();  // from localStorage first, so the UI reflects choices immediately
+  await loadSources();
+  await loadBridges();
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&_=' + Date.now();
+    const resp = await fetch(url);
+    const text = await resp.text();
+    const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (json.success) {
+      ROWS = json.rows || [];
+      // Merge hub-stored exclusions (cross-device) with local ones, if the backend provides them.
+      if (json.excluded_leads) { try { loadExclusions(JSON.parse(json.excluded_leads)); } catch(e) {} }
+      renderAll();
+    }
+  } catch(e) { console.error('load', e); }
+  await loadKeyStatus();
+}
+
+// ===== Helpers =====
+function isThisWeek(d){
+  if(!d) return false;
+  const dt = new Date(d); if(isNaN(dt)) return false;
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7*24*60*60*1000);
+  return dt >= weekAgo && dt <= now;
+}
+function isToday(d){
+  if(!d) return false;
+  const dt = new Date(d); if(isNaN(dt)) return false;
+  const n = new Date();
+  return dt.getFullYear()===n.getFullYear() && dt.getMonth()===n.getMonth() && dt.getDate()===n.getDate();
+}
+function dayKey(d){ try{ const dt=new Date(d); if(isNaN(dt)) return ''; return dt.toISOString().slice(0,10); }catch(e){ return ''; } }
+function fmtDate(d){ try{ return d ? new Date(d).toLocaleDateString() : ''; }catch(e){ return d||''; } }
+function fmtDayLabel(key){ try{ return new Date(key+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }catch(e){ return key; } }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Defensive name cleaner — strips LinkedIn status suffixes ("… was last active 2 days ago",
+// "… is reachable", etc.), trailing " • …" segments, and trailing emoji/flags, so records
+// stored with dirty names (e.g. "Patrick Ferron was last active 2 days ago") display clean.
+function cleanName(raw){
+  let s = String(raw||'').replace(/\s+/g,' ').trim();
+  if(!s) return '';
+  const cut = s.match(/\s+(?:is|was)\s+(?:reachable|last active|open to work|a group member|hiring|online|out of office)\b/i);
+  if(cut && cut.index>=0) s = s.slice(0, cut.index);
+  s = s.replace(/\s*[•·]\s*.*$/,'');
+  try { s = s.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE00}-\u{FE0F}\u{1F1E6}-\u{1F1FF}].*$/u,''); } catch(e) {}
+  return s.replace(/\s+/g,' ').replace(/^[\s.,;:•·\-]+|[\s.,;:•·\-]+$/g,'').trim();
+}
+function fullName(r){ return cleanName(((r.first_name||'')+' '+(r.last_name||'')).trim()); }
+
+// ===== ICP-fit grade (computed client-side from a bridge's title) =====
+// Returns one of "A+","A","B","C","D" — first matching rule wins, top to bottom.
+function icpGrade(title){
+  const t = String(title||'');
+  if (!t.trim()) return 'D';
+  const mentionsUS = /\b(US|U\.S\.|USA|United States|America|American)\b/i.test(t);
+  // A+ — explicitly bringing foreign companies INTO the US
+  const aPlusForeign = /help(ing)?\b.*\b(foreign|international|overseas|european|french|non[- ]?us)\b.*\b(compan|business|firm|client|brand)/i.test(t);
+  if (aPlusForeign && mentionsUS) return 'A+';
+  if (/\b(US|U\.S\.|USA|United States|America|American)\b.*\b(market entry|expansion|soft.?land|go[- ]?to[- ]?market|launch|set ?up|establish)/i.test(t)) return 'A+';
+  if (/\b(expand|enter|launch|bring|grow)\b.*\b(to|into|in)\b.*\b(the )?(US|U\.S\.|USA|United States|America)\b/i.test(t)) return 'A+';
+  if (/\bUS market entry\b|\bUS expansion\b/i.test(t)) return 'A+';
+  // A — international expansion generally (not US-specific)
+  if (/international (expansion|development|business|trade|growth)|market entry|cross[- ]?border|internationaliz|global expansion|expand(ing)? abroad|go[- ]?to[- ]?market|market development/i.test(t)) return 'A';
+  // B — commercial / BD roles
+  if (/business development|partnership|sales|commercial|export|growth|account (manager|executive)|revenue/i.test(t)) return 'B';
+  // C — senior / leadership without the above
+  if (/partner|founder|ceo|coo|managing director|director|vice president|\bvp\b|head of|president|consultant|advisor/i.test(t)) return 'C';
+  // D — none of the above
+  return 'D';
+}
+// Sort weight: A+ (highest) → D (lowest)
+function gradeRank(g){ return ({ 'A+':5, 'A':4, 'B':3, 'C':2, 'D':1 })[g] || 0; }
+// Connection-level badge from bridge.connection ("1st"/"2nd"/"3rd"/"")
+function connBadge(connection){
+  const c = _norm(connection);
+  if (c === '1st') return '<span class="lvl-badge lvl-1">Level 1 &#10003;</span>';
+  if (c === '2nd') return '<span class="lvl-badge lvl-2">Level 2</span>';
+  if (c === '3rd') return '<span class="lvl-badge lvl-3">Level 3</span>';
+  return '<span class="lvl-badge lvl-0">Level ?</span>';
+}
+
+// ===== Getting-started onboarding =====
+// Four setup flags tracked in localStorage. Step 1 (signed in) is always true here
+// because renderAll only runs after initAuth reveals the app. The rest are manual/
+// confirm-based for now; real auto-detection comes from the extension later.
+const OB_KEYS = { salesnav:'radar_salesnav_ok', ext:'radar_ext_ok', botdog:'radar_botdog_ok' };
+function obFlag(k){ try{ return localStorage.getItem(k) === '1'; }catch(e){ return false; } }
+function obSet(k, v){ try{ v ? localStorage.setItem(k,'1') : localStorage.removeItem(k); }catch(e){} }
+function obMark(k){ obSet(k, true); renderOnboarding(); }
+function obReopen(){ try{ localStorage.removeItem('radar_onboarded'); }catch(e){} renderOnboarding(); }
+function obDismiss(){ try{ localStorage.setItem('radar_onboarded','1'); }catch(e){} renderOnboarding(); }
+
+function obDot(done){ return '<div class="ob-dot ' + (done?'done':'todo') + '">' + (done?'&#10003;':'&#9675;') + '</div>'; }
+
+// ===== Extension auto-detection =====
+// The Radar content script announces itself two ways: it sets data-radar-ext (=version)
+// and data-radar-salesnav (='1'/'0') on <html>, and dispatches a window 'radar-ext-ready'
+// CustomEvent {detail:{version,salesNav}}. detectExtension() reads the attributes and
+// persists the onboarding flags; initExtDetect() wires the event + polls on load.
+function detectExtension(){
+  try {
+    var ver = document.documentElement.getAttribute('data-radar-ext');
+    if (ver) {
+      localStorage.setItem('radar_ext_ok', '1');
+      localStorage.setItem('radar_ext_ver', ver);
+    }
+    var sn = document.documentElement.getAttribute('data-radar-salesnav');
+    if (sn === '1') { localStorage.setItem('radar_salesnav_ok', '1'); }
+  } catch(e) {}
+  renderOnboarding();
+}
+
+let _extDetectInit = false;
+function initExtDetect(){
+  if (_extDetectInit) return;
+  _extDetectInit = true;
+  window.addEventListener('radar-ext-ready', function(e){
+    try {
+      if (e.detail) {
+        if (e.detail.version) {
+          localStorage.setItem('radar_ext_ok', '1');
+          localStorage.setItem('radar_ext_ver', e.detail.version);
+        }
+        if (e.detail.salesNav === true) localStorage.setItem('radar_salesnav_ok', '1');
+      }
+    } catch(_) {}
+    detectExtension();
+  });
+  // Nudge the extension to announce, then detect immediately.
+  try { window.dispatchEvent(new Event('radar-ext-ping')); } catch(e) {}
+  detectExtension();
+  // Poll a handful of times in case the content script injects late.
+  var tries = 0;
+  var poll = setInterval(function(){
+    tries++;
+    if (obFlag('radar_ext_ok') || tries >= 6) { clearInterval(poll); }
+    try { window.dispatchEvent(new Event('radar-ext-ping')); } catch(e) {}
+    detectExtension();
+  }, 1500);
+}
+
+// Test & Save the Botdog key through the proxy (same pattern as saveSettings),
+// then re-check keyStatus; only mark step done when the backend confirms it's valid.
+async function obSaveBotdog(){
+  const inp = document.getElementById('obBotdogKey');
+  const st  = document.getElementById('obBotdogStatus');
+  const btn = document.getElementById('obBotdogBtn');
+  const key = (inp && inp.value || '').trim();
+  if (!key) { if (st){ st.className='ob-status err'; st.textContent='Paste your Botdog API key.'; } return; }
+  if (st){ st.className='ob-status'; st.textContent='Testing…'; }
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'setConfig', botdog_api_key: key }) });
+    const data = await resp.json();
+    if (!data.saved) { if (st){ st.className='ob-status err'; st.textContent='Error: ' + JSON.stringify(data); } if (btn) btn.disabled=false; return; }
+    // Re-check backend key status to confirm the key is valid.
+    let valid = false;
+    try {
+      const t = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=keyStatus&_=' + Date.now()).then(r=>r.text());
+      const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+      valid = !!(j.botdog_set && j.botdog_valid);
+    } catch(e) {}
+    // Keep the Settings view's Key Status panel in sync if present.
+    try { loadKeyStatus(); } catch(e) {}
+    if (valid) { obSet(OB_KEYS.botdog, true); if (st){ st.className='ob-status ok'; st.textContent='Connected ✓'; } renderOnboarding(); }
+    else { if (st){ st.className='ob-status err'; st.textContent='Saved, but the key tested invalid. Double-check it.'; } if (btn) btn.disabled=false; }
+  } catch(e) {
+    if (st){ st.className='ob-status err'; st.textContent='Error: ' + e.message; }
+    if (btn) btn.disabled=false;
+  }
+}
+
+function renderOnboarding(){
+  const wrap = document.getElementById('onboardingWrap');
+  if (!wrap) return;
+  const done = { signin:true, salesnav:obFlag(OB_KEYS.salesnav), ext:obFlag(OB_KEYS.ext), botdog:obFlag(OB_KEYS.botdog) };
+  const count = (done.signin?1:0) + (done.salesnav?1:0) + (done.ext?1:0) + (done.botdog?1:0);
+  const all = count === 4;
+  const onboarded = obFlag('radar_onboarded');
+
+  // Fully set up and dismissed → just a small "Setup" reopen link.
+  if (all && onboarded) {
+    wrap.innerHTML = '<div class="onboard-reopen"><a onclick="obReopen()">⚙ Setup</a></div>';
+    return;
+  }
+  // All four done but not yet dismissed → collapsed "all set" line.
+  if (all) {
+    wrap.innerHTML =
+      '<div class="onboard-done">' +
+        '<div class="ob-dot done">&#10003;</div>' +
+        '<span class="ok-txt">You\'re all set — Radar is fully configured.</span>' +
+        '<button class="dismiss" onclick="obDismiss()">dismiss</button>' +
+      '</div>';
+    return;
+  }
+
+  const steps = [];
+  // 1) Signed in
+  steps.push(
+    '<div class="ob-step">' + obDot(true) +
+      '<div class="ob-body"><div class="ob-title done">Signed in with LinkedIn</div></div>' +
+    '</div>');
+  // 2) Sales Navigator connected — best-effort auto-detected via the extension.
+  steps.push(
+    '<div class="ob-step">' + obDot(done.salesnav) +
+      '<div class="ob-body"><div class="ob-title' + (done.salesnav?' done':'') + '">Sales Navigator connected</div>' +
+        (done.salesnav ?
+        '<div class="ob-note">Sales Navigator detected</div>' :
+        '<div class="ob-actions">' +
+          '<a class="ob-link" href="https://www.linkedin.com/sales/" target="_blank" rel="noopener">Open Sales Navigator ↗</a>' +
+          '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
+        '</div>' +
+        '<div class="ob-note">Detection is best-effort. <a onclick="obMark(\'' + OB_KEYS.salesnav + '\')">I\'ve connected it</a></div>') +
+      '</div>' +
+    '</div>');
+  // 3) Chrome extension installed — auto-detected via the content script.
+  var extVer = '';
+  try { extVer = localStorage.getItem('radar_ext_ver') || ''; } catch(e) {}
+  steps.push(
+    '<div class="ob-step">' + obDot(done.ext) +
+      '<div class="ob-body"><div class="ob-title' + (done.ext?' done':'') + '">' +
+        (done.ext ? 'Extension installed' + (extVer ? ' (v' + extVer + ')' : '') : 'Install the Chrome extension') + '</div>' +
+        (done.ext ?
+        '<div class="ob-note">detected automatically</div>' :
+        '<div class="ob-actions">' +
+          '<a class="ob-link" href="/extension.html" target="_blank" rel="noopener">Download &amp; install ↗</a>' +
+          '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
+        '</div>') +
+      '</div>' +
+    '</div>');
+  // 4) Connect Botdog
+  steps.push(
+    '<div class="ob-step">' + obDot(done.botdog) +
+      '<div class="ob-body"><div class="ob-title' + (done.botdog?' done':'') + '">Connect Botdog</div>' +
+        (done.botdog ? '' :
+        '<div class="ob-field">' +
+          '<input type="password" id="obBotdogKey" placeholder="paste your Botdog API key…">' +
+          '<button class="ob-btn" id="obBotdogBtn" onclick="obSaveBotdog()">Test &amp; Save</button>' +
+        '</div>' +
+        '<div class="ob-status" id="obBotdogStatus"></div>') +
+        '<div class="ob-note">Don\'t have Botdog? <a href="https://tolt.link/gershonAI" target="_blank" rel="noopener">Create your Botdog account →</a></div>' +
+      '</div>' +
+    '</div>');
+
+  const pct = Math.round((count/4)*100);
+  wrap.innerHTML =
+    '<div class="onboard">' +
+      '<div class="ob-head">' +
+        '<h3>Get set up</h3>' +
+        '<div class="ob-progress">' +
+          '<span class="ob-count">' + count + ' of 4 done</span>' +
+          '<span class="ob-bar"><i style="width:' + pct + '%"></i></span>' +
+        '</div>' +
+      '</div>' +
+      steps.join('') +
+    '</div>';
+}
+
+// ===== Render orchestration =====
+function renderAll(){
+  renderOnboarding();
+  renderStats();
+  populateFilters();
+  renderTargets();
+  renderBridges();
+  renderSources();
+  renderCollections();
+  renderLog();
+  renderCharts();
+  renderFlow();
+}
+
+// ----- Collection Log view -----
+// One line per prospect ever collected: DATE : SOURCE > BRIDGE > PROSPECT (level with you).
+const LEVEL_HELP = "Level = your LinkedIn connection degree to the prospect — Level 1: you're already connected · Level 2: a connection of yours knows them · Level 3: further out.";
+function levelChip(connection){
+  const c = _norm(connection);
+  const t = ' title="' + esc(LEVEL_HELP) + '"';
+  if (c === '1st') return '<span class="lg-lvl l1"' + t + '>Level 1</span>';
+  if (c === '2nd') return '<span class="lg-lvl l2"' + t + '>Level 2</span>';
+  if (c === '3rd') return '<span class="lg-lvl l3"' + t + '>Level 3</span>';
+  return '<span class="lg-lvl l0"' + t + '>Level —</span>';
+}
+// Small muted location chip for a collected row (city/country), '' when absent.
+function locChip(r){
+  const loc = rowLocation(r);
+  if (!loc || loc === '—') return '';
+  return '<span class="loc-chip" title="Prospect location">📍 ' + esc(loc) + '</span>';
+}
+function renderLog(){
+  const body = document.getElementById('logBody');
+  if (!body) return;
+  const q  = (document.getElementById('logSearch').value||'').toLowerCase().trim();
+  const fl = document.getElementById('logLevel').value;
+  const cnt = document.getElementById('logCount');
+
+  // Newest first.
+  let list = ROWS.slice().sort((a,b) =>
+    (new Date(b.collected_date||0)) - (new Date(a.collected_date||0)));
+
+  list = list.filter(r => {
+    const conn = _norm(r.connection);
+    if (fl === 'none' && conn) return false;
+    if (fl && fl !== 'none' && conn !== fl) return false;
+    if (!q) return true;
+    const hay = [leadSource(r), r.radar_person, fullName(r), r.company, r.title]
+      .map(x => String(x||'').toLowerCase()).join(' ');
+    return hay.indexOf(q) !== -1;
+  });
+
+  if (cnt) cnt.textContent = list.length + (list.length===1?' collection':' collections');
+
+  if (!list.length) { body.innerHTML = '<div class="empty" style="padding:18px">No matching collections.</div>'; return; }
+
+  let html = '', lastDay = '';
+  list.forEach(r => {
+    const day = dayKey(r.collected_date);
+    if (day !== lastDay) { html += '<div class="log-day">' + esc(fmtDayLabel(day) || 'Undated') + '</div>'; lastDay = day; }
+    const source   = esc(leadSource(r) || 'Unassigned');
+    const bridge   = esc(r.radar_person || '—');
+    const prospect = esc(fullName(r) || '(unknown)');
+    html +=
+      '<div class="log-line">' +
+        '<span class="lg-date">' + esc(fmtDate(r.collected_date)) + '</span>' +
+        '<span class="lg-sep">:</span>' +
+        '<span class="lg-source">' + source + '</span>' +
+        '<span class="lg-arrow">&rsaquo;</span>' +
+        '<span class="lg-bridge">' + bridge + '</span>' +
+        '<span class="lg-arrow">&rsaquo;</span>' +
+        '<span class="lg-prospect">' + prospect + '</span>' +
+        locChip(r) +
+        levelChip(r.connection) +
+      '</div>';
+  });
+  body.innerHTML = html;
+}
+
+function renderStats(){
+  const rows = ROWS;
+  const total   = rows.length;
+  // Percentages are over SELECTED targets (the ones you intend for Botdog). Unselecting the
+  // prospects with no LinkedIn URL is how you drive both numbers toward 100%.
+  const selected = rows.filter(r => !EXCLUDED.has(leadKey(r)));
+  const selCount = selected.length;
+  const pushed  = selected.filter(r => r.botdog_pushed).length;
+  const linked  = selected.filter(r => String(r.linkedin_url || '').trim()).length;
+  const pct = (n) => selCount ? Math.round(n / selCount * 100) + '%' : '0%';
+  // Bridges/Sources reflect the ACTUAL active bridge list (not just bridges that have already
+  // produced targets) so newly discovered/activated bridges are counted the moment they exist.
+  const activeBridges = BRIDGES.filter(b => b.active === true);
+  const activeBridgeCount = activeBridges.length;
+  const activeSourceCount = new Set(activeBridges.map(b => _norm(b.source)).filter(Boolean)).size;
+  document.getElementById('statTotal').textContent     = total;
+  document.getElementById('statToday').textContent     = rows.filter(r => isToday(r.collected_date)).length;
+  document.getElementById('statWeek').textContent      = rows.filter(r => isThisWeek(r.collected_date)).length;
+  document.getElementById('statLinkedPct').textContent = pct(linked);
+  document.getElementById('statLinkedSub').textContent = linked + ' of ' + selCount + ' selected';
+  document.getElementById('statPushedPct').textContent = pct(pushed);
+  document.getElementById('statPushedSub').textContent = pushed + ' of ' + selCount + ' selected';
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+  // ---------- 3. TARGETS ----------
+  const grades = rows.map(r => icpGrade(cleanTitle(r.title)));
+  const topGrade = grades.filter(g => g === 'A+' || g === 'A').length;
+  set('statTopGrade', topGrade);
+  set('statTopGradeSub', total ? Math.round(topGrade / total * 100) + '% of all targets' : 'best fits');
+
+  // ---------- 2. BRIDGES ----------
+  const totalB = BRIDGES.length;
+  const connB  = BRIDGES.filter(b => /1st|^1\b/i.test(String(b.connection || ''))).length;
+  set('statBridges', activeBridgeCount);
+  set('statBridgesSub', 'of ' + totalB + ' found');
+  set('statBridgesConn', totalB ? Math.round(connB / totalB * 100) + '%' : '0%');
+  set('statBridgesConnSub', connB + ' of ' + totalB);
+  // Bridges that have actually produced at least one target.
+  const producedBy = new Set(rows.map(r => _norm(r.radar_person)).filter(Boolean));
+  const brgProducing = activeBridges.filter(b => producedBy.has(_norm(b.name))).length;
+  set('statBrgProducing', brgProducing);
+  set('statBrgProducingSub', brgProducing + ' of ' + activeBridgeCount + ' active');
+  set('statBrgNeedInvite', totalB - connB);
+
+  // ---------- 1. SOURCES ----------
+  const srcTotal = STORED_SOURCES.length || activeSourceCount;
+  const srcWithBridges = new Set(BRIDGES.map(b => _norm(b.source)).filter(Boolean));
+  const srcProducing = STORED_SOURCES.filter(s => srcWithBridges.has(_norm(s.name))).length;
+  set('statSources', srcTotal);
+  set('statSrcProducing', srcProducing);
+  set('statSrcProducingSub', srcProducing + ' of ' + srcTotal);
+  set('statSrcIdle', Math.max(0, srcTotal - srcProducing));
+  set('statSrcAvg', srcTotal ? Math.round(total / srcTotal) : 0);
+
+  // nav counts
+  set('leadCount', rows.length);
+  set('bridgeNavCount', BRIDGES.length);
+  set('sourceNavCount', STORED_SOURCES.length);
+}
+
+// ----- Sync Now (web app drives the extension) -----
+// The extension's content script listens for 'radar-ext-sync' and runs the daily sync
+// (bridge discovery for new sources + prospect collection), then dispatches
+// 'radar-ext-sync-result'. This lets the user run a collection without opening the popup.
+let SYNC_RUNNING = false;
+function syncMsg(text, kind){
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = 'sync-status ' + (kind || 'info');
+  el.textContent = text;
+}
+function triggerSync(){
+  if (SYNC_RUNNING) return;
+  const btn = document.getElementById('syncNowBtn');
+  const hasExt = document.documentElement.getAttribute('data-radar-ext');
+  if (!hasExt) {
+    syncMsg('Chrome extension not detected. Install/reload the Radar extension, then try again.', 'err');
+    return;
+  }
+  SYNC_RUNNING = true;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Syncing…'; }
+  syncMsg('Sync started — collecting prospects from your active bridges in the background. This can take a few minutes; you can keep working.', 'info');
+  let done = false;
+  const onResult = (e) => {
+    if (done) return; done = true;
+    window.removeEventListener('radar-ext-sync-result', onResult);
+    SYNC_RUNNING = false;
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Sync Now'; }
+    const d = (e && e.detail) || {};
+    if (d.ok) {
+      const nw = (d.result && (d.result.written != null ? d.result.written : d.result.newLeads)) ;
+      syncMsg('✓ Sync complete' + (nw != null ? ' — ' + nw + ' new prospects written.' : '.') + ' Refreshing…', 'ok');
+      load();
+    } else {
+      syncMsg('Sync error: ' + (d.error || 'unknown') + '. Make sure you are logged into Sales Navigator.', 'err');
+    }
+  };
+  window.addEventListener('radar-ext-sync-result', onResult);
+  window.dispatchEvent(new CustomEvent('radar-ext-sync'));
+  // Safety timeout: the SW keeps running even if we miss the event; re-enable the button.
+  setTimeout(() => {
+    if (done) return; done = true;
+    window.removeEventListener('radar-ext-sync-result', onResult);
+    SYNC_RUNNING = false;
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Sync Now'; }
+    syncMsg('Sync is running in the background. Refresh the page in a few minutes to see new prospects.', 'info');
+  }, 180000);
+}
+
+// ----- Targets view -----
+function populateFilters(){
+  const bridges = Array.from(new Set(ROWS.map(r => r.radar_person).filter(Boolean))).sort();
+  const sources = Array.from(new Set(ROWS.map(leadSource).filter(Boolean))).sort();
+  const bSel = document.getElementById('tBridge'), sSel = document.getElementById('tSource');
+  const bVal = bSel.value, sVal = sSel.value;
+  bSel.innerHTML = '<option value="">All bridges</option>' + bridges.map(b => '<option>' + esc(b) + '</option>').join('');
+  sSel.innerHTML = '<option value="">All sources</option>' + sources.map(s => '<option>' + esc(s) + '</option>').join('');
+  bSel.value = bVal; sSel.value = sVal;
+}
+
+// Compose a display location from city/country, falling back to r.location.
+function rowLocation(r){
+  const city = String(r.city||'').trim(), country = String(r.country||'').trim();
+  if (city && country) return city + ', ' + country;
+  if (city) return city;
+  if (country) return country;
+  return String(r.location||'').trim() || '—';
+}
+function cleanTitle(t){
+  const s = String(t || '').trim();
+  // Sales Nav CTA/placeholder that sometimes lands in the title for out-of-network cards.
+  if (/save this lead|get alerts|change jobs, post/i.test(s)) return '';
+  return s;
+}
+function rowFields(r){
+  const title = cleanTitle(r.title);
+  return {
+    name: fullName(r), title: title, company: r.company||'',
+    location: rowLocation(r), language: r.language||'—',
+    bridge: r.radar_person||'', source: leadSource(r)||'',
+    grade: icpGrade(title),
+    date: r.collected_date ? new Date(r.collected_date).getTime() : 0,
+    botdog: r.botdog_pushed ? 1 : 0, _r: r
+  };
+}
+// Collapse duplicate people: same person reached via several bridges appears once.
+// Key by lead_id (the LinkedIn URN); fall back to name+company. Keeps the first seen and
+// records how many bridges reached them.
+function dedupeTargets(list){
+  const seen = new Map();
+  for (const x of list) {
+    const r = x._r || {};
+    const key = String(r.lead_id || '').trim() || ((x.name || '') + '|' + (x.company || '')).toLowerCase();
+    if (seen.has(key)) { seen.get(key)._dupes++; continue; }
+    x._dupes = 1;
+    seen.set(key, x);
+  }
+  return [...seen.values()];
+}
+
+function renderTargets(){
+  const q = (document.getElementById('tSearch').value||'').toLowerCase().trim();
+  const fb = document.getElementById('tBridge').value;
+  const fs = document.getElementById('tSource').value;
+  let list = ROWS.map(rowFields);
+  if (fb) list = list.filter(x => x.bridge === fb);
+  if (fs) list = list.filter(x => x.source === fs);
+  if (q)  list = list.filter(x => (x.name+' '+x.title+' '+x.company+' '+x.location+' '+x.language).toLowerCase().includes(q));
+  if (STAT_FILTER === 'today')       list = list.filter(x => isToday(x._r.collected_date));
+  else if (STAT_FILTER === 'week')   list = list.filter(x => isThisWeek(x._r.collected_date));
+  else if (STAT_FILTER === 'pushed') list = list.filter(x => x.botdog === 1);
+  else if (STAT_FILTER === 'nolink') list = list.filter(x => !String((x._r && x._r.linkedin_url) || '').trim());
+  // Hide unselected (excluded) targets unless the user asks to see them.
+  if (!SHOW_EXCLUDED) list = list.filter(x => !EXCLUDED.has(leadKey(x._r)));
+  // Collapse duplicate people (same person via multiple bridges → one row).
+  const beforeDupes = list.length;
+  list = dedupeTargets(list);
+  const removedDupes = beforeDupes - list.length;
+
+  const k = SORT.key, dir = SORT.dir;
+  list.sort((a,b) => {
+    let va = a[k], vb = b[k];
+    if (k === 'grade') { va = gradeRank(a.grade); vb = gradeRank(b.grade); }
+    else if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return -1*dir; if (va > vb) return 1*dir; return 0;
+  });
+
+  const body = document.getElementById('targetsBody');
+  body.innerHTML = list.length ? list.map(x => {
+    const r = x._r;
+    const lid = leadKey(r);
+    const excluded = EXCLUDED.has(lid);
+    const lidArg = "'" + String(lid).replace(/['"\\]/g, '') + "'";
+    const g = x.grade || 'D';
+    const gradePill = '<span class="icp-grade g-' + g.replace('+','plus') + '" title="ICP fit">' + g + '</span>';
+    const dupeTag = (x._dupes > 1) ? ' <span class="dupe-tag" title="Reached via ' + x._dupes + ' bridges">×' + x._dupes + '</span>' : '';
+    return '<tr class="' + (excluded ? 'row-excluded' : '') + '">' +
+      '<td style="text-align:center"><input type="checkbox" class="sel-box"' + (excluded ? '' : ' checked') +
+        ' onchange="toggleTargetSelect(' + lidArg + ', this)" title="' + (excluded ? 'Unselected — excluded from Botdog' : 'Selected — will go to Botdog') + '"></td>' +
+      '<td style="text-align:center">' + gradePill + '</td>' +
+      '<td>' + esc(x.name) + dupeTag + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.company) +
+      '</td><td>' + esc(x.location) + '</td><td>' + esc(x.language) +
+      '</td><td>' + esc(x.bridge) + '</td><td>' + esc(x.source) + '</td><td>' + fmtDate(r.collected_date) +
+      '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') +
+      '</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
+  }).join('') : '<tr><td colspan="12" class="empty">No targets match</td></tr>';
+  const _chip = STAT_FILTER ? '<span class="stat-chip" onclick="clearStatFilter()" title="Clear filter">' + esc(STAT_LABEL[STAT_FILTER]||STAT_FILTER) + ' <span class="x">✕</span></span>' : '';
+  const _dupeNote = removedDupes > 0 ? ' <span style="color:#94a3b8">(' + removedDupes + ' duplicate' + (removedDupes===1?'':'s') + ' merged)</span>' : '';
+  document.getElementById('tCount').innerHTML = _chip + list.length + ' target' + (list.length===1?'':'s') + _dupeNote;
+
+  // update header arrows
+  document.querySelectorAll('#tHead th.sortable').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.key === SORT.key);
+    const a = th.querySelector('.arrow');
+    a.textContent = th.dataset.key === SORT.key ? (SORT.dir === 1 ? '▲' : '▼') : '';
+  });
+}
+
+function initSorting(){
+  document.querySelectorAll('#tHead th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (SORT.key === key) SORT.dir *= -1;
+      else { SORT.key = key; SORT.dir = (key === 'date' || key === 'botdog') ? -1 : 1; }
+      renderTargets();
+    });
+  });
+}
+
+// ----- Bridges view -----
+function bridgeCounts(){
+  const byBridge = {};
+  ROWS.forEach(r => { const k = r.radar_person || '—'; (byBridge[k] = byBridge[k] || []).push(r); });
+  Object.keys(CONFIG.BRIDGE_SOURCE).forEach(k => { if (!byBridge[k]) byBridge[k] = []; });
+  return byBridge;
+}
+// # of targets already collected via a bridge (match row.radar_person to bridge.name)
+function targetsForBridge(name){
+  const n = _norm(name);
+  let c = 0;
+  ROWS.forEach(r => { if (_norm(r.radar_person) === n) c++; });
+  return c;
+}
+function setBridgeFilter(f){
+  BRIDGE_FILTER = f;
+  document.querySelectorAll('#bridgeFilterSeg button').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  renderBridges();
+}
+
+// Trigger the extension to invite non-1st-degree bridges into the Botdog bridges campaign now.
+let BRIDGE_PUSH_RUNNING = false;
+function triggerBridgePush(){
+  const st = document.getElementById('bridgePushStatus');
+  const btn = document.getElementById('inviteBridgesBtn');
+  const show = (t, k) => { if (st) { st.style.display='block'; st.className='sync-status '+(k||'info'); st.textContent=t; } };
+  if (!document.documentElement.getAttribute('data-radar-ext')) { show('Chrome extension not detected — install/reload the Radar extension, then try again.', 'err'); return; }
+  if (BRIDGE_PUSH_RUNNING) return;
+  BRIDGE_PUSH_RUNNING = true;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Inviting…'; }
+  show('Inviting your non-1st-degree bridges into the Botdog campaign… enricherPro is resolving their LinkedIn URLs. This can take a couple of minutes.', 'info');
+  let done = false;
+  const onResult = (e) => {
+    if (done) return; done = true;
+    window.removeEventListener('radar-ext-push-bridges-result', onResult);
+    BRIDGE_PUSH_RUNNING = false;
+    if (btn) { btn.disabled = false; btn.textContent = '📨 Invite to Botdog'; }
+    const d = (e && e.detail) || {}, r = d.result || {};
+    if (!d.ok) { show('Couldn’t run: ' + (d.error || 'unknown') + '.', 'err'); return; }
+    if (r.reason === 'no-key') { show('Set your Botdog API key in Settings first (it’s handed to the extension when you save it).', 'err'); return; }
+    show('✓ Invited ' + (r.sent != null ? r.sent : 0) + ' bridge(s) this run (out of ' + (r.candidates != null ? r.candidates : '?') + ' not-yet-connected). It runs again on each sync to work through the rest.', 'ok');
+  };
+  window.addEventListener('radar-ext-push-bridges-result', onResult);
+  window.dispatchEvent(new CustomEvent('radar-ext-push-bridges'));
+  setTimeout(() => { if (done) return; done = true; window.removeEventListener('radar-ext-push-bridges-result', onResult); BRIDGE_PUSH_RUNNING = false; if (btn) { btn.disabled = false; btn.textContent = '📨 Invite to Botdog'; } show('Still running in the background — check the extension log (bridge-push:done) in a few minutes.', 'info'); }, 180000);
+}
+
+// Export bridges to CSV: FirstName, LastName, Title, Company Name, LinkedIn link.
+// Use only public /in/ URLs for the LinkedIn column (Sales Nav lead URLs aren't importable to
+// Botdog). Rows whose public URL is still missing are flagged so you can see what enricherPro
+// needs to resolve. Respects the current All / Active-only filter.
+function csvCell(v){ const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }
+function downloadBridgesCsv(){
+  const list = (BRIDGE_FILTER === 'active') ? BRIDGES.filter(b => b.active) : BRIDGES.slice();
+  if (!list.length) { alert('No bridges to export yet.'); return; }
+  const header = ['FirstName','LastName','Title','Company Name','LinkedIn link','Level'];
+  const levelOf = (c) => { const s = String(c||''); if (/1st|^1\b/i.test(s)) return '1'; if (/2nd|^2\b/i.test(s)) return '2'; if (/3rd|^3\b/i.test(s)) return '3'; return ''; };
+  const rows = list.map(b => {
+    const name = cleanName(b.name || '');
+    const parts = name.split(/\s+/);
+    const first = parts.shift() || '';
+    const last = parts.join(' ');
+    const url = String(b.linkedin_url || '');
+    const publicUrl = /linkedin\.com\/in\//i.test(url) ? url.split('?')[0] : '';
+    return [first, last, b.title || '', b.source || '', publicUrl || 'NEEDS-ENRICHERPRO', levelOf(b.connection)];
+  });
+  const csv = [header, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'radar-bridges-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function renderBridges(){
+  const body = document.getElementById('bridgesBody');
+  const countEl = document.getElementById('bridgeCount');
+
+  // Not fetched yet
+  if (!BRIDGES_LOADED) {
+    body.innerHTML = '<div class="empty">Loading bridge candidates…</div>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  // Empty state
+  if (!BRIDGES.length) {
+    body.innerHTML = '<div class="empty">No bridge candidates yet — add a Source and the extension will discover its people.</div>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+
+  // Group by source (organization)
+  const bySource = {};
+  BRIDGES.forEach(b => {
+    const s = b.source || 'Unassigned';
+    (bySource[s] = bySource[s] || []).push(b);
+  });
+
+  // Sort sources by candidate count desc
+  const sourceEntries = Object.entries(bySource).sort((a,b) => b[1].length - a[1].length);
+  const showActiveOnly = BRIDGE_FILTER === 'active';
+
+  let totalShown = 0, totalActive = 0;
+  BRIDGES.forEach(b => { if (b.active) totalActive++; });
+
+  const html = sourceEntries.map(([src, list]) => {
+    const activeCount = list.filter(b => b.active).length;
+    const visible = showActiveOnly ? list.filter(b => b.active) : list;
+    if (!visible.length) return '';
+    totalShown += visible.length;
+
+    // sort within source: active first, then by ICP grade (A+→D),
+    // then Level 1 first within a grade, then target count desc, then name
+    visible.sort((a,b) => {
+      if (!!b.active !== !!a.active) return (b.active?1:0) - (a.active?1:0);
+      const gb = gradeRank(icpGrade(b.title)), ga = gradeRank(icpGrade(a.title));
+      if (gb !== ga) return gb - ga;
+      const l1b = (_norm(b.connection)==='1st')?1:0, l1a = (_norm(a.connection)==='1st')?1:0;
+      if (l1b !== l1a) return l1b - l1a;
+      const tb = targetsForBridge(b.name), ta = targetsForBridge(a.name);
+      if (tb !== ta) return tb - ta;
+      return _norm(a.name).localeCompare(_norm(b.name));
+    });
+
+    const rows = visible.map(b => {
+      const tgt = targetsForBridge(b.name);
+      const on  = !!b.active;
+      const urnAttr = esc(b.urn);
+      const is1st = _norm(b.connection) === '1st';
+      const lvl  = connBadge(b.connection);
+      // Not connected yet -> invited into the dedicated bridges campaign BY DEFAULT.
+      // Untick to skip this person (opt-out, remembered).
+      const willInvite = b.invite_queued !== false;
+      const hint = is1st ? ''
+        : '<label class="invite-chk' + (willInvite ? '' : ' off') + '" title="Ticked = this bridge is sent a connection invite via the Botdog bridges campaign. Untick to skip them.">' +
+            '<input type="checkbox"' + (willInvite ? ' checked' : '') +
+            ' onchange="onBridgeInviteToggle(this,\'' + jsq(b.urn) + '\')"> ' + (willInvite ? 'invite' : 'skipped') +
+          '</label>';
+      const grade = icpGrade(b.title);
+      const gradeBadge = '<span class="icp-grade g-' + grade.replace('+','plus') + '" title="ICP fit">' + grade + '</span>';
+      const connect = b.linkedin_url
+        ? '<a class="connect" href="' + esc(b.linkedin_url) + '" target="_blank" rel="noopener">Open profile ↗</a>'
+        : '';
+      const ttl  = b.title ? '<div class="ttl">' + esc(b.title) + '</div>' : '';
+      return '<div class="bridge-row' + (on ? ' on' : '') + '" data-urn="' + urnAttr + '">' +
+        '<label class="switch"><input type="checkbox"' + (on ? ' checked' : '') +
+          ' onchange="onBridgeToggle(this,\'' + jsq(b.urn) + '\')"><span class="track"></span></label>' +
+        gradeBadge +
+        '<div class="info"><div class="nm">' + esc(cleanName(b.name)) + ' ' + lvl + ' ' + hint + ' ' + connect + '</div>' + ttl + '</div>' +
+        '<div class="tgtcount"><b>' + tgt + '</b><br><span style="font-size:0.72rem">targets</span></div>' +
+        '<div class="save-status"></div>' +
+        '<button class="remove" title="Remove candidate" onclick="onBridgeRemove(this,\'' + jsq(b.urn) + '\')">✕</button>' +
+        '</div>';
+    }).join('');
+
+    return '<div class="bridge-src-section">' +
+      '<div class="bridge-src-head"><span class="nm">' + esc(src.toUpperCase()) + '</span>' +
+        '<span class="meta">' + list.length + ' candidate' + (list.length===1?'':'s') + '</span>' +
+        '<span class="actives">' + activeCount + ' active</span></div>' +
+      '<div class="bridge-list">' + rows + '</div></div>';
+  }).join('');
+
+  body.innerHTML = html || '<div class="empty">No active bridges yet — toggle a candidate on above.</div>';
+  if (countEl) countEl.textContent = totalActive + ' of ' + BRIDGES.length + ' active';
+}
+
+// Every non-1st-degree bridge is invited into the dedicated Botdog bridges campaign
+// BY DEFAULT. This list holds the ones you've explicitly chosen to SKIP.
+function inviteSkips(){
+  try { return JSON.parse(localStorage.getItem('radar_bridge_invite_skips') || '[]'); } catch(e){ return []; }
+}
+function onBridgeInviteToggle(inputEl, urn){
+  const on = inputEl.checked;                 // ticked = invite, unticked = skip
+  const rec = BRIDGES.find(b => String(b.urn) === String(urn));
+  if (rec) rec.invite_queued = on;
+  let skips = inviteSkips().filter(u => String(u) !== String(urn));
+  if (!on) skips.push(urn);
+  try { localStorage.setItem('radar_bridge_invite_skips', JSON.stringify(skips)); } catch(e){}
+  // Hand the skip list to the extension; it invites everyone else.
+  try { window.dispatchEvent(new CustomEvent('radar-ext-set-bridge-invites', { detail: { skips: skips } })); } catch(e){}
+  const lbl = inputEl.closest('.invite-chk');
+  if (lbl) { lbl.classList.toggle('off', !on); lbl.lastChild.textContent = ' ' + (on ? 'invite' : 'skipped'); }
+  const note = document.getElementById('bridgePushStatus');
+  if (note) {
+    const willGo = BRIDGES.filter(b => _norm(b.connection) !== '1st' && b.invite_queued !== false).length;
+    note.style.display = 'block';
+    note.textContent = willGo + ' not-yet-connected bridge' + (willGo===1?'':'s') + ' will be invited'
+      + (skips.length ? ' · ' + skips.length + ' skipped' : '') + '. Click “Invite to Botdog” to send them.';
+  }
+}
+// Re-apply skip state onto freshly loaded bridges (default = invite).
+function applyInviteQueue(){
+  const skips = new Set(inviteSkips().map(String));
+  BRIDGES.forEach(b => { b.invite_queued = !skips.has(String(b.urn)); });
+  // keep the extension's copy in sync on every load
+  try { window.dispatchEvent(new CustomEvent('radar-ext-set-bridge-invites', { detail: { skips: [...skips] } })); } catch(e){}
+}
+
+// Toggle handler: optimistic UI + POST
+async function onBridgeToggle(inputEl, urn){
+  const newState = inputEl.checked;
+  const rowEl = inputEl.closest('.bridge-row');
+  const statusEl = rowEl ? rowEl.querySelector('.save-status') : null;
+
+  // optimistic UI
+  if (rowEl) rowEl.classList.toggle('on', newState);
+  inputEl.disabled = true;
+  const rec = BRIDGES.find(b => String(b.urn) === String(urn));
+  const prev = rec ? rec.active : undefined;
+  if (rec) rec.active = newState;
+
+  const ok = await setBridgeActive(urn, newState, statusEl);
+  inputEl.disabled = false;
+
+  if (!ok) {
+    // revert on failure
+    if (rec) rec.active = prev;
+    inputEl.checked = !newState;
+    if (rowEl) rowEl.classList.toggle('on', !newState);
+  }
+  // refresh the per-source active count + header badge (cheap re-render)
+  renderBridges();
+}
+
+// Remove handler: optimistic DOM removal + POST deleteBridge
+async function onBridgeRemove(btnEl, urn){
+  const rowEl = btnEl.closest('.bridge-row');
+  const statusEl = rowEl ? rowEl.querySelector('.save-status') : null;
+
+  // optimistic UI
+  btnEl.disabled = true;
+  if (rowEl) rowEl.classList.add('removing');
+  if (statusEl) { statusEl.textContent = 'removing…'; statusEl.classList.remove('ok'); }
+
+  const ok = await deleteBridge(urn);
+  if (ok) {
+    // drop from state and re-render (keeps counts/grouping consistent)
+    BRIDGES = BRIDGES.filter(b => String(b.urn) !== String(urn));
+    renderBridges();
+  } else {
+    if (rowEl) rowEl.classList.remove('removing');
+    btnEl.disabled = false;
+    if (statusEl) statusEl.textContent = 'error';
+  }
+}
+
+// ----- Sources view -----
+function sourceAgg(){
+  const byBridge = bridgeCounts();
+  const bySource = {};
+  const ensureSrc = s => (bySource[s] = bySource[s] || { bridges: [], leads: 0, url: '', category: 'partner' });
+  STORED_SOURCES.forEach(s => { const o = ensureSrc(s.name); o.url = s.linkedin_url || o.url; o.category = s.category || o.category; o.org_id = s.org_id || o.org_id; });
+  ROWS.forEach(r => { ensureSrc(leadSource(r)).leads++; });
+  Object.keys(byBridge).forEach(b => { if (b && b !== '—') ensureSrc(bridgeSource(b)).bridges.push(b); });
+  return bySource;
+}
+function renderSources(){
+  const bySource = sourceAgg();
+  const sBody = document.getElementById('sourcesBody');
+  const sEntries = Object.entries(bySource)
+    .filter(([s, info]) => s && (s !== 'Unassigned' || info.leads > 0))
+    .sort((a,b) => b[1].leads - a[1].leads);
+  sBody.innerHTML = sEntries.length ? sEntries.map(([s, info]) => {
+    const cat = info.category || 'partner';
+    const link = info.url ? '<a href="' + esc(info.url) + '" target="_blank" style="font-size:0.8rem">↗ company</a>' : '';
+    const nb = info.bridges.length;
+    const via = nb
+      ? nb + ' bridge' + (nb===1?'':'s') + ': ' + esc(info.bridges.map(cleanName).join(', '))
+      : (info.leads ? 'leadership collected directly'
+         : (info.org_id ? 'ready — no bridges yet (use “Find Bridges Now” in the extension)'
+                        : 'add a Sales Nav Org ID to enable bridge discovery'));
+    const btn = '<button class="btn-secondary" onclick="requestBridges(this,\'' + jsq(s) + '\')">🧭 Find Bridges</button>';
+    // Two headline counts per source: bridges (orange) and targets (blue), clickable through.
+    const counts =
+      '<div class="src-counts">' +
+        '<div class="src-count c-brg" onclick="statGo(\'bridges\',\'\')" title="Bridges found inside ' + esc(s) + '">' +
+          '<div class="n">' + nb + '</div><div class="l">bridge' + (nb===1?'':'s') + '</div></div>' +
+        '<div class="src-count c-tgt" onclick="statGo(\'targets\',\'\')" title="Targets collected via ' + esc(s) + '">' +
+          '<div class="n">' + info.leads + '</div><div class="l">target' + (info.leads===1?'':'s') + '</div></div>' +
+      '</div>';
+    return '<div class="entity-card"><div class="top"><div><h3><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:' + sourceColor(s) + ';margin-right:8px;vertical-align:middle"></span>' + esc(s) + '</h3>' + (link?('<p>'+link+'</p>'):'') +
+      '</div><span class="pill ' + cat + '">' + cat + '</span></div>' +
+      counts +
+      '<p style="margin-top:8px;font-size:0.84rem;color:#64748b">' + via + '</p>' +
+      '<div style="margin-top:12px">' + btn + '<div class="src-bridge-note" data-note style="display:none"></div></div></div>';
+  }).join('') : '<div class="empty">No sources yet — add one above.</div>';
+}
+
+// Per-source "Find Bridges": look up org_id + discover_keyword in STORED_SOURCES,
+// then POST addSource with discover_now:true (proxy injects owner). Inline note on the card.
+async function requestBridges(btnEl, sourceName){
+  const card = btnEl.closest('.entity-card');
+  const note = card ? card.querySelector('[data-note]') : null;
+  const setNote = (msg, cls) => {
+    if (!note) return;
+    note.style.display = 'block';
+    note.className = 'src-bridge-note' + (cls ? ' ' + cls : '');
+    note.textContent = msg;
+  };
+  const src = STORED_SOURCES.find(s => _norm(s.name) === _norm(sourceName));
+  const orgId = src && src.org_id ? String(src.org_id).trim() : '';
+  const kw = src && src.discover_keyword ? String(src.discover_keyword).trim() : '';
+  if (!orgId) { setNote('Add a Sales Nav Org ID first', 'warn'); return; }
+  btnEl.disabled = true;
+  setNote('Queuing…', '');
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: sourceName, org_id: orgId, discover_keyword: kw, discover_now: true })
+    });
+    const d = await resp.json();
+    if (d && (d.saved || d.success)) {
+      setNote('✓ Queued — bridges will be collected on the next sync (or click Find New Bridges in the extension).', 'ok');
+    } else {
+      setNote('Error: ' + JSON.stringify(d), 'err');
+      btnEl.disabled = false;
+    }
+  } catch(e) {
+    setNote('Error: ' + e.message, 'err');
+    btnEl.disabled = false;
+  }
+}
+
+// ----- Collections view -----
+function renderCollections(){
+  const byDay = {};
+  ROWS.forEach(r => {
+    const k = dayKey(r.collected_date); if (!k) return;
+    (byDay[k] = byDay[k] || []).push(r);
+  });
+  const days = Object.keys(byDay).sort().reverse();
+  const body = document.getElementById('collectionsBody');
+  if (!days.length) { body.innerHTML = '<div class="empty">No collections yet</div>'; return; }
+  body.innerHTML = days.map(k => {
+    const rows = byDay[k];
+    const byBridge = {};
+    rows.forEach(r => { const b = r.radar_person || 'Unassigned'; byBridge[b] = (byBridge[b]||0)+1; });
+    const chips = Object.entries(byBridge).sort((a,b)=>b[1]-a[1])
+      .map(([b,c]) => '<span class="bchip">' + esc(b) + ' (' + c + ')</span>').join('');
+    return '<div class="collection-day"><div class="date">' + esc(fmtDayLabel(k)) + '</div>' +
+      '<div class="summary">' + rows.length + ' new target' + (rows.length===1?'':'s') + ' collected</div>' +
+      '<div class="bridges">bridges: ' + chips + '</div></div>';
+  }).join('');
+}
+
+// ----- Charts -----
+function destroyChart(id){ if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+// Distinct, multi-hue palette so each Source is easy to tell apart (not just blues).
+const SOURCE_PALETTE = ['#6366f1','#ef4444','#10b981','#f59e0b','#0ea5e9','#ec4899','#14b8a6','#f97316','#8b5cf6','#84cc16','#e11d48','#06b6d4','#a855f7','#eab308','#22c55e','#3b82f6','#f43f5e','#d946ef','#0891b2','#65a30d'];
+// Stable color per source name: alphabetical index into the palette, so a source keeps the
+// same color everywhere on the dashboard (doughnut + source cards + flow) and across reloads.
+function sourceColor(name){
+  const names = Array.from(new Set(STORED_SOURCES.map(s => s.name).concat(ROWS.map(leadSource))))
+    .filter(Boolean).map(_norm).sort();
+  const i = names.indexOf(_norm(name));
+  return SOURCE_PALETTE[(i < 0 ? 0 : i) % SOURCE_PALETTE.length];
+}
+
+function renderCharts(){
+  if (typeof Chart === 'undefined') return;
+  const PRIMARY='#1e40af', ACCENT='#3b82f6';
+
+  // Targets per Bridge
+  const byBridge = bridgeCounts();
+  const bEntries = Object.entries(byBridge).filter(([n])=>n&&n!=='—').sort((a,b)=>b[1].length-a[1].length);
+  destroyChart('chartBridges');
+  CHARTS.chartBridges = new Chart(document.getElementById('chartBridges'), {
+    type:'bar',
+    data:{ labels:bEntries.map(e=>e[0]), datasets:[{ label:'Targets', data:bEntries.map(e=>e[1].length), backgroundColor:ACCENT, borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+  });
+
+  // Targets per Source
+  const bySource = sourceAgg();
+  const sEntries = Object.entries(bySource).filter(([s,i])=>s&&(s!=='Unassigned'||i.leads>0)).sort((a,b)=>b[1].leads-a[1].leads);
+  destroyChart('chartSources');
+  CHARTS.chartSources = new Chart(document.getElementById('chartSources'), {
+    type:'doughnut',
+    data:{ labels:sEntries.map(e=>e[0]), datasets:[{ data:sEntries.map(e=>e[1].leads), backgroundColor:sEntries.map(e=>sourceColor(e[0])), borderWidth:2, borderColor:'#fff' }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:12, font:{size:11}}}} }
+  });
+
+  // ICP grade distribution (A+ / A / B / C / D)
+  try {
+    if (ROWS && ROWS.length) {
+      const order = ['A+','A','B','C','D'];
+      const gradeCounts = { 'A+':0, 'A':0, 'B':0, 'C':0, 'D':0 };
+      ROWS.forEach(r => { const g = icpGrade(cleanTitle(r.title)); if (gradeCounts[g] != null) gradeCounts[g]++; });
+      const gradeColors = { 'A+':'#059669', 'A':'#10b981', 'B':'#3b82f6', 'C':'#f59e0b', 'D':'#94a3b8' };
+      destroyChart('chartGrades');
+      const gEl = document.getElementById('chartGrades');
+      if (gEl) CHARTS.chartGrades = new Chart(gEl, {
+        type:'bar',
+        data:{ labels:order, datasets:[{ label:'Targets', data:order.map(g=>gradeCounts[g]), backgroundColor:order.map(g=>gradeColors[g]), borderRadius:4 }] },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+      });
+    }
+  } catch(e) { /* keep dashboard resilient if grading fails */ }
+
+  // Daily trend
+  const byDay = {};
+  ROWS.forEach(r => { const k = dayKey(r.collected_date); if (k) byDay[k] = (byDay[k]||0)+1; });
+  const dKeys = Object.keys(byDay).sort();
+  destroyChart('chartTrend');
+  CHARTS.chartTrend = new Chart(document.getElementById('chartTrend'), {
+    type:'line',
+    data:{ labels:dKeys.map(fmtDayLabel), datasets:[{ label:'New targets', data:dKeys.map(k=>byDay[k]),
+      borderColor:PRIMARY, backgroundColor:'rgba(59,130,246,0.12)', fill:true, tension:0.3, pointRadius:3, pointBackgroundColor:PRIMARY }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}} } }
+  });
+}
+
+// ----- Flow diagram -----
+function renderFlow(){
+  const bySource = sourceAgg();
+  const byBridge = bridgeCounts();
+
+  // map source -> bridges, bridge -> count
+  const sources = Object.entries(bySource)
+    .filter(([s,i]) => s && (s!=='Unassigned' || i.leads>0))
+    .sort((a,b)=>b[1].leads-a[1].leads);
+  const bridges = Object.entries(byBridge)
+    .filter(([n]) => n && n!=='—')
+    .sort((a,b)=>b[1].length-a[1].length);
+
+  const f = FLOW_FILTER;
+  const bridgeMatchesFilter = (name) => {
+    if (!f) return true;
+    if (f.type==='bridge') return name===f.value;
+    if (f.type==='source') return bridgeSource(name)===f.value;
+    return true;
+  };
+  const sourceMatchesFilter = (name) => {
+    if (!f) return true;
+    if (f.type==='source') return name===f.value;
+    if (f.type==='bridge') return bridgeSource(f.value)===name;
+    return true;
+  };
+
+  const srcCol = sources.map(([s,info]) => {
+    const dim = !sourceMatchesFilter(s) ? ' dim' : '';
+    const act = (f && f.type==='source' && f.value===s) ? ' active' : '';
+    return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'source\',\'' + jsq(s) + '\')">' +
+      '<span class="nm">' + esc(s) + '</span><span class="ct">' + info.leads + '</span></div>';
+  }).join('') || '<div class="flow-node target">No sources</div>';
+
+  const brCol = bridges.map(([n,l]) => {
+    const dim = !bridgeMatchesFilter(n) ? ' dim' : '';
+    const act = (f && f.type==='bridge' && f.value===n) ? ' active' : '';
+    return '<div class="flow-node' + act + dim + '" onclick="setFlowFilter(\'bridge\',\'' + jsq(n) + '\')">' +
+      '<span class="nm">' + esc(n) + '</span><span class="ct">' + l.length + '</span></div>';
+  }).join('') || '<div class="flow-node target">No bridges</div>';
+
+  // Targets column: count under current filter
+  let tCount, tLabel;
+  if (f && f.type==='bridge') {
+    tCount = (byBridge[f.value]||[]).length; tLabel = 'targets via ' + f.value;
+  } else if (f && f.type==='source') {
+    tCount = (bySource[f.value]||{leads:0}).leads; tLabel = 'targets from ' + f.value;
+  } else {
+    tCount = ROWS.length; tLabel = 'total targets';
+  }
+  const tgtCol = '<div class="flow-node target"><span class="big" style="font-size:1.4rem;font-weight:700;color:#1e40af">' + tCount + '</span><br>' +
+    '<span style="font-size:0.78rem;color:#64748b">' + esc(tLabel) + '</span></div>';
+
+  document.getElementById('flowDiagram').innerHTML =
+    '<div class="flow-col"><div class="colhead">Sources</div>' + srcCol + '</div>' +
+    '<div class="flow-col"><div class="colhead">Bridges</div>' + brCol + '</div>' +
+    '<div class="flow-col"><div class="colhead">Targets</div>' + tgtCol + '</div>';
+
+  document.getElementById('flowHint').textContent = f
+    ? 'Filtering by ' + f.type + ': ' + f.value + ' — click again to clear.'
+    : 'Click a Source or Bridge to highlight its path.';
+}
+function jsq(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function setFlowFilter(type, value){
+  if (FLOW_FILTER && FLOW_FILTER.type===type && FLOW_FILTER.value===value) FLOW_FILTER = null;
+  else FLOW_FILTER = { type:type, value:value };
+  renderFlow();
+}
+
+// ===== Navigation =====
+// ===== Leads (stage 4: targets who replied on Botdog) =====
+// Reads from Supabase via /api/leads. "Sync replies" (POST /api/leads/sync) is what
+// asks Botdog who answered; this list itself never depends on Botdog being up.
+// ===== Leads (Botdog replies) — REMOVED FROM THE UI 2026-07-16 =====
+// Pulled because Botdog exposes no reply timestamp (only hasReplied), so "when they
+// replied" could only ever mean "when Radar noticed". The backend (functions/api/leads/*)
+// and the Supabase `leads` table are still in place. Restore this view once the webhook
+// question in CHARLES-LEADS.md is answered. Do not ship a Leads tab that cannot be trusted.
+
+function showView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  // charts need a resize nudge when their container becomes visible
+  if (name === 'dashboard') Object.values(CHARTS).forEach(c => { try{ c.resize(); }catch(e){} });
+  // (re)populate the onboarding checklist when the Setup view opens
+  if (name === 'setup') { try { renderOnboarding(); } catch(e){} }
+  // refresh bridge candidates each time the Bridges view is opened
+  if (name === 'bridges') { loadBridges().then(() => { try { applyInviteQueue(); } catch(e){} renderBridges(); }); }
+  // pull the latest replies each time the Leads view is opened
+  // load the current collection schedule from the extension when Settings opens
+  if (name === 'settings') { try { loadSchedule(); } catch(e){} try { loadSavedKeys(); } catch(e){} }
+  // fill the referral link with the signed-in user's code
+  if (name === 'referrals') { try { const el = document.getElementById('refLink'); if (el) el.value = buildRefLink(); } catch(e){} }
+  // build the growth charts when the Growth view opens
+  if (name === 'growth') { try { renderGrowth(); } catch(e){} }
+}
+
+// ===== Growth (sources / bridges / targets added over time) =====
+let GROWTH_METRIC = 'targets';
+let GROWTH_GRAIN  = 'day';
+function setGrowthMetric(m){ GROWTH_METRIC = m; document.querySelectorAll('#growthMetric .seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.metric===m)); renderGrowth(); }
+function setGrowthGrain(g){ GROWTH_GRAIN = g; document.querySelectorAll('#growthGrain .seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.grain===g)); renderGrowth(); }
+
+// Pull the timestamp list for a metric from data already loaded in the app.
+function growthDates(metric){
+  if (metric === 'targets') return ROWS.map(r => r.collected_date).filter(Boolean);
+  if (metric === 'bridges') return BRIDGES.map(b => b.added_date).filter(Boolean);
+  return STORED_SOURCES.map(s => s.added_date).filter(Boolean);
+}
+// Bucket a date into a period key + a short label, by grain.
+function periodKey(d, grain){
+  const dt = new Date(d); if (isNaN(dt)) return null;
+  if (grain === 'day')  return dt.toISOString().slice(0,10);
+  if (grain === 'month')return dt.toISOString().slice(0,7);
+  // ISO week: Monday-anchored
+  const t = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()));
+  const day = (t.getUTCDay() + 6) % 7; t.setUTCDate(t.getUTCDate() - day);
+  return t.toISOString().slice(0,10);
+}
+function periodLabel(key, grain){
+  if (grain === 'month'){ const [y,m]=key.split('-'); return new Date(y,m-1,1).toLocaleString('en-US',{month:'short',year:'2-digit'}); }
+  const dt = new Date(key);
+  const s = dt.toLocaleString('en-US',{month:'short',day:'numeric'});
+  return grain === 'week' ? ('wk of '+s) : s;
+}
+// Build an ordered series of {key,label,count,cumulative} filling gaps between first & last period.
+function growthSeries(metric, grain){
+  const counts = {};
+  growthDates(metric).forEach(d => { const k = periodKey(d, grain); if (k) counts[k] = (counts[k]||0)+1; });
+  const keys = Object.keys(counts).sort();
+  if (!keys.length) return [];
+  // fill gaps so the trend line is honest about quiet periods
+  const stepDays = grain==='day'?1:grain==='week'?7:0;
+  const out = []; let cum = 0;
+  if (grain === 'month'){
+    let [sy,sm] = keys[0].split('-').map(Number); const [ey,em] = keys[keys.length-1].split('-').map(Number);
+    while (sy<ey || (sy===ey && sm<=em)){ const k = sy+'-'+String(sm).padStart(2,'0'); cum += (counts[k]||0); out.push({key:k,label:periodLabel(k,grain),count:counts[k]||0,cumulative:cum}); sm++; if(sm>12){sm=1;sy++;} }
+  } else {
+    let cur = new Date(keys[0]); const end = new Date(keys[keys.length-1]);
+    while (cur <= end){ const k = cur.toISOString().slice(0,10); cum += (counts[k]||0); out.push({key:k,label:periodLabel(k,grain),count:counts[k]||0,cumulative:cum}); cur.setUTCDate(cur.getUTCDate()+stepDays); }
+  }
+  return out;
+}
+const GROWTH_COLORS = { targets:{ink:'#1d4ed8',soft:'rgba(29,78,216,.15)'}, bridges:{ink:'#c2610a',soft:'rgba(194,97,10,.15)'}, sources:{ink:'#15803d',soft:'rgba(21,128,61,.15)'} };
+function renderGrowth(){
+  const grainWord = { day:'day', week:'week', month:'month' }[GROWTH_GRAIN];
+  const series = growthSeries(GROWTH_METRIC, GROWTH_GRAIN);
+  const labels = series.map(s=>s.label);
+  const counts = series.map(s=>s.count);
+  const cum    = series.map(s=>s.cumulative);
+  const col    = GROWTH_COLORS[GROWTH_METRIC];
+  const cap = GROWTH_METRIC.charAt(0).toUpperCase()+GROWTH_METRIC.slice(1);
+
+  // ---- KPIs ----
+  const total = counts.reduce((a,b)=>a+b,0);
+  const thisP = counts.length ? counts[counts.length-1] : 0;
+  const prevP = counts.length>1 ? counts[counts.length-2] : 0;
+  const delta = prevP ? Math.round((thisP-prevP)/prevP*100) : (thisP?100:0);
+  const active = counts.filter(c=>c>0);
+  let bestIdx = -1, bestVal = -1; counts.forEach((c,i)=>{ if(c>bestVal){bestVal=c;bestIdx=i;} });
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('gTotalLbl','Total '+GROWTH_METRIC); set('gTotal', total);
+  set('gThisLbl','This '+grainWord); set('gThis', thisP);
+  set('gDelta', (delta>0?'+':'')+delta+'%'); set('gDeltaSub','was '+prevP+' last '+grainWord);
+  set('gBest', bestVal<0?0:bestVal); set('gBestSub', bestIdx>=0 ? series[bestIdx].label : '');
+  set('gAvgLbl','Avg / active '+grainWord); set('gAvg', active.length ? Math.round(total/active.length) : 0);
+  const dEl = document.getElementById('gDelta'); if (dEl) dEl.style.color = delta>0?'#15803d':(delta<0?'#c0341d':'');
+
+  // ---- main chart: bars (per period) + line (cumulative) ----
+  set('growthChartTitle', 'New '+GROWTH_METRIC+' per '+grainWord);
+  destroyChart('chartGrowth');
+  const el = document.getElementById('chartGrowth');
+  if (el) CHARTS.chartGrowth = new Chart(el, {
+    data: { labels, datasets:[
+      { type:'bar', label:'New '+GROWTH_METRIC, data:counts, backgroundColor:col.soft, borderColor:col.ink, borderWidth:1, yAxisID:'y', order:2 },
+      { type:'line', label:'Running total', data:cum, borderColor:col.ink, backgroundColor:col.ink, tension:.3, pointRadius:2, yAxisID:'y1', order:1 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      scales:{ y:{beginAtZero:true,title:{display:true,text:'added'}}, y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'cumulative'}} },
+      plugins:{ legend:{display:true,position:'bottom'} } }
+  });
+
+  // ---- comparison chart: all three cumulative ----
+  destroyChart('chartGrowthAll');
+  const el2 = document.getElementById('chartGrowthAll');
+  if (el2){
+    // build a shared timeline across the three metrics at the current grain
+    const all = ['sources','bridges','targets'].map(m=>({m, s:growthSeries(m,GROWTH_GRAIN)}));
+    const keySet = new Set(); all.forEach(a=>a.s.forEach(p=>keySet.add(p.key)));
+    const keys = [...keySet].sort();
+    const lbls = keys.map(k=>periodLabel(k,GROWTH_GRAIN));
+    const ds = all.map(a=>{
+      const byKey={}; a.s.forEach(p=>byKey[p.key]=p.cumulative);
+      let last=0; const data = keys.map(k=>{ if(byKey[k]!=null) last=byKey[k]; return last; });
+      const c = GROWTH_COLORS[a.m];
+      return { label:a.m, data, borderColor:c.ink, backgroundColor:c.soft, tension:.3, pointRadius:0, fill:false };
+    });
+    CHARTS.chartGrowthAll = new Chart(el2, {
+      type:'line', data:{ labels:lbls, datasets:ds },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{y:{beginAtZero:true}} }
+    });
+  }
+}
+
+// ===== Collection schedule (lives in the extension — Radar is self-contained) =====
+function schedBridgesToggle(){
+  const m = document.getElementById('schedBridgesMode');
+  const wrap = document.getElementById('schedBridgesEveryWrap');
+  if (m && wrap) wrap.style.display = (m.value === 'periodic') ? '' : 'none';
+}
+function loadSchedule(){
+  const warn = document.getElementById('schedExtWarn');
+  const hasExt = document.documentElement.getAttribute('data-radar-ext');
+  if (warn) warn.style.display = hasExt ? 'none' : 'block';
+  if (!hasExt) return;
+  const onSched = (e) => {
+    window.removeEventListener('radar-ext-schedule', onSched);
+    const s = (e && e.detail && e.detail.schedule) || {};
+    const t = document.getElementById('schedTargets');
+    const m = document.getElementById('schedBridgesMode');
+    const ev = document.getElementById('schedBridgesEvery');
+    if (t && s.targetsEveryHours) t.value = String(s.targetsEveryHours);
+    if (m && s.bridgesMode) m.value = s.bridgesMode;
+    if (ev && s.bridgesEveryDays) ev.value = String(s.bridgesEveryDays);
+    schedBridgesToggle();
+  };
+  window.addEventListener('radar-ext-schedule', onSched);
+  window.dispatchEvent(new CustomEvent('radar-ext-get-schedule'));
+  const mSel = document.getElementById('schedBridgesMode');
+  if (mSel && !mSel._wired) { mSel._wired = true; mSel.addEventListener('change', schedBridgesToggle); }
+}
+function saveSchedule(){
+  const status = document.getElementById('schedStatus');
+  const hasExt = document.documentElement.getAttribute('data-radar-ext');
+  if (!hasExt) { if (status) status.textContent = 'Chrome extension not detected — reload it and try again.'; return; }
+  const schedule = {
+    targetsEveryHours: parseInt(document.getElementById('schedTargets').value, 10) || 24,
+    bridgesMode: document.getElementById('schedBridgesMode').value || 'new-only',
+    bridgesEveryDays: parseInt(document.getElementById('schedBridgesEvery').value, 10) || 30
+  };
+  if (status) status.textContent = 'Saving…';
+  const onSaved = (e) => {
+    window.removeEventListener('radar-ext-schedule-saved', onSaved);
+    const d = (e && e.detail) || {};
+    if (status) status.textContent = d.ok
+      ? '✓ Saved. Targets every ' + schedule.targetsEveryHours + 'h; bridges: ' + schedule.bridgesMode + '.'
+      : 'Error saving schedule: ' + (d.error || 'unknown');
+  };
+  window.addEventListener('radar-ext-schedule-saved', onSaved);
+  window.dispatchEvent(new CustomEvent('radar-ext-set-schedule', { detail: schedule }));
+  setTimeout(() => { window.removeEventListener('radar-ext-schedule-saved', onSaved); }, 8000);
+}
+
+// ===== Settings =====
+async function saveSettings() {
+  const botdog = document.getElementById('inputBotdog').value.trim();
+  const resend = document.getElementById('inputResend').value.trim();
+  const pappersEl = document.getElementById('inputPappers');
+  const pappers = pappersEl ? pappersEl.value.trim() : '';
+  const status = document.getElementById('saveStatus');
+  if (!botdog && !resend && !pappers) { status.textContent = 'Enter at least one key.'; return; }
+  status.textContent = 'Saving…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_api_key: botdog, resend_api_key: resend, pappers_api_key: pappers }) });
+    const data = await resp.json();
+    status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
+    if (data.saved) await loadKeyStatus();
+    // Also hand the Botdog key to the Chrome extension so its sync can invite bridges.
+    if (botdog) { try { window.dispatchEvent(new CustomEvent('radar-ext-set-botdog', { detail:{ key: botdog } })); } catch(e) {} }
+    // Remember the keys in this browser so the fields repopulate and you can see them later.
+    try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if(botdog)cur.botdog=botdog; if(resend)cur.resend=resend; if(pappers)cur.pappers=pappers; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
+  } catch(e) { status.textContent = 'Error: ' + e.message; }
+}
+// ===== Billing / Referrals / Feedback =====
+// Stripe customer-portal link. Set STRIPE_BILLING_URL once Olivier provides it.
+const STRIPE_BILLING_URL = '';
+function openBilling(ev){
+  ev.preventDefault();
+  if (!STRIPE_BILLING_URL) {
+    document.getElementById('billingNote').innerHTML = '<strong>Billing isn’t connected yet.</strong> The Stripe portal link hasn’t been added — once it is, this button opens your subscription, payment method and invoices.';
+    return false;
+  }
+  window.open(STRIPE_BILLING_URL, '_blank', 'noopener');
+  return false;
+}
+// Referral link keyed to the signed-in user so joins can be credited.
+function buildRefLink(){
+  const who = (window.__ME && (window.__ME.user && (window.__ME.user.sub || window.__ME.user.email))) || '';
+  const code = who ? btoa(String(who)).replace(/=+$/,'').slice(0, 12) : '';
+  return location.origin + (code ? ('/?ref=' + encodeURIComponent(code)) : '/');
+}
+function copyRefLink(){
+  const el = document.getElementById('refLink');
+  const st = document.getElementById('refStatus');
+  if (el) el.value = buildRefLink();
+  try {
+    navigator.clipboard.writeText(el.value);
+    st.textContent = '✓ Link copied — send it to whoever you’d like to invite.';
+  } catch(e) {
+    el.select(); st.textContent = 'Press Ctrl/Cmd+C to copy.';
+  }
+}
+// Feedback: bugs + suggestions -> opens a pre-filled email to support.
+// Mail is the primary path (always works, no backend needed); we also log it to the
+// hub best-effort so the team has a record even if the user never hits Send.
+const SUPPORT_EMAIL = 'support@gershonconsulting.com';
+function buildFeedbackMail(type, body){
+  const label = { bug: 'Bug', idea: 'Suggestion', other: 'Feedback' }[type] || 'Feedback';
+  const who = (window.__ME && window.__ME.user && (window.__ME.user.email || window.__ME.user.name)) || 'unknown user';
+  const subject = 'Radar ' + label + ' — ' + who;
+  const lines = [
+    body, '', '---', 'Type: ' + label, 'From: ' + who,
+    'Version: ' + ((document.getElementById('sideVer') || {}).textContent || ''),
+    'Page: ' + location.href, 'Browser: ' + navigator.userAgent,
+    'When: ' + new Date().toISOString()
+  ];
+  return 'mailto:' + SUPPORT_EMAIL + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(lines.join('\n'));
+}
+function sendFeedback(){
+  const type = document.getElementById('fbType').value;
+  const body = (document.getElementById('fbBody').value || '').trim();
+  const st = document.getElementById('fbStatus');
+  if (!body) { st.textContent = 'Tell us a bit about the bug or idea first.'; return; }
+  const mail = buildFeedbackMail(type, body);
+  // Best-effort server-side log; never blocks the email.
+  try {
+    fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, credentials:'same-origin',
+      body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'feedback', type: type, body: body, page: location.href, ua: navigator.userAgent }) }).catch(function(){});
+  } catch(e) {}
+  window.location.href = mail;
+  st.innerHTML = '✉️ Opening your email app with this addressed to <strong>' + SUPPORT_EMAIL + '</strong> — press Send to deliver it. ' +
+                 'Nothing happened? <a href="' + mail + '">Open it manually</a> or email ' + SUPPORT_EMAIL + ' directly.';
+}
+
+// Show/hide the API key fields. Sweep every key input in the card so newly added
+// keys are covered automatically (no hardcoded list to forget to update).
+function toggleKeyVisibility(show){
+  const box = document.getElementById('showKeys');
+  const on = (typeof show === 'boolean') ? show : !!(box && box.checked);
+  const card = box ? box.closest('.settings-card') : null;
+  const scope = card || document;
+  scope.querySelectorAll('input[type="password"], input[data-key="1"]').forEach(el => {
+    el.setAttribute('data-key','1');
+    el.type = on ? 'text' : 'password';
+  });
+}
+// Repopulate key fields from what was entered before (stored in this browser).
+function loadSavedKeys(){
+  try {
+    const k = JSON.parse(localStorage.getItem('radar_keys') || '{}');
+    const b = document.getElementById('inputBotdog'); if (b && k.botdog && !b.value) b.value = k.botdog;
+    const r = document.getElementById('inputResend'); if (r && k.resend && !r.value) r.value = k.resend;
+    const p = document.getElementById('inputPappers'); if (p && k.pappers && !p.value) p.value = k.pappers;
+  } catch(e) {}
+  // Re-apply the show/hide state after fields repopulate.
+  try { toggleKeyVisibility(); } catch(e) {}
+}
+
+async function loadKeyStatus() {
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=keyStatus&_=' + Date.now();
+    const resp = await fetch(url);
+    const text = await resp.text();
+    const json = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    const fmt = function(set, valid){
+      if (!set) return '<span style="color:#dc2626">Missing</span>';
+      return valid ? '<span style="color:#16a34a;font-weight:600">Set &amp; Valid ✓</span>'
+                   : '<span style="color:#dc2626;font-weight:600">Set but Invalid ✗</span>';
+    };
+    const when = json.tested_at ? 'Last tested: ' + new Date(json.tested_at).toLocaleString() : '';
+    document.getElementById('keyStatus').innerHTML =
+      'Botdog: ' + fmt(json.botdog_set, json.botdog_valid) + '<br>' +
+      'Resend: ' + fmt(json.resend_set, json.resend_valid) + '<br>' +
+      '<small style="color:#94a3b8">' + when + ' · auto-tested daily</small>';
+  } catch(e) {}
+}
+
+// ----- Botdog campaign selection -----
+function onCampaignSelect(){
+  const v = document.getElementById('botdogCampaignSelect').value;
+  if (v) document.getElementById('botdogCampaignId').value = v;
+}
+function onBridgesCampaignSelect(){
+  const v = document.getElementById('botdogBridgesCampaignSelect').value;
+  if (v) document.getElementById('botdogBridgesCampaignId').value = v;
+}
+function fillCampaignOptions(sel, list, currentId){
+  if (!sel) return;
+  if (list.length) {
+    sel.innerHTML = '<option value="">— select a campaign —</option>' +
+      list.map(c => '<option value="' + esc(c.id) + '"' + (c.id===currentId?' selected':'') + '>' + esc(c.name || c.id) + '</option>').join('');
+  } else {
+    sel.innerHTML = '<option value="">— couldn’t load campaigns; paste ID below —</option>';
+  }
+}
+async function loadCampaigns(){
+  const sel = document.getElementById('botdogCampaignSelect');
+  const bsel = document.getElementById('botdogBridgesCampaignSelect');
+  const idInput = document.getElementById('botdogCampaignId');
+  const bIdInput = document.getElementById('botdogBridgesCampaignId');
+  if (!sel) return;
+  let curId = '', curBridgeId = '';
+  try {
+    const cfg = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r=>r.text());
+    const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    curId = j.botdog_campaign_id || '';
+    curBridgeId = j.botdog_bridges_campaign_id || '';
+    if (curId && idInput && !idInput.value) idInput.value = curId;
+    if (curBridgeId && bIdInput && !bIdInput.value) bIdInput.value = curBridgeId;
+  } catch(e) {}
+  try {
+    const t = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getBotdogCampaigns&_=' + Date.now()).then(r=>r.text());
+    const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    const list = (j && j.campaigns) || [];
+    fillCampaignOptions(sel, list, curId);
+    fillCampaignOptions(bsel, list, curBridgeId);
+  } catch(e) { fillCampaignOptions(sel, [], ''); fillCampaignOptions(bsel, [], ''); }
+}
+// Accept a full Botdog campaign URL (e.g. app.botdog.co/campaigns/<uuid>/sequence) or a bare ID.
+function parseCampaignId(v){
+  const s = String(v || '').trim();
+  const m = s.match(/campaigns\/([0-9a-f-]{16,})/i) || s.match(/\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i);
+  return m ? m[1] : s;
+}
+async function saveCampaign(){
+  const id = parseCampaignId(document.getElementById('botdogCampaignId').value);
+  const bid = parseCampaignId(document.getElementById('botdogBridgesCampaignId').value);
+  document.getElementById('botdogCampaignId').value = id;
+  document.getElementById('botdogBridgesCampaignId').value = bid;
+  const sel = document.getElementById('botdogCampaignSelect');
+  const bsel = document.getElementById('botdogBridgesCampaignSelect');
+  const name = sel && sel.selectedOptions.length ? (sel.selectedOptions[0].textContent||'').trim() : '';
+  const bname = bsel && bsel.selectedOptions.length ? (bsel.selectedOptions[0].textContent||'').trim() : '';
+  const status = document.getElementById('campaignStatus');
+  if (!id && !bid) { status.textContent = 'Select at least one campaign or paste an ID.'; return; }
+  status.textContent = 'Saving…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', botdog_campaign_id: id, botdog_campaign_name: name, botdog_bridges_campaign_id: bid, botdog_bridges_campaign_name: bname }) });
+    const data = await resp.json();
+    status.textContent = data.saved ? '✓ Campaigns saved — targets → targets campaign, bridges → bridges campaign.' : 'Error: ' + JSON.stringify(data);
+    // Hand the bridges campaign id to the Chrome extension so its sync invites bridges there.
+    if (bid) { try { window.dispatchEvent(new CustomEvent('radar-ext-set-botdog', { detail:{ campaign: bid } })); } catch(e) {} }
+  } catch(e) { status.textContent = 'Error: ' + e.message; }
+}
+
+// ===== Auth gate =====
+// On load, check the session (/api/me). Show the sign-in overlay if not authenticated;
+// reveal the app and boot it if authenticated. The proxy enforces access server-side too.
+// Reflect the *verified* LinkedIn session in the sidebar badge. States: checking → connected / disconnected.
+function setLiStatus(state, name){
+  const el = document.getElementById('liStatus'); const tx = document.getElementById('liStatusText');
+  if (!el || !tx) return;
+  el.classList.remove('li-checking','li-connected','li-disconnected');
+  if (state === 'connected'){ el.classList.add('li-connected'); tx.textContent = name ? ('Connected · ' + name) : 'LinkedIn Connected'; el.onclick = null; el.title = 'LinkedIn session is live'; }
+  else if (state === 'disconnected'){ el.classList.add('li-disconnected'); tx.textContent = 'Not connected — sign in'; el.title = 'Click to reconnect LinkedIn'; el.onclick = function(){ window.location.href = '/api/auth/linkedin/login'; }; }
+  else { el.classList.add('li-checking'); tx.textContent = 'Checking…'; }
+}
+
+async function initAuth(){
+  const params = new URLSearchParams(window.location.search);
+  const overlay = document.getElementById('signinOverlay');
+  setLiStatus('checking');
+  if (params.get('denied') === '1' || params.get('pending') === '1') {
+    const d = document.getElementById('signinDenied');
+    if (d) {
+      if (params.get('pending') === '1') {
+        d.classList.add('pending');
+        d.innerHTML = 'Request received &#10003; — your access is <strong>waiting for admin approval</strong>.<br>You\'ll be able to sign in as soon as it\'s granted.';
+      }
+      d.classList.add('show');
+    }
+    if (overlay) overlay.classList.remove('hidden');
+    setLiStatus('disconnected');
+    return;
+  }
+  let me;
+  try { const resp = await fetch('/api/me', { credentials: 'same-origin' }); me = await resp.json(); }
+  catch(e) { me = { ok:false }; }
+  if (!me || !me.ok) { if (overlay) overlay.classList.remove('hidden'); setLiStatus('disconnected'); return; }
+  const user = me.user || {};
+  const nm = document.getElementById('userName'); if (nm) nm.textContent = user.name || user.email || '';
+  const av = document.getElementById('userAvatar'); if (av) av.textContent = ((user.name || user.email || '?').charAt(0) || '?').toUpperCase();
+  const chip = document.getElementById('userChip'); if (chip) chip.style.display = 'flex';
+  window.__ME = me;   // used by the referral link builder
+  setLiStatus('connected', (user.name || '').split(' ')[0] || '');
+  // Only admins see the Admin link (server enforces this too).
+  if (me.isAdmin || user.isAdmin) { const a = document.getElementById('nav-admin'); if (a) a.style.display = 'flex'; }
+  if (overlay) overlay.classList.add('hidden');
+  const shell = document.getElementById('appShell'); if (shell) shell.style.display = 'flex';
+  // Boot the app
+  initSorting();
+  load();
+  loadCampaigns();
+  // Start auto-detecting the Chrome extension (and best-effort Sales Nav).
+  initExtDetect();
+  // Record this login in the Users store (fire-and-forget, through the authenticated proxy).
+  try { fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, credentials:'same-origin',
+    body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'logLogin', email:user.email, name:user.name, linkedin_sub:user.sub }) }); } catch(e) {}
+}
+initAuth();
+</script>
+</body>
+</html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
