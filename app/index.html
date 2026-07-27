@@ -424,7 +424,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.8.3</div>
+      <div class="ver" id="sideVer">v1.8.4</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -629,21 +629,23 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="page-head"><h2>Sources</h2><p>Organizations you watch and collect connections from.</p></div>
       <div class="settings-card" style="max-width:620px">
         <h2>Add a Source</h2>
-        <p>Add an organization to watch. Paste its LinkedIn company URL — collect its team into Targets next.</p>
-        <div class="field"><label>Source name</label><input id="srcName" placeholder="e.g. Krymkier Law"></div>
+        <p>Just paste an organization's LinkedIn company URL — Radar names the source and resolves its Sales Nav ID to find bridges.</p>
         <div class="field"><label>LinkedIn company URL</label><input id="srcUrl" placeholder="https://www.linkedin.com/company/..."></div>
-        <div class="field"><label>Sales Nav company URL or Org ID <span style="color:#94a3b8;font-weight:400">— enables bridge discovery</span></label><input id="srcOrg" placeholder="…/organization/139070  or  139070"></div>
-        <div class="field"><label>Role / function keyword <span style="color:#94a3b8;font-weight:400">— optional; narrows discovery for large orgs</span></label><input id="srcKeyword" placeholder="e.g. Team France Export"></div>
-        <div class="field"><label>Type</label>
-          <select id="srcCat">
-            <option value="partner">Partner</option>
-            <option value="competitor">Competitor</option>
-            <option value="organization">Organization</option>
-          </select>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;color:#334155;margin:2px 0 12px;cursor:pointer">
-          <input type="checkbox" id="srcDiscoverNow" checked style="width:16px;height:16px"> Collect bridges now <span style="color:#94a3b8">(otherwise on the monthly discovery run)</span>
-        </label>
+        <details style="margin:2px 0 10px"><summary style="cursor:pointer;font-size:0.85rem;color:#64748b">Optional details (leave blank to auto-fill)</summary>
+          <div class="field" style="margin-top:8px"><label>Source name <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="srcName" placeholder="auto-filled from the company page"></div>
+          <div class="field"><label>Sales Nav company URL or Org ID <span style="color:#94a3b8;font-weight:400">— speeds up bridge discovery</span></label><input id="srcOrg" placeholder="…/organization/139070  or  139070"></div>
+          <div class="field"><label>Role / function keyword <span style="color:#94a3b8;font-weight:400">— narrows discovery for large orgs</span></label><input id="srcKeyword" placeholder="e.g. Team France Export"></div>
+          <div class="field"><label>Type</label>
+            <select id="srcCat">
+              <option value="partner">Partner</option>
+              <option value="competitor">Competitor</option>
+              <option value="organization">Organization</option>
+            </select>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;color:#334155;margin:2px 0 4px;cursor:pointer">
+            <input type="checkbox" id="srcDiscoverNow" checked style="width:16px;height:16px"> Collect bridges now <span style="color:#94a3b8">(needs the Org ID; otherwise on the discovery run)</span>
+          </label>
+        </details>
         <button class="btn-save" onclick="addSource()">+ Add Source</button>
         <div id="srcStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
@@ -976,18 +978,26 @@ async function addSource() {
   const st   = document.getElementById('srcStatus');
   // Pull the numeric org id out of a Sales Nav / company URL, or accept a bare number.
   const orgId = (orgRaw.match(/(?:organization|company)\/(\d+)/) || orgRaw.match(/^(\d{3,})$/) || [])[1] || '';
-  if (!name) { st.textContent = 'Enter a source name.'; return; }
+  // URL-only: a LinkedIn company page is enough. Derive the source name from the
+  // company slug if none was typed; the org ID (for bridge discovery) is resolved later.
+  let srcName = name;
+  if (!srcName) {
+    const slug = (url.split('?')[0].replace(/\/+$/, '').match(/\/company\/([^/]+)/) || [])[1] || '';
+    if (slug) { try { srcName = decodeURIComponent(slug).replace(/-/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase()); } catch(e) { srcName = slug.replace(/-/g, ' '); } }
+  }
+  if (!srcName) { st.textContent = 'Paste the LinkedIn company URL — that’s all you need.'; return; }
   const srcBlock = sourceCapBlock();
   if (srcBlock) { st.innerHTML = srcBlock + ' <a href="#" onclick="showView(\'billing\');return false;" style="color:#2563eb">Upgrade →</a>'; return; }
-  if (discoverNow && !orgId) { st.textContent = 'To collect bridges now, add the Sales Nav company URL or Org ID (or untick the box).'; return; }
+  // Can't discover bridges without the org ID yet — save the source anyway; bridges come once it's resolved.
+  let effectiveDiscover = discoverNow && !!orgId;
   st.textContent = 'Adding…';
   try {
-    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: name, linkedin_url: url, category: cat, org_id: orgId, discover_keyword: keyword, discover_now: discoverNow }) });
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: srcName, linkedin_url: url, category: cat, org_id: orgId, discover_keyword: keyword, discover_now: effectiveDiscover }) });
     const d = await resp.json();
     if (d.saved) {
-      st.textContent = discoverNow
-        ? '✓ Added "' + name + '". Bridges queued — they’ll be collected on the next sync, or open the Radar extension and click Discover to run now.'
-        : '✓ Added "' + name + '". Bridges will be found on the monthly discovery run.';
+      st.textContent = effectiveDiscover
+        ? '✓ Added "' + srcName + '". Bridges queued — they’ll be collected on the next sync, or open the Radar extension and click Discover to run now.'
+        : '✓ Added "' + srcName + '". Radar resolves the company’s Sales Nav ID, then finds its bridges automatically.';
       document.getElementById('srcName').value = ''; document.getElementById('srcUrl').value = ''; document.getElementById('srcOrg').value = ''; document.getElementById('srcKeyword').value = '';
       await loadSources(); await load();
     } else { st.textContent = 'Error: ' + JSON.stringify(d); }
