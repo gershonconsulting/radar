@@ -424,7 +424,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.8.1</div>
+      <div class="ver" id="sideVer">v1.8.2</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -759,9 +759,22 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div id="salesNavListStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
+        <h2>Daily lead target</h2>
+        <p>How many new prospects Radar should aim to collect each day. The extension caps daily collection at this number.</p>
+        <div class="field">
+          <label>New leads per day: <strong id="leadTargetVal">25</strong></label>
+          <input type="range" id="inputLeadTarget" min="10" max="100" step="5" value="25" oninput="document.getElementById('leadTargetVal').textContent=this.value" style="width:100%">
+          <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:#94a3b8"><span>10 (min)</span><span>100 (max)</span></div>
+        </div>
+        <button class="btn-save" onclick="saveLeadTarget()">Save target</button>
+        <div id="leadTargetStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
         <h2>Key Status</h2>
-        <p>Current backend key status.</p>
+        <p>Live validation of your saved keys against each service.</p>
         <div id="keyStatus" class="key-status">Loading…</div>
+        <button class="btn-save" style="margin-top:12px" onclick="testAllKeys()">Test keys now</button>
+        <div id="testKeysStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
     </section>
 
@@ -2343,6 +2356,34 @@ async function loadSalesNavList() {
     try { const k = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if (k.salesnav_list_url && !el.value) el.value = k.salesnav_list_url; } catch(_){}
   }
 }
+
+// ===== Daily lead target (how many new prospects/day to collect) =====
+async function saveLeadTarget() {
+  const el = document.getElementById('inputLeadTarget');
+  const val = el ? parseInt(el.value, 10) : 25;
+  const st = document.getElementById('leadTargetStatus');
+  if (st) st.textContent = 'Saving…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', daily_lead_target: String(val) }) });
+    const d = await resp.json();
+    if (st) st.textContent = d.saved ? ('Saved — aiming for ' + val + ' new leads/day.') : ('Error: ' + JSON.stringify(d));
+    if (d.saved) {
+      try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); cur.daily_lead_target = val; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
+      // Hand the target to the Chrome extension so its collection caps at this number.
+      try { window.dispatchEvent(new CustomEvent('radar-ext-set-lead-target', { detail:{ target: val } })); } catch(e) {}
+    }
+  } catch(e) { if (st) st.textContent = 'Error: ' + e.message; }
+}
+async function loadLeadTarget() {
+  const el = document.getElementById('inputLeadTarget');
+  const lbl = document.getElementById('leadTargetVal');
+  if (!el) return;
+  try {
+    const cfg = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r=>r.text());
+    const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (j && j.daily_lead_target) { el.value = j.daily_lead_target; if (lbl) lbl.textContent = j.daily_lead_target; }
+  } catch(e) {}
+}
 // ===== Plans / free-tier limits =====
 const PLAN_LIMITS = {
   free: { sources: 1, bridgesPerSource: 5, prospectsPerBridge: 10 },
@@ -2503,12 +2544,27 @@ async function loadKeyStatus() {
       return valid ? '<span style="color:#16a34a;font-weight:600">Set &amp; Valid ✓</span>'
                    : '<span style="color:#dc2626;font-weight:600">Set but Invalid ✗</span>';
     };
-    const when = json.tested_at ? 'Last tested: ' + new Date(json.tested_at).toLocaleString() : '';
+    const when = json.tested_at ? 'Last tested: ' + new Date(json.tested_at).toLocaleString() : 'Not tested yet — click “Test keys now”.';
     document.getElementById('keyStatus').innerHTML =
       'Botdog: ' + fmt(json.botdog_set, json.botdog_valid) + '<br>' +
       'Resend: ' + fmt(json.resend_set, json.resend_valid) + '<br>' +
-      '<small style="color:#94a3b8">' + when + ' · auto-tested daily</small>';
+      'Pappers: ' + fmt(json.pappers_set, json.pappers_valid) + '<br>' +
+      '<small style="color:#94a3b8">' + when + '</small>';
   } catch(e) {}
+}
+// Validate all saved keys (Botdog, Resend, Pappers) against their live APIs.
+async function testAllKeys() {
+  const st = document.getElementById('testKeysStatus');
+  if (st) st.textContent = 'Testing keys against Botdog, Resend and Pappers…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'testKeys' }) });
+    const d = await resp.json();
+    if (d && d.ok) {
+      const mark = (set, valid) => !set ? 'not set' : (valid ? 'valid ✓' : 'invalid ✗');
+      if (st) st.innerHTML = 'Botdog: ' + mark(d.botdog_set, d.botdog_valid) + ' · Resend: ' + mark(d.resend_set, d.resend_valid) + ' · Pappers: ' + mark(d.pappers_set, d.pappers_valid);
+      await loadKeyStatus();
+    } else if (st) { st.textContent = 'Error: ' + JSON.stringify(d).slice(0, 160); }
+  } catch(e) { if (st) st.textContent = 'Error: ' + e.message; }
 }
 
 // ----- Botdog campaign selection -----
@@ -2631,6 +2687,7 @@ async function initAuth(){
   load();
   loadCampaigns();
   loadSalesNavList();
+  loadLeadTarget();
   // Start auto-detecting the Chrome extension (and best-effort Sales Nav).
   initExtDetect();
   // Record this login in the Users store (fire-and-forget, through the authenticated proxy).
