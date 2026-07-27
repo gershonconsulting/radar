@@ -424,7 +424,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.8.0</div>
+      <div class="ver" id="sideVer">v1.8.1</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -747,6 +747,16 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         </div>
         <button class="btn-save" onclick="saveCampaign()">Save Campaigns</button>
         <div id="campaignStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
+        <h2>Sales Navigator list</h2>
+        <p>New prospects are added to this LinkedIn Sales Navigator list, so you can work them all in one place. Paste your dedicated list URL.</p>
+        <div class="field">
+          <label>Sales Nav list URL</label>
+          <input type="text" id="inputSalesNavList" placeholder="https://www.linkedin.com/sales/lists/people/…">
+        </div>
+        <button class="btn-save" onclick="saveSalesNavList()">Save List</button>
+        <div id="salesNavListStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
         <h2>Key Status</h2>
@@ -2300,6 +2310,39 @@ async function saveSettings() {
     try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if(botdog)cur.botdog=botdog; if(resend)cur.resend=resend; if(pappers)cur.pappers=pappers; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
+
+// ===== Sales Navigator list (where new prospects get placed) =====
+async function saveSalesNavList() {
+  const el = document.getElementById('inputSalesNavList');
+  const url = (el ? el.value : '').trim();
+  const status = document.getElementById('salesNavListStatus');
+  if (url && !/linkedin\.com\/sales\/lists\//i.test(url)) {
+    status.textContent = 'That doesn’t look like a Sales Navigator list URL (…/sales/lists/…).'; return;
+  }
+  status.textContent = 'Saving…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', salesnav_list_url: url }) });
+    const data = await resp.json();
+    status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
+    if (data.saved) {
+      try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); cur.salesnav_list_url = url; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
+      // Hand the list URL to the Chrome extension so it can add new prospects to it.
+      try { window.dispatchEvent(new CustomEvent('radar-ext-set-salesnav-list', { detail:{ url: url } })); } catch(e) {}
+    }
+  } catch(e) { status.textContent = 'Error: ' + e.message; }
+}
+// Load the saved Sales Nav list URL from the backend (cross-device) into the field.
+async function loadSalesNavList() {
+  const el = document.getElementById('inputSalesNavList');
+  if (!el) return;
+  try {
+    const cfg = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r=>r.text());
+    const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (j && j.salesnav_list_url && !el.value) el.value = j.salesnav_list_url;
+  } catch(e) {
+    try { const k = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if (k.salesnav_list_url && !el.value) el.value = k.salesnav_list_url; } catch(_){}
+  }
+}
 // ===== Plans / free-tier limits =====
 const PLAN_LIMITS = {
   free: { sources: 1, bridgesPerSource: 5, prospectsPerBridge: 10 },
@@ -2587,6 +2630,7 @@ async function initAuth(){
   initSorting();
   load();
   loadCampaigns();
+  loadSalesNavList();
   // Start auto-detecting the Chrome extension (and best-effort Sales Nav).
   initExtDetect();
   // Record this login in the Users store (fire-and-forget, through the authenticated proxy).
