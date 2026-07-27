@@ -424,7 +424,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.8.2</div>
+      <div class="ver" id="sideVer">v1.8.3</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -598,14 +598,16 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div id="bridgePushStatus" class="sync-status" style="display:none"></div>
       <details class="settings-card" style="margin-bottom:14px">
         <summary style="cursor:pointer;font-weight:600">➕ Add a bridge manually</summary>
-        <p style="margin-top:8px">Paste a LinkedIn profile URL to add someone you know as a bridge.</p>
-        <div class="field"><label>Name</label><input id="mbName" placeholder="e.g. Jane Doe"></div>
+        <p style="margin-top:8px">Just paste a LinkedIn profile URL — Radar fills in the name, title and connection degree from the profile on the next sync.</p>
         <div class="field"><label>LinkedIn profile URL</label><input id="mbUrl" placeholder="https://www.linkedin.com/in/…"></div>
-        <div class="field"><label>Company / source</label><input id="mbSource" placeholder="e.g. Acme Corp"></div>
-        <div class="field"><label>Title <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="mbTitle" placeholder="e.g. Partner"></div>
-        <div class="field"><label>Your connection</label>
-          <select id="mbConn"><option value="1st">1st — already connected</option><option value="2nd">2nd</option><option value="3rd">3rd</option></select>
-        </div>
+        <details style="margin:2px 0 10px"><summary style="cursor:pointer;font-size:0.85rem;color:#64748b">Optional details (leave blank to auto-fill)</summary>
+          <div class="field" style="margin-top:8px"><label>Name <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="mbName" placeholder="auto-filled from the profile"></div>
+          <div class="field"><label>Company / source <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="mbSource" placeholder="e.g. Acme Corp"></div>
+          <div class="field"><label>Title <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="mbTitle" placeholder="auto-filled from the profile"></div>
+          <div class="field"><label>Your connection <span style="color:#94a3b8;font-weight:400">(optional)</span></label>
+            <select id="mbConn"><option value="">auto-detect</option><option value="1st">1st — already connected</option><option value="2nd">2nd</option><option value="3rd">3rd</option></select>
+          </div>
+        </details>
         <button class="btn-save" onclick="addBridgeManual()">+ Add Bridge</button>
         <div id="mbStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </details>
@@ -993,25 +995,27 @@ async function addSource() {
 }
 
 async function addBridgeManual() {
-  const name   = (document.getElementById('mbName').value || '').trim();
   const url     = (document.getElementById('mbUrl').value || '').trim();
+  const st     = document.getElementById('mbStatus');
+  if (!/linkedin\.com\/in\//i.test(url)) { st.textContent = 'Paste a linkedin.com/in/… profile URL — that’s all you need.'; return; }
+  const publicUrl = url.split('?')[0].replace(/\/+$/, '');
+  const slug = (publicUrl.split('/in/')[1] || '').replace(/\/+$/, '');
+  // Everything else is optional — derive a readable name from the slug; the extension
+  // fills in the real name/title/degree from the profile on the next sync.
+  let name = (document.getElementById('mbName').value || '').trim();
+  if (!name) { try { name = decodeURIComponent(slug).replace(/-/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase()); } catch(e) { name = slug.replace(/-/g, ' '); } }
   const source = (document.getElementById('mbSource').value || '').trim();
   const title  = (document.getElementById('mbTitle').value || '').trim();
-  const conn   = document.getElementById('mbConn').value;
-  const st     = document.getElementById('mbStatus');
-  if (!name) { st.textContent = 'Enter a name.'; return; }
-  if (!/linkedin\.com\/in\//i.test(url)) { st.textContent = 'Enter a linkedin.com/in/… profile URL.'; return; }
+  const conn   = document.getElementById('mbConn').value || '';
   const brBlock = bridgeCapBlock(source || 'Manual');
   if (brBlock) { st.innerHTML = brBlock + ' <a href="#" onclick="showView(\'billing\');return false;" style="color:#2563eb">Upgrade →</a>'; return; }
-  const publicUrl = url.split('?')[0].replace(/\/+$/, '');
-  const slug = publicUrl.split('/in/')[1] || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const urn = 'manual:' + slug;
   st.textContent = 'Adding…';
   try {
     const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addBridges', source: source || 'Manual', bridges: [{ name: name, title: title, urn: urn, linkedin_url: publicUrl, connection: conn, active: true }] }) });
     const d = await resp.json();
     if (d && (d.saved || d.added != null || d.success)) {
-      st.textContent = '✓ Bridge "' + name + '" added.';
+      st.textContent = '✓ Bridge added — name, title and degree will be filled in from the profile on the next sync.';
       document.getElementById('mbName').value = ''; document.getElementById('mbUrl').value = ''; document.getElementById('mbSource').value = ''; document.getElementById('mbTitle').value = '';
       await loadBridges(); await load();
     } else if (d && d.error && /unknown action|addBridges/i.test(JSON.stringify(d))) {
