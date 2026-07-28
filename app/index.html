@@ -424,7 +424,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.8.5</div>
+      <div class="ver" id="sideVer">v1.9.0</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -490,6 +490,13 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div id="warningBanner" class="banner" style="display:none">
         WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
       </div>
+      <div id="extUpdateBanner" class="banner" style="display:none;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
+        <span id="extUpdateMsg"></span>
+        <a id="extUpdateDl" href="/radar-extension.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
+        <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#2563eb;text-decoration:none">How to update</a>
+        <a href="#" onclick="dismissExtUpdate();return false" style="margin-left:12px;color:#64748b;text-decoration:none">Dismiss</a>
+        <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#334155;font-weight:400">To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.)</div>
+      </div>
       <!-- ========= 1. SOURCES ========= -->
       <div class="dash-sec stage-sources">
         <div class="dash-head">
@@ -551,6 +558,11 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     <section id="view-setup" class="view">
       <div class="page-head"><h2>Setup</h2><p>Connect Radar to LinkedIn Sales Navigator and Botdog to start collecting targets.</p></div>
       <div id="onboardingWrap"></div>
+      <div class="settings-card" style="max-width:620px">
+        <h2>Radar extension version</h2>
+        <p>Radar collects through the Chrome extension. Keep it up to date to get the latest fixes.</p>
+        <div id="extVersionRow" style="font-size:0.92rem;color:#334155">Checking…</div>
+      </div>
     </section>
 
     <!-- ===== Targets ===== -->
@@ -1213,6 +1225,39 @@ function detectExtension(){
     if (sn === '1') { localStorage.setItem('radar_salesnav_ok', '1'); }
   } catch(e) {}
   renderOnboarding();
+  try { checkExtUpdate(); } catch(e) {}
+}
+
+// ===== Extension version offer (installed vs latest, like the Linalysis check) =====
+const LATEST_EXT_VERSION = '1.6.6';   // latest packaged extension offered on the platform
+function cmpVer(a, b){
+  const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
+  const pb = String(b||'0').split('.').map(n => parseInt(n,10)||0);
+  for (let i=0; i<Math.max(pa.length, pb.length); i++){ const d = (pa[i]||0)-(pb[i]||0); if (d) return d<0?-1:1; }
+  return 0;
+}
+function extUpdateDismissed(){ try { return localStorage.getItem('radar_ext_update_dismissed') === LATEST_EXT_VERSION; } catch(e){ return false; } }
+function dismissExtUpdate(){ try { localStorage.setItem('radar_ext_update_dismissed', LATEST_EXT_VERSION); } catch(e){} const b = document.getElementById('extUpdateBanner'); if (b) b.style.display='none'; }
+function toggleExtUpdateHelp(){ const h = document.getElementById('extUpdateHelp'); if (h) h.style.display = (h.style.display==='none' ? 'block' : 'none'); }
+function checkExtUpdate(){
+  let installed = document.documentElement.getAttribute('data-radar-ext');
+  if (!installed) { try { installed = localStorage.getItem('radar_ext_ver'); } catch(e){} }
+  const behind = installed && cmpVer(installed, LATEST_EXT_VERSION) < 0;
+  const row = document.getElementById('extVersionRow');
+  if (row) {
+    row.innerHTML = !installed
+      ? 'Extension: <span style="color:#dc2626;font-weight:600">not detected</span> — <a href="/radar-extension.zip" download style="color:#2563eb">download it</a>, then Load unpacked in chrome://extensions.'
+      : (behind
+        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
+        : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
+  }
+  const banner = document.getElementById('extUpdateBanner'), msg = document.getElementById('extUpdateMsg');
+  if (banner) {
+    if (behind && !extUpdateDismissed()) {
+      if (msg) msg.innerHTML = 'A new version of Radar is available — <strong>v'+LATEST_EXT_VERSION+'</strong> (you have v'+installed+').';
+      banner.style.display = 'block';
+    } else { banner.style.display = 'none'; }
+  }
 }
 
 let _extDetectInit = false;
