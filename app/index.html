@@ -424,7 +424,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.9.1</div>
+      <div class="ver" id="sideVer">v1.9.2</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -703,7 +703,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected. Install/reload the Radar extension to change the schedule.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -1227,6 +1227,7 @@ function detectExtension(){
   try {
     var ver = document.documentElement.getAttribute('data-radar-ext');
     if (ver) {
+      window.__extLivePresent = true;   // proven present THIS page load by the content script
       localStorage.setItem('radar_ext_ok', '1');
       localStorage.setItem('radar_ext_ver', ver);
     }
@@ -1238,7 +1239,7 @@ function detectExtension(){
 }
 
 // ===== Extension version offer (installed vs latest, like the Linalysis check) =====
-const LATEST_EXT_VERSION = '1.6.6';   // latest packaged extension offered on the platform
+const LATEST_EXT_VERSION = '1.6.8';   // latest packaged extension offered on the platform
 function cmpVer(a, b){
   const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
   const pb = String(b||'0').split('.').map(n => parseInt(n,10)||0);
@@ -1249,13 +1250,14 @@ function extUpdateDismissed(){ try { return localStorage.getItem('radar_ext_upda
 function dismissExtUpdate(){ try { localStorage.setItem('radar_ext_update_dismissed', LATEST_EXT_VERSION); } catch(e){} const b = document.getElementById('extUpdateBanner'); if (b) b.style.display='none'; }
 function toggleExtUpdateHelp(){ const h = document.getElementById('extUpdateHelp'); if (h) h.style.display = (h.style.display==='none' ? 'block' : 'none'); }
 function checkExtUpdate(){
-  let installed = document.documentElement.getAttribute('data-radar-ext');
-  if (!installed) { try { installed = localStorage.getItem('radar_ext_ver'); } catch(e){} }
+  // Live-only: trust ONLY what the extension announces this page load (never stale localStorage),
+  // so we never falsely claim "installed" after the extension has been removed.
+  let installed = document.documentElement.getAttribute('data-radar-ext') || '';
   const behind = installed && cmpVer(installed, LATEST_EXT_VERSION) < 0;
   const row = document.getElementById('extVersionRow');
   if (row) {
     row.innerHTML = !installed
-      ? 'Extension: <span style="color:#dc2626;font-weight:600">not detected</span> — <a href="/radar-extension.zip" download style="color:#2563eb">download it</a>, then Load unpacked in chrome://extensions.'
+      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
       : (behind
         ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
         : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
@@ -1285,14 +1287,23 @@ function initExtDetect(){
     } catch(_) {}
     detectExtension();
   });
+  // Start each session assuming the extension is ABSENT — only a live announcement this page
+  // load proves it present. This prevents a stale localStorage flag from claiming "installed".
+  window.__extLivePresent = false;
+  try { localStorage.removeItem('radar_ext_ok'); localStorage.removeItem('radar_ext_ver'); } catch(e) {}
   // Nudge the extension to announce, then detect immediately.
   try { window.dispatchEvent(new Event('radar-ext-ping')); } catch(e) {}
   detectExtension();
-  // Poll a handful of times in case the content script injects late.
+  // Poll a handful of times in case the content script injects late; if it never announces,
+  // finalize as "not installed" (truthful) and refresh the UI.
   var tries = 0;
   var poll = setInterval(function(){
     tries++;
-    if (obFlag('radar_ext_ok') || tries >= 6) { clearInterval(poll); }
+    var live = !!document.documentElement.getAttribute('data-radar-ext');
+    if (live || tries >= 6) {
+      clearInterval(poll);
+      if (!live) { window.__extLivePresent = false; try { localStorage.removeItem('radar_ext_ok'); localStorage.removeItem('radar_ext_ver'); } catch(e){} renderOnboarding(); try { checkExtUpdate(); } catch(e){} }
+    }
     try { window.dispatchEvent(new Event('radar-ext-ping')); } catch(e) {}
     detectExtension();
   }, 1500);
@@ -1381,8 +1392,9 @@ function renderOnboarding(){
         (done.ext ? 'Extension installed' + (extVer ? ' (v' + extVer + ')' : '') : 'Install the Chrome extension') + '</div>' +
         (done.ext ?
         '<div class="ob-note">detected automatically</div>' :
+        '<div class="ob-note" style="margin-bottom:6px">Download it, then in <code>chrome://extensions</code> enable <strong>Developer mode</strong> → <strong>Load unpacked</strong> → pick the unzipped folder.</div>' +
         '<div class="ob-actions">' +
-          '<a class="ob-link" href="/extension.html" target="_blank" rel="noopener">Download &amp; install ↗</a>' +
+          '<a class="ob-link" href="/radar-extension.zip" download>Download the extension ↓</a>' +
           '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
         '</div>') +
       '</div>' +
