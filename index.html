@@ -1,286 +1,299 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Radar by Gershon.AI — Your next client is one introduction away</title>
-<meta name="description" content="Radar watches the organizations your market trusts, finds the people inside who know your buyers, and turns their networks into a warm pipeline that fills itself — every day.">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Radar — Warm intros to your ideal customers</title>
+<meta name="description" content="Radar maps the people who can introduce you to your ideal customers. Watch the right organizations, find the bridges inside them, and collect graded prospects — automatically, through a Chrome extension." />
+<meta property="og:title" content="Radar — Warm intros to your ideal customers" />
+<meta property="og:description" content="Source → Bridge → Target. Radar turns the organizations you watch into a steady stream of graded, ready-to-contact prospects." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://radar.gershoncrm.com" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <style>
   :root{
-    --ink:#0f1e3d; --muted:#64748b; --line:#e2e8f0; --brand:#4f46e5; --brand-2:#6366f1; --brand-soft:#eef0fe;
-    --navy:#0b1230; --navy-2:#111a3f;
-    --src-bg:#eafaf0; --src-ink:#15803d; --src-line:#bbe8cd;
-    --brg-bg:#fff3e6; --brg-ink:#c2610a; --brg-line:#ffd9b0;
-    --tgt-bg:#e8f2fe; --tgt-ink:#1d4ed8; --tgt-line:#bcd9fb;
+    --bg:#0b1020; --bg2:#0e1530; --ink:#0b1020; --paper:#ffffff;
+    --muted:#5b6478; --line:#e6e9f2; --soft:#f5f7fc;
+    --brand:#3b5bfd; --brand2:#22d3ee; --brand-ink:#1e34c4;
+    --grad:linear-gradient(120deg,#3b5bfd 0%,#6366f1 45%,#22d3ee 100%);
+    --ok:#16a34a; --shadow:0 18px 50px rgba(18,28,64,.14);
+    --radius:16px;
   }
-  *{ box-sizing:border-box; margin:0; padding:0; }
-  html{ scroll-behavior:smooth; }
-  body{ font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif; color:var(--ink); background:#fff; -webkit-font-smoothing:antialiased; }
-  a{ color:inherit; text-decoration:none; }
-  .wrap{ max-width:1080px; margin:0 auto; padding:0 24px; }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;color:#1a2133;background:var(--paper);line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;font-weight:600;font-size:.98rem;padding:.8rem 1.25rem;border-radius:12px;border:1px solid transparent;cursor:pointer;transition:.18s;white-space:nowrap}
+  .btn-primary{background:var(--grad);color:#fff;box-shadow:0 8px 22px rgba(59,91,253,.35)}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(59,91,253,.45)}
+  .btn-ghost{background:#fff;border-color:var(--line);color:#1a2133}
+  .btn-ghost:hover{border-color:#c8cfe6;background:var(--soft)}
+  .btn-lite{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#fff}
+  .btn-lite:hover{background:rgba(255,255,255,.16)}
+  .li{width:16px;height:16px;flex:none}
 
-  /* ---------- Nav ---------- */
-  nav{ position:sticky; top:0; z-index:50; background:rgba(11,18,48,.85); backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,.08); }
-  .nav-in{ display:flex; align-items:center; justify-content:space-between; height:64px; }
-  .logo{ display:flex; align-items:center; gap:10px; color:#fff; }
-  .logo svg{ width:26px; height:26px; color:#818cf8; }
-  .logo b{ font-size:1.35rem; font-weight:800; letter-spacing:-.02em; }
-  .logo i{ font-style:normal; font-size:.68rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#94a3b8; margin-top:6px; }
-  .nav-links{ display:flex; align-items:center; gap:28px; }
-  .nav-links a{ color:#cbd5e1; font-size:.9rem; font-weight:600; transition:color .2s; }
-  .nav-links a:hover{ color:#fff; }
-  .btn{ display:inline-block; font-weight:800; border-radius:10px; padding:11px 22px; font-size:.92rem; transition:transform .15s, box-shadow .15s; cursor:pointer; }
-  .btn:hover{ transform:translateY(-1px); }
-  .btn-brand{ background:linear-gradient(135deg,var(--brand),var(--brand-2)); color:#fff; box-shadow:0 4px 14px rgba(79,70,229,.35); }
-  .btn-ghost{ background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.18); }
-  .btn-white{ background:#fff; color:var(--brand); }
-  .nav-cta{ padding:9px 18px; font-size:.85rem; }
-  @media (max-width:720px){ .nav-links a:not(.btn){ display:none; } }
+  header{position:sticky;top:0;z-index:40;backdrop-filter:saturate(180%) blur(12px);background:rgba(255,255,255,.82);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .brand{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:1.12rem;letter-spacing:-.02em}
+  .brand .dot{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;box-shadow:0 6px 16px rgba(59,91,253,.4)}
+  .brand small{display:block;font-weight:600;font-size:.62rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:-2px}
+  .nav-links{display:flex;align-items:center;gap:1.4rem}
+  .nav-links a.link{color:#3a4258;font-weight:500;font-size:.95rem}
+  .nav-links a.link:hover{color:var(--brand-ink)}
+  @media(max-width:720px){.nav-links a.link{display:none}}
 
-  /* ---------- Hero ---------- */
-  .hero{ position:relative; overflow:hidden; background:radial-gradient(1200px 600px at 70% -10%, #24308a 0%, var(--navy) 55%); color:#fff; }
-  .hero-in{ position:relative; z-index:2; padding:96px 0 88px; text-align:center; }
-  .eyebrow{ display:inline-block; font-size:.72rem; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:#a5b4fc; background:rgba(99,102,241,.14); border:1px solid rgba(129,140,248,.35); border-radius:999px; padding:6px 16px; margin-bottom:22px; }
-  .hero h1{ font-size:clamp(2rem,5vw,3.3rem); font-weight:800; letter-spacing:-.03em; line-height:1.12; max-width:820px; margin:0 auto 20px; }
-  .hero h1 .accent{ background:linear-gradient(90deg,#a5b4fc,#818cf8); -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .hero p.sub{ font-size:clamp(1rem,2vw,1.18rem); color:#c7d2fe; max-width:680px; margin:0 auto 34px; }
-  .hero-ctas{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
-  .hero-note{ margin-top:18px; font-size:.8rem; color:#8ea0c9; }
+  .hero{position:relative;overflow:hidden;background:radial-gradient(1200px 600px at 78% -10%,#1b2a63 0,transparent 55%),radial-gradient(900px 500px at 10% 0,#12224d 0,transparent 55%),linear-gradient(180deg,#0b1020,#0e1734);color:#eaf0ff}
+  .hero .wrap{padding:76px 24px 90px;position:relative;z-index:2}
+  .kicker{display:inline-flex;align-items:center;gap:.5rem;font-size:.8rem;font-weight:600;letter-spacing:.02em;color:#bcd0ff;background:rgba(120,150,255,.12);border:1px solid rgba(140,165,255,.28);padding:.4rem .8rem;border-radius:999px}
+  .hero h1{font-size:clamp(2.1rem,5vw,3.5rem);line-height:1.05;letter-spacing:-.03em;margin:1.1rem 0 0;font-weight:800;color:#fff}
+  .hero h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.sub{font-size:1.14rem;color:#c3ccea;max-width:640px;margin:1.1rem 0 0}
+  .cta-row{display:flex;flex-wrap:wrap;gap:.8rem;margin-top:1.8rem}
+  .trust{margin-top:1.4rem;font-size:.86rem;color:#93a0c9}
+  .rings{position:absolute;right:-160px;top:-120px;width:620px;height:620px;opacity:.5;z-index:1;pointer-events:none}
+  .rings span{position:absolute;inset:0;margin:auto;border:1px solid rgba(120,160,255,.28);border-radius:50%}
+  .rings span:nth-child(1){width:620px;height:620px}
+  .rings span:nth-child(2){width:460px;height:460px}
+  .rings span:nth-child(3){width:300px;height:300px}
+  .rings span:nth-child(4){width:150px;height:150px}
+  .sweep{position:absolute;inset:0;margin:auto;width:620px;height:620px;border-radius:50%;background:conic-gradient(from 0deg,rgba(34,211,238,.28),transparent 30%);animation:spin 6s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* radar sweep */
-  .sweep{ position:absolute; inset:0; z-index:1; opacity:.35; pointer-events:none; }
-  .sweep svg{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:1100px; height:1100px; }
-  .ring{ fill:none; stroke:rgba(129,140,248,.22); stroke-width:1; }
-  .beam{ transform-origin:550px 550px; animation:spin 7s linear infinite; }
-  @keyframes spin{ to{ transform:rotate(360deg); } }
-  .blip{ fill:#a5b4fc; opacity:0; animation:blip 7s linear infinite; }
-  @keyframes blip{ 0%,4%{opacity:0} 6%{opacity:1} 30%{opacity:.15} 55%{opacity:0} 100%{opacity:0} }
+  .mock{margin-top:3.2rem;position:relative;z-index:2;background:#0c1430;border:1px solid rgba(120,150,255,.22);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+  .mock .bar{display:flex;align-items:center;gap:.5rem;padding:.7rem 1rem;border-bottom:1px solid rgba(120,150,255,.16);background:#0a1128}
+  .mock .bar i{width:11px;height:11px;border-radius:50%;background:#334166;display:inline-block}
+  .mock .bar .u{margin-left:.6rem;font-size:.8rem;color:#8ea0d0}
+  .flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:0;align-items:stretch;padding:26px 22px}
+  @media(max-width:760px){.flow{grid-template-columns:1fr;gap:14px}.flow .arrow{display:none}}
+  .stage{background:#0f1a3d;border:1px solid rgba(120,150,255,.18);border-radius:14px;padding:16px 16px 18px}
+  .stage h4{margin:0;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#7f8fc4}
+  .stage .big{font-size:1.9rem;font-weight:800;color:#fff;margin:.25rem 0 .1rem}
+  .stage .lbl{font-size:.86rem;color:#aeb9de}
+  .stage ul{margin:.7rem 0 0;padding:0;list-style:none;font-size:.82rem;color:#c7d0ee}
+  .stage ul li{display:flex;align-items:center;gap:.45rem;padding:.16rem 0}
+  .stage ul li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--brand2)}
+  .arrow{display:grid;place-items:center;color:#5f6ea3;font-size:1.4rem;padding:0 6px}
 
-  /* ---------- Chain strip ---------- */
-  .chainbar{ background:var(--navy-2); border-top:1px solid rgba(255,255,255,.06); color:#e2e8f0; padding:18px 0; }
-  .chain{ display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
-  .chain span{ font-size:.82rem; font-weight:700; padding:7px 16px; border-radius:999px; }
-  .chain .ar{ background:none; color:#64748b; padding:0; font-weight:800; }
-  .c-src{ background:var(--src-bg); color:var(--src-ink); }
-  .c-brg{ background:var(--brg-bg); color:var(--brg-ink); }
-  .c-tgt{ background:var(--tgt-bg); color:var(--tgt-ink); }
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:-40px;position:relative;z-index:5;box-shadow:var(--shadow)}
+  @media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:#fff;padding:22px 18px;text-align:center}
+  .stat b{display:block;font-size:1.7rem;font-weight:800;letter-spacing:-.02em;color:var(--brand-ink)}
+  .stat span{font-size:.82rem;color:var(--muted)}
 
-  /* ---------- Sections ---------- */
-  section{ padding:76px 0; }
-  .sec-head{ text-align:center; max-width:640px; margin:0 auto 44px; }
-  .kicker{ font-size:.72rem; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--brand); margin-bottom:10px; }
-  .sec-head h2{ font-size:clamp(1.5rem,3.4vw,2.1rem); font-weight:800; letter-spacing:-.02em; line-height:1.2; margin-bottom:12px; }
-  .sec-head p{ color:var(--muted); font-size:1rem; }
+  section.pad{padding:76px 0}
+  .eyebrow{text-align:center;font-size:.78rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--brand)}
+  h2.sec{text-align:center;font-size:clamp(1.6rem,3.4vw,2.35rem);line-height:1.12;letter-spacing:-.02em;margin:.6rem auto 0;max-width:720px;font-weight:800}
+  p.lead{text-align:center;color:var(--muted);max-width:640px;margin:1rem auto 0;font-size:1.05rem}
 
-  /* stages */
-  .stages{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
-  @media (max-width:820px){ .stages{ grid-template-columns:1fr; } }
-  .stage{ border:1.5px solid; border-radius:16px; padding:26px 24px; position:relative; }
-  .stage .badge{ width:30px; height:30px; border-radius:50%; font-size:.85rem; font-weight:800; color:#fff; display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
-  .stage h3{ font-size:1.05rem; font-weight:800; letter-spacing:.02em; }
-  .stage h3 i{ font-size:.78rem; font-style:normal; opacity:.7; font-weight:600; margin-left:6px; }
-  .stage p{ font-size:.9rem; line-height:1.55; color:#334155; margin-top:10px; }
-  .stage p strong{ color:var(--ink); }
-  .stage .eg{ margin-top:14px; padding-top:12px; border-top:1px dashed currentColor; font-size:.82rem; opacity:.9; }
-  .s-src{ background:var(--src-bg); border-color:var(--src-line); color:var(--src-ink); } .s-src .badge{ background:var(--src-ink); }
-  .s-brg{ background:var(--brg-bg); border-color:var(--brg-line); color:var(--brg-ink); } .s-brg .badge{ background:var(--brg-ink); }
-  .s-tgt{ background:var(--tgt-bg); border-color:var(--tgt-line); color:var(--tgt-ink); } .s-tgt .badge{ background:var(--tgt-ink); }
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:44px}
+  @media(max-width:900px){.grid3{grid-template-columns:1fr 1fr}}
+  @media(max-width:600px){.grid3{grid-template-columns:1fr}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px;transition:.18s}
+  .card:hover{border-color:#c9d2ee;box-shadow:var(--shadow);transform:translateY(-2px)}
+  .card .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:1.3rem;background:linear-gradient(135deg,#eef2ff,#e0f7ff);border:1px solid #e2e8ff}
+  .card h3{margin:.9rem 0 .35rem;font-size:1.08rem;letter-spacing:-.01em}
+  .card p{margin:0;color:var(--muted);font-size:.94rem}
 
-  /* features */
-  .features{ background:#f8fafc; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
-  .feats{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
-  @media (max-width:980px){ .feats{ grid-template-columns:repeat(2,1fr); } }
-  @media (max-width:560px){ .feats{ grid-template-columns:1fr; } }
-  .feat{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px 18px; transition:box-shadow .2s, transform .2s; }
-  .feat:hover{ box-shadow:0 8px 24px rgba(15,23,42,.08); transform:translateY(-2px); }
-  .feat .ic{ width:34px; height:34px; border-radius:9px; background:var(--brand-soft); color:var(--brand); font-size:.95rem; font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:12px; }
-  .feat b{ font-size:.92rem; font-weight:800; display:block; margin-bottom:5px; }
-  .feat span{ font-size:.82rem; color:var(--muted); line-height:1.5; }
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:44px}
+  @media(max-width:820px){.steps{grid-template-columns:1fr}}
+  .step{position:relative;padding:26px 22px;background:var(--soft);border:1px solid var(--line);border-radius:var(--radius)}
+  .step .n{width:38px;height:38px;border-radius:11px;background:var(--grad);color:#fff;font-weight:800;display:grid;place-items:center;box-shadow:0 8px 18px rgba(59,91,253,.35)}
+  .step h3{margin:.8rem 0 .3rem;font-size:1.08rem}
+  .step p{margin:0;color:var(--muted);font-size:.94rem}
 
-  /* two cards */
-  .two{ display:grid; grid-template-columns:1fr 1fr; gap:22px; }
-  @media (max-width:720px){ .two{ grid-template-columns:1fr; } }
-  .card{ border:1px solid var(--line); border-radius:16px; padding:26px 28px; }
-  .card h4{ font-size:1.02rem; font-weight:800; margin-bottom:12px; }
-  .card ul{ list-style:none; }
-  .card li{ font-size:.9rem; color:#334155; padding:6px 0 6px 20px; position:relative; line-height:1.5; }
-  .card li:before{ content:"▸"; position:absolute; left:0; color:var(--brand); font-size:.8rem; top:8px; }
+  .band{background:linear-gradient(180deg,#f7f9ff,#eef2ff);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .why{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+  @media(max-width:820px){.why{grid-template-columns:1fr}}
+  .why h2{font-size:clamp(1.5rem,3vw,2.1rem);letter-spacing:-.02em;margin:0 0 .8rem;font-weight:800}
+  .why p{color:#44506e;margin:.6rem 0}
+  .checklist{list-style:none;margin:1.2rem 0 0;padding:0}
+  .checklist li{display:flex;gap:.7rem;align-items:flex-start;padding:.45rem 0;font-size:.98rem}
+  .checklist li svg{flex:none;margin-top:2px}
+  .pricecard{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:26px}
+  .pricecard .tag{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brand)}
+  .pricecard .amt{font-size:2.2rem;font-weight:800;letter-spacing:-.02em;margin:.3rem 0}
+  .pricecard .amt small{font-size:.95rem;font-weight:600;color:var(--muted)}
+  .pricecard ul{list-style:none;margin:1rem 0;padding:0}
+  .pricecard ul li{display:flex;gap:.55rem;align-items:center;padding:.34rem 0;font-size:.95rem;color:#33405e}
+  .pricecard ul li::before{content:"✓";color:var(--ok);font-weight:800}
 
-  /* CTA band */
-  .cta{ background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%); color:#fff; border-radius:22px; padding:52px 48px; text-align:center; box-shadow:0 18px 50px rgba(79,70,229,.35); }
-  @media (max-width:560px){ .cta{ padding:38px 24px; } }
-  .cta h2{ font-size:clamp(1.4rem,3.2vw,2rem); font-weight:800; letter-spacing:-.02em; margin-bottom:10px; }
-  .cta p{ font-size:1rem; opacity:.92; max-width:560px; margin:0 auto 26px; }
+  .final{background:radial-gradient(900px 420px at 50% -20%,#22345f 0,transparent 60%),linear-gradient(180deg,#0b1020,#0e1734);color:#fff;text-align:center}
+  .final .wrap{padding:80px 24px}
+  .final h2{font-size:clamp(1.7rem,3.6vw,2.6rem);letter-spacing:-.02em;margin:0;font-weight:800}
+  .final p{color:#bcc7ea;max-width:560px;margin:1rem auto 0}
+  .final .cta-row{justify-content:center}
 
-  footer{ border-top:1px solid var(--line); padding:26px 0; }
-  .foot{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; font-size:.82rem; color:var(--muted); }
-  .foot .logo{ color:var(--ink); } .foot .logo svg{ color:var(--brand); } .foot .logo b{ font-size:1rem; }
-
-  /* reveal on scroll */
-  .rv{ opacity:0; transform:translateY(18px); transition:opacity .6s ease, transform .6s ease; }
-  .rv.on{ opacity:1; transform:none; }
+  footer{background:#0a0e1c;color:#93a0c9;font-size:.9rem}
+  footer .wrap{padding:44px 24px;display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between;align-items:center}
+  footer .brand{color:#fff}
+  footer .brand small{color:#7482ab}
+  footer a.link:hover{color:#fff}
+  .foot-links{display:flex;gap:1.4rem;flex-wrap:wrap}
+  .copy{width:100%;border-top:1px solid rgba(255,255,255,.08);padding-top:18px;color:#6d7aa4;font-size:.82rem}
 </style>
 </head>
 <body>
 
-<nav>
-  <div class="wrap nav-in">
-    <a class="logo" href="#top">
-      <svg viewBox="0 0 64 64"><defs><linearGradient id="navbeam" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a5b4fc" stop-opacity=".9"/><stop offset="1" stop-color="#a5b4fc" stop-opacity="0"/></linearGradient></defs><circle cx="32" cy="32" r="12" fill="none" stroke="#818cf8" stroke-width="2" opacity=".4"/><circle cx="32" cy="32" r="20" fill="none" stroke="#818cf8" stroke-width="2" opacity=".6"/><circle cx="32" cy="32" r="28" fill="none" stroke="#a5b4fc" stroke-width="2.5"/><path d="M32 32 L32 6 A26 26 0 0 1 54.5 19 Z" fill="url(#navbeam)"/><circle cx="32" cy="32" r="3.5" fill="#c7d2fe"/><circle cx="44" cy="20" r="3" fill="#e0e7ff"/><circle cx="22" cy="42" r="2.4" fill="#a5b4fc"/></svg>
-      <b>Radar</b><i>by Gershon.AI</i>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/">
+      <span class="dot">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.6"/><circle cx="12" cy="12" r="4.5" stroke="#fff" stroke-width="1.6"/><circle cx="12" cy="12" r="1.6" fill="#fff"/><path d="M12 12L19 6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </span>
+      <span>Radar<small>by Gershon.AI</small></span>
     </a>
-    <div class="nav-links">
-      <a href="#how">How it works</a>
-      <a href="#features">Features</a>
-      <a href="#who">Who it's for</a>
-      <a class="btn btn-brand nav-cta" href="app/">Sign in</a>
-    </div>
-  </div>
-</nav>
-
-<header class="hero" id="top">
-  <div class="sweep" aria-hidden="true">
-    <svg viewBox="0 0 1100 1100">
-      <circle class="ring" cx="550" cy="550" r="150"/>
-      <circle class="ring" cx="550" cy="550" r="290"/>
-      <circle class="ring" cx="550" cy="550" r="430"/>
-      <circle class="ring" cx="550" cy="550" r="540"/>
-      <g class="beam">
-        <path d="M550 550 L550 10 A540 540 0 0 1 810 78 Z" fill="url(#g)"/>
-        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="rgba(129,140,248,.5)"/><stop offset="1" stop-color="rgba(129,140,248,0)"/>
-        </linearGradient></defs>
-      </g>
-      <circle class="blip" cx="700" cy="300" r="6" style="animation-delay:.4s"/>
-      <circle class="blip" cx="380" cy="420" r="5" style="animation-delay:2.8s"/>
-      <circle class="blip" cx="640" cy="760" r="6" style="animation-delay:4.6s"/>
-      <circle class="blip" cx="300" cy="700" r="5" style="animation-delay:5.6s"/>
-    </svg>
-  </div>
-  <div class="wrap hero-in">
-    <span class="eyebrow">The LinkedIn lead engine for relationship-led sales</span>
-    <h1>Your next client is already <span class="accent">one introduction away</span>.<br>Radar finds them — every day.</h1>
-    <p class="sub">Radar watches the organizations your market trusts, finds the people inside who know your buyers, and turns their networks into a warm pipeline that fills itself.</p>
-    <div class="hero-ctas">
-      <a class="btn btn-brand" href="app/">Open Radar</a>
-      <a class="btn btn-ghost" href="#how">See how it works</a>
-    </div>
-    <div class="hero-note">Secure sign-in with LinkedIn · Your network, your data</div>
+    <nav class="nav-links">
+      <a class="link" href="#how">How it works</a>
+      <a class="link" href="#features">Features</a>
+      <a class="link" href="#pricing">Pricing</a>
+      <a class="link" href="/api/auth/linkedin/login">Sign in</a>
+      <a class="btn btn-primary" href="/api/auth/linkedin/login">
+        <svg class="li" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z"/></svg>
+        Get started
+      </a>
+    </nav>
   </div>
 </header>
 
-<div class="chainbar">
-  <div class="wrap chain">
-    <span class="c-src">an organization you watch</span><span class="ar">→</span>
-    <span class="c-brg">a person inside it who knows your buyers</span><span class="ar">→</span>
-    <span class="c-tgt">the buyers themselves, warm</span>
+<section class="hero">
+  <div class="rings"><span></span><span></span><span></span><span></span><div class="sweep"></div></div>
+  <div class="wrap">
+    <span class="kicker">◆ LinkedIn lead engine · built on warm intros</span>
+    <h1>The people who can introduce you<br/><span class="g">to your best customers</span> — mapped.</h1>
+    <p class="sub">Radar watches the organizations that matter to you, finds the well-connected people inside them, and collects the prospects <em>they</em> can open the door to — graded, deduplicated, and ready for outreach. It runs itself through a Chrome extension. No password sharing.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="/api/auth/linkedin/login">
+        <svg class="li" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z"/></svg>
+        Get started with LinkedIn
+      </a>
+      <a class="btn btn-lite" href="/api/auth/linkedin/login">Already have an account? Sign in →</a>
+    </div>
+    <div class="trust">Free to start · no credit card · your data stays yours</div>
+
+    <div class="mock">
+      <div class="bar"><i></i><i></i><i></i><span class="u">radar.gershoncrm.com/app</span></div>
+      <div class="flow">
+        <div class="stage">
+          <h4>1 · Sources</h4>
+          <div class="big">Organizations</div>
+          <div class="lbl">that your buyers cluster around</div>
+          <ul><li>Partners &amp; competitors</li><li>Industry bodies</li><li>Chambers &amp; networks</li></ul>
+        </div>
+        <div class="arrow">→</div>
+        <div class="stage">
+          <h4>2 · Bridges</h4>
+          <div class="big">Connectors</div>
+          <div class="lbl">the people inside who know your prospects</div>
+          <ul><li>Well-connected insiders</li><li>Warm-path scoring</li><li>Auto-nested by source</li></ul>
+        </div>
+        <div class="arrow">→</div>
+        <div class="stage">
+          <h4>3 · Targets</h4>
+          <div class="big">Prospects</div>
+          <div class="lbl">graded, deduped, ready to contact</div>
+          <ul><li>ICP grade A+ → C</li><li>Pushed to your campaign</li><li>Filed in a Sales Nav list</li></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><b>Source→Bridge→Target</b><span>the whole warm-intro map</span></div>
+    <div class="stat"><b>Auto</b><span>runs in your browser, daily</span></div>
+    <div class="stat"><b>ICP-graded</b><span>quality, not just quantity</span></div>
+    <div class="stat"><b>1-click outreach</b><span>straight into Botdog</span></div>
   </div>
 </div>
 
-<section id="how">
+<section class="pad" id="features">
   <div class="wrap">
-    <div class="sec-head rv">
-      <div class="kicker">How it works</div>
-      <h2>Three stages. One warm path.</h2>
-      <p>Cold outreach is a numbers game you lose. Radar plays a different one — it maps who already trusts you, and who trusts them.</p>
-    </div>
-    <div class="stages">
-      <div class="stage s-src rv">
-        <div class="badge">1</div>
-        <h3>SOURCE<i>an organization</i></h3>
-        <p><strong>A place where your future clients already gather.</strong> A chamber, a trade body, a partner firm, even a competitor. You don't sell to a Source — you watch it, because the people you want are already in its orbit.</p>
-        <div class="eg">e.g. <em>a chamber of commerce, an industry association, a partner firm</em></div>
-      </div>
-      <div class="stage s-brg rv" style="transition-delay:.1s">
-        <div class="badge">2</div>
-        <h3>BRIDGE<i>a person inside it</i></h3>
-        <p><strong>Someone inside it whose network overlaps your market.</strong> A partner, a board member, a director. Not your prospect either — they're the door. Radar sees who you already know, and invites the ones you don't.</p>
-        <div class="eg">e.g. <em>a Partner there, connected to hundreds of founders in your market</em></div>
-      </div>
-      <div class="stage s-tgt rv" style="transition-delay:.2s">
-        <div class="badge">3</div>
-        <h3>TARGET<i>a prospect</i></h3>
-        <p><strong>A real buyer inside a Bridge's network.</strong> Who you actually want to meet — reached via someone you both know, not a cold list. Graded A+ to D on real company data, then pushed to your outreach.</p>
-        <div class="eg">e.g. <em>the CEO of a mid-sized company expanding into your market</em></div>
-      </div>
+    <div class="eyebrow">What you get</div>
+    <h2 class="sec">Everyone sells to strangers. Radar sells through the people who already know them.</h2>
+    <p class="lead">Cold outreach converts in the low single digits. A warm path — through someone your prospect actually trusts — changes the math. Radar builds that path for you, automatically.</p>
+    <div class="grid3">
+      <div class="card"><div class="ic">🏢</div><h3>Watch the right sources</h3><p>Add an organization with just its LinkedIn URL. Radar names it, resolves its Sales Nav ID, and starts finding the people inside it.</p></div>
+      <div class="card"><div class="ic">🤝</div><h3>Find your bridges</h3><p>The well-connected insiders who can introduce you. Paste a profile URL and Radar fills in the name, title and connection degree on the next sync.</p></div>
+      <div class="card"><div class="ic">🎯</div><h3>Collect graded targets</h3><p>Every prospect a bridge opens is captured, deduplicated, and scored against your ICP — A+ down to C — so you work the best fits first.</p></div>
+      <div class="card"><div class="ic">🧩</div><h3>Chrome extension does the work</h3><p>Installs in a few seconds and collects in your own browser session. No password sharing, no scraping service in the middle.</p></div>
+      <div class="card"><div class="ic">🚀</div><h3>One-click outreach</h3><p>Push non-connected bridges and selected targets straight into your Botdog campaigns, and file every new prospect in a dedicated Sales Navigator list.</p></div>
+      <div class="card"><div class="ic">📩</div><h3>Daily report &amp; health alerts</h3><p>A morning email shows what Radar collected. If collection ever stalls, you get an alert instead of silent nothing.</p></div>
     </div>
   </div>
 </section>
 
-<section class="features" id="features">
+<section class="pad band" id="how">
   <div class="wrap">
-    <div class="sec-head rv">
-      <div class="kicker">What Radar does</div>
-      <h2>Set it up once. Wake up to new prospects.</h2>
-    </div>
-    <div class="feats">
-      <div class="feat rv"><div class="ic">1</div><b>Automatic daily collection</b><span>A Chrome extension works your Sales Navigator on a schedule you set. No manual exports, no copy-paste.</span></div>
-      <div class="feat rv" style="transition-delay:.05s"><div class="ic">2</div><b>Bridge discovery</b><span>Point Radar at an organization; it finds the people inside worth knowing — once per source, never repeated.</span></div>
-      <div class="feat rv" style="transition-delay:.1s"><div class="ic">3</div><b>ICP grading A+ to D</b><span>Every Target scored on fit, enriched with real company data: age, headcount, last known revenue, location.</span></div>
-      <div class="feat rv" style="transition-delay:.15s"><div class="ic">4</div><b>Company intelligence</b><span>Official registry lookups tell you which companies are substantial enough to be worth your time.</span></div>
-      <div class="feat rv"><div class="ic">5</div><b>Connection-degree aware</b><span>See instantly who you already know (1st), who's one hop away (2nd), and who needs an introduction.</span></div>
-      <div class="feat rv" style="transition-delay:.05s"><div class="ic">6</div><b>One-click outreach</b><span>Push selected Targets straight into your outreach campaigns — with separate sequences for Bridges and Targets.</span></div>
-      <div class="feat rv" style="transition-delay:.1s"><div class="ic">7</div><b>Bridges get invited too</b><span>Not connected to a Bridge yet? Radar queues them for a connection request, so the door opens by itself.</span></div>
-      <div class="feat rv" style="transition-delay:.15s"><div class="ic">8</div><b>You stay in control</b><span>Unselect anyone. Radar remembers forever and never re-surfaces or contacts them.</span></div>
+    <div class="eyebrow">How it works</div>
+    <h2 class="sec">Three steps to a self-running pipeline.</h2>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><h3>Sign in &amp; set your ICP</h3><p>Connect with LinkedIn, paste your Sales Navigator search template, and add your first source — the organization your buyers cluster around.</p></div>
+      <div class="step"><div class="n">2</div><h3>Install the extension</h3><p>Download the Radar Chrome extension and pin it. From then on it collects bridges and targets in your browser, on a schedule you set.</p></div>
+      <div class="step"><div class="n">3</div><h3>Work your warm list</h3><p>Graded prospects land in your dashboard and your Sales Nav list. Push the best into outreach with a click, and read the daily recap in your inbox.</p></div>
     </div>
   </div>
 </section>
 
-<section id="who">
-  <div class="wrap">
-    <div class="sec-head rv">
-      <div class="kicker">Built for</div>
-      <h2>Made for people who sell through relationships</h2>
+<section class="pad" id="pricing">
+  <div class="wrap why">
+    <div>
+      <div class="eyebrow" style="text-align:left">Why it works</div>
+      <h2>Start free. Upgrade when the pipeline pays for itself.</h2>
+      <p>Radar is free to try with one source so you can see real warm-intro paths before paying a cent. When you're ready to scale — more sources, more bridges, unlimited prospects — upgrade to Pro.</p>
+      <ul class="checklist">
+        <li><svg class="li" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>No password sharing — collection runs in your own browser.</span></li>
+        <li><svg class="li" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Your data is isolated to your account — no one else sees it.</span></li>
+        <li><svg class="li" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Cancel anytime and keep every export.</span></li>
+      </ul>
     </div>
-    <div class="two">
-      <div class="card rv">
-        <h4>Who it's for</h4>
-        <ul>
-          <li>Business developers who sell through relationships</li>
-          <li>Consultants and advisors who live off warm introductions</li>
-          <li>Teams entering a new market or geography</li>
-          <li>Anyone whose best deals come from their network</li>
-        </ul>
-      </div>
-      <div class="card rv" style="transition-delay:.1s">
-        <h4>Why it's different</h4>
-        <ul>
-          <li>Warm paths, not cold lists — every target traces to someone who knows them</li>
-          <li>Scored on company reality, not just job titles</li>
-          <li>Your own LinkedIn network, not a purchased database</li>
-          <li>Secure sign-in with LinkedIn; your data stays yours</li>
-        </ul>
-      </div>
+    <div class="pricecard">
+      <div class="tag">Free — Starter</div>
+      <div class="amt">$0<small> / forever</small></div>
+      <ul>
+        <li>1 source</li>
+        <li>5 bridges per source</li>
+        <li>10 prospects per bridge</li>
+        <li>Daily report &amp; health alerts</li>
+        <li>Chrome extension included</li>
+      </ul>
+      <a class="btn btn-primary" style="width:100%;justify-content:center" href="/api/auth/linkedin/login">Get started free</a>
+      <p style="text-align:center;color:var(--muted);font-size:.85rem;margin:.9rem 0 0">Need more sources and unlimited prospects? <a href="/api/auth/linkedin/login" style="color:var(--brand);font-weight:600">Upgrade to Pro</a> inside the app.</p>
     </div>
   </div>
 </section>
 
-<section>
+<section class="final">
   <div class="wrap">
-    <div class="cta rv">
-      <h2>Stop guessing who to contact.</h2>
-      <p>Radar turns the network you already have into a pipeline that fills itself — every single day.</p>
-      <a class="btn btn-white" href="app/">Open Radar</a>
+    <h2>Stop cold-emailing strangers.</h2>
+    <p>Let Radar map the warm paths you already have — and turn the organizations you watch into a steady stream of graded prospects.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="/api/auth/linkedin/login">
+        <svg class="li" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z"/></svg>
+        Get started with LinkedIn
+      </a>
+      <a class="btn btn-lite" href="/api/auth/linkedin/login">Sign in to your account →</a>
     </div>
   </div>
 </section>
 
 <footer>
-  <div class="wrap foot">
-    <a class="logo" href="#top">
-      <svg viewBox="0 0 64 64" style="width:22px;height:22px"><defs><linearGradient id="footbeam" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5" stop-opacity=".85"/><stop offset="1" stop-color="#4f46e5" stop-opacity="0"/></linearGradient></defs><circle cx="32" cy="32" r="12" fill="none" stroke="#4f46e5" stroke-width="2" opacity=".35"/><circle cx="32" cy="32" r="20" fill="none" stroke="#4f46e5" stroke-width="2" opacity=".55"/><circle cx="32" cy="32" r="28" fill="none" stroke="#4f46e5" stroke-width="2.5"/><path d="M32 32 L32 6 A26 26 0 0 1 54.5 19 Z" fill="url(#footbeam)"/><circle cx="32" cy="32" r="3.5" fill="#4f46e5"/><circle cx="44" cy="20" r="3" fill="#6366f1"/><circle cx="22" cy="42" r="2.4" fill="#818cf8"/></svg>
-      <b>Radar</b>
+  <div class="wrap">
+    <a class="brand" href="/">
+      <span class="dot"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.6"/><circle cx="12" cy="12" r="4.5" stroke="#fff" stroke-width="1.6"/><circle cx="12" cy="12" r="1.6" fill="#fff"/><path d="M12 12L19 6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+      <span>Radar<small>by Gershon.AI</small></span>
     </a>
-    <span>Radar by Gershon.AI — LinkedIn lead engine · radar.gershonCRM.com</span>
-    <span>support@gershonconsulting.com</span>
+    <div class="foot-links">
+      <a class="link" href="#how">How it works</a>
+      <a class="link" href="#features">Features</a>
+      <a class="link" href="#pricing">Pricing</a>
+      <a class="link" href="/api/auth/linkedin/login">Sign in</a>
+      <a class="link" href="mailto:support@gershonconsulting.com">Support</a>
+    </div>
+    <div class="copy">© 2026 Gershon.AI · Radar. Warm-intro lead intelligence for LinkedIn Sales Navigator. All rights reserved.</div>
   </div>
 </footer>
-
-<script>
-  const io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add('on'); io.unobserve(e.target); } }), { threshold:.12 });
-  document.querySelectorAll('.rv').forEach(el => io.observe(el));
-</script>
 
 </body>
 </html>
