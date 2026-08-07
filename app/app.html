@@ -424,7 +424,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.7.1</div>
+      <div class="ver" id="sideVer">v1.9.2</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -436,16 +436,19 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <span id="liStatusText">Checking…</span>
     </div>
     <nav class="nav-items">
-      <button class="nav-item active" id="nav-dashboard"   onclick="showView('dashboard')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg></span> Dashboard</button>
+      <div class="nav-sec">Overview</div>
+      <button class="nav-item active" id="nav-home"        onclick="showView('home')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg></span> Dashboard</button>
+      <button class="nav-item"        id="nav-dashboard"   onclick="showView('dashboard')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Summary</button>
+      <button class="nav-item"        id="nav-growth"      onclick="showView('growth')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span> Growth</button>
       <div class="nav-sec">Pipeline</div>
       <button class="nav-item"        id="nav-sources"     onclick="showView('sources')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M6 21V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v17"/><path d="M14 9h3a1 1 0 0 1 1 1v11"/><line x1="9" y1="7" x2="10" y2="7"/><line x1="9" y1="11" x2="10" y2="11"/><line x1="9" y1="15" x2="10" y2="15"/></svg></span> Sources <span class="nav-count" id="sourceNavCount">0</span></button>
       <button class="nav-item"        id="nav-bridges"     onclick="showView('bridges')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span> Bridges <span class="nav-count" id="bridgeNavCount">0</span></button>
       <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
       <div class="nav-sec">Activity</div>
-      <button class="nav-item"        id="nav-growth"      onclick="showView('growth')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span> Growth</button>
       <button class="nav-item"        id="nav-setup"       onclick="showView('setup')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Setup</button>
       <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span> Collections</button>
       <button class="nav-item"        id="nav-log"         onclick="showView('log')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg></span> Log</button>
+      <div class="nav-sec">Account</div>
       <button class="nav-item"        id="nav-settings"    onclick="showView('settings')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings</button>
       <button class="nav-item"        id="nav-billing"     onclick="showView('billing')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span> Billing</button>
       <button class="nav-item"        id="nav-referrals"   onclick="showView('referrals')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span> Referrals</button>
@@ -480,15 +483,28 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
   <div class="main">
   <div class="content">
 
-    <!-- ===== Dashboard ===== -->
-    <section id="view-dashboard" class="view active">
+    <!-- ===== Dashboard (command center) ===== -->
+    <section id="view-home" class="view active">
+      <div class="page-head"><h2>Dashboard</h2><p>Your engine at a glance — capture health, pipeline totals, and what needs attention today.</p></div>
+      <div id="homeBody"><div class="empty">Loading…</div></div>
+    </section>
+
+    <!-- ===== Summary (detailed pipeline view) ===== -->
+    <section id="view-dashboard" class="view">
       <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
-        <div><h2>Dashboard</h2><p>Your Source → Bridge → Target pipeline at a glance.</p></div>
+        <div><h2>Summary</h2><p>Your Source → Bridge → Target pipeline in detail.</p></div>
         <button id="syncNowBtn" onclick="triggerSync()" class="sync-btn">🔄 Sync Now</button>
       </div>
       <div id="syncStatus" class="sync-status" style="display:none"></div>
       <div id="warningBanner" class="banner" style="display:none">
         WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
+      </div>
+      <div id="extUpdateBanner" class="banner" style="display:none;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
+        <span id="extUpdateMsg"></span>
+        <a id="extUpdateDl" href="/radar-extension.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
+        <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#2563eb;text-decoration:none">How to update</a>
+        <a href="#" onclick="dismissExtUpdate();return false" style="margin-left:12px;color:#64748b;text-decoration:none">Dismiss</a>
+        <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#334155;font-weight:400">To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.)</div>
       </div>
       <!-- ========= 1. SOURCES ========= -->
       <div class="dash-sec stage-sources">
@@ -551,6 +567,11 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     <section id="view-setup" class="view">
       <div class="page-head"><h2>Setup</h2><p>Connect Radar to LinkedIn Sales Navigator and Botdog to start collecting targets.</p></div>
       <div id="onboardingWrap"></div>
+      <div class="settings-card" style="max-width:620px">
+        <h2>Radar extension version</h2>
+        <p>Radar collects through the Chrome extension. Keep it up to date to get the latest fixes.</p>
+        <div id="extVersionRow" style="font-size:0.92rem;color:#334155">Checking…</div>
+      </div>
     </section>
 
     <!-- ===== Targets ===== -->
@@ -598,14 +619,16 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div id="bridgePushStatus" class="sync-status" style="display:none"></div>
       <details class="settings-card" style="margin-bottom:14px">
         <summary style="cursor:pointer;font-weight:600">➕ Add a bridge manually</summary>
-        <p style="margin-top:8px">Paste a LinkedIn profile URL to add someone you know as a bridge.</p>
-        <div class="field"><label>Name</label><input id="mbName" placeholder="e.g. Jane Doe"></div>
+        <p style="margin-top:8px">Just paste a LinkedIn profile URL — Radar fills in the name, title and connection degree from the profile on the next sync.</p>
         <div class="field"><label>LinkedIn profile URL</label><input id="mbUrl" placeholder="https://www.linkedin.com/in/…"></div>
-        <div class="field"><label>Company / source</label><input id="mbSource" placeholder="e.g. Acme Corp"></div>
-        <div class="field"><label>Title <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="mbTitle" placeholder="e.g. Partner"></div>
-        <div class="field"><label>Your connection</label>
-          <select id="mbConn"><option value="1st">1st — already connected</option><option value="2nd">2nd</option><option value="3rd">3rd</option></select>
-        </div>
+        <details style="margin:2px 0 10px"><summary style="cursor:pointer;font-size:0.85rem;color:#64748b">Optional details (leave blank to auto-fill)</summary>
+          <div class="field" style="margin-top:8px"><label>Name <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="mbName" placeholder="auto-filled from the profile"></div>
+          <div class="field"><label>Company / source <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="mbSource" placeholder="e.g. Acme Corp"></div>
+          <div class="field"><label>Title <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="mbTitle" placeholder="auto-filled from the profile"></div>
+          <div class="field"><label>Your connection <span style="color:#94a3b8;font-weight:400">(optional)</span></label>
+            <select id="mbConn"><option value="">auto-detect</option><option value="1st">1st — already connected</option><option value="2nd">2nd</option><option value="3rd">3rd</option></select>
+          </div>
+        </details>
         <button class="btn-save" onclick="addBridgeManual()">+ Add Bridge</button>
         <div id="mbStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </details>
@@ -627,21 +650,23 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="page-head"><h2>Sources</h2><p>Organizations you watch and collect connections from.</p></div>
       <div class="settings-card" style="max-width:620px">
         <h2>Add a Source</h2>
-        <p>Add an organization to watch. Paste its LinkedIn company URL — collect its team into Targets next.</p>
-        <div class="field"><label>Source name</label><input id="srcName" placeholder="e.g. Krymkier Law"></div>
+        <p>Just paste an organization's LinkedIn company URL — Radar names the source and resolves its Sales Nav ID to find bridges.</p>
         <div class="field"><label>LinkedIn company URL</label><input id="srcUrl" placeholder="https://www.linkedin.com/company/..."></div>
-        <div class="field"><label>Sales Nav company URL or Org ID <span style="color:#94a3b8;font-weight:400">— enables bridge discovery</span></label><input id="srcOrg" placeholder="…/organization/139070  or  139070"></div>
-        <div class="field"><label>Role / function keyword <span style="color:#94a3b8;font-weight:400">— optional; narrows discovery for large orgs</span></label><input id="srcKeyword" placeholder="e.g. Team France Export"></div>
-        <div class="field"><label>Type</label>
-          <select id="srcCat">
-            <option value="partner">Partner</option>
-            <option value="competitor">Competitor</option>
-            <option value="organization">Organization</option>
-          </select>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;color:#334155;margin:2px 0 12px;cursor:pointer">
-          <input type="checkbox" id="srcDiscoverNow" checked style="width:16px;height:16px"> Collect bridges now <span style="color:#94a3b8">(otherwise on the monthly discovery run)</span>
-        </label>
+        <details style="margin:2px 0 10px"><summary style="cursor:pointer;font-size:0.85rem;color:#64748b">Optional details (leave blank to auto-fill)</summary>
+          <div class="field" style="margin-top:8px"><label>Source name <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="srcName" placeholder="auto-filled from the company page"></div>
+          <div class="field"><label>Sales Nav company URL or Org ID <span style="color:#94a3b8;font-weight:400">— speeds up bridge discovery</span></label><input id="srcOrg" placeholder="…/organization/139070  or  139070"></div>
+          <div class="field"><label>Role / function keyword <span style="color:#94a3b8;font-weight:400">— narrows discovery for large orgs</span></label><input id="srcKeyword" placeholder="e.g. Team France Export"></div>
+          <div class="field"><label>Type</label>
+            <select id="srcCat">
+              <option value="partner">Partner</option>
+              <option value="competitor">Competitor</option>
+              <option value="organization">Organization</option>
+            </select>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;color:#334155;margin:2px 0 4px;cursor:pointer">
+            <input type="checkbox" id="srcDiscoverNow" checked style="width:16px;height:16px"> Collect bridges now <span style="color:#94a3b8">(needs the Org ID; otherwise on the discovery run)</span>
+          </label>
+        </details>
         <button class="btn-save" onclick="addSource()">+ Add Source</button>
         <div id="srcStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
@@ -678,7 +703,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected. Install/reload the Radar extension to change the schedule.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -749,9 +774,32 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div id="campaignStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
+        <h2>Sales Navigator list</h2>
+        <p>New prospects are added to this LinkedIn Sales Navigator list, so you can work them all in one place. Paste your dedicated list URL.</p>
+        <div class="field">
+          <label>Sales Nav list URL</label>
+          <input type="text" id="inputSalesNavList" placeholder="https://www.linkedin.com/sales/lists/people/…">
+        </div>
+        <button class="btn-save" onclick="saveSalesNavList()">Save List</button>
+        <div id="salesNavListStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
+        <h2>Daily lead target</h2>
+        <p>How many new prospects Radar should aim to collect each day. The extension caps daily collection at this number.</p>
+        <div class="field">
+          <label>New leads per day: <strong id="leadTargetVal">25</strong></label>
+          <input type="range" id="inputLeadTarget" min="10" max="100" step="5" value="25" oninput="document.getElementById('leadTargetVal').textContent=this.value" style="width:100%">
+          <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:#94a3b8"><span>10 (min)</span><span>100 (max)</span></div>
+        </div>
+        <button class="btn-save" onclick="saveLeadTarget()">Save target</button>
+        <div id="leadTargetStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
         <h2>Key Status</h2>
-        <p>Current backend key status.</p>
+        <p>Live validation of your saved keys against each service.</p>
         <div id="keyStatus" class="key-status">Loading…</div>
+        <button class="btn-save" style="margin-top:12px" onclick="testAllKeys()">Test keys now</button>
+        <div id="testKeysStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
     </section>
 
@@ -795,8 +843,9 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Your plan</h2>
         <p id="billingPlan">Radar — early access.</p>
-        <p style="margin-top:10px"><a id="billingLink" class="btn-save" style="display:inline-block;text-decoration:none" href="#" onclick="return openBilling(event)">Manage billing ↗</a></p>
-        <div id="billingNote" style="margin-top:10px;font-size:0.85rem;color:#64748b">Billing is handled securely by Stripe. You'll be taken to Stripe's customer portal.</div>
+        <div id="planFeatures" style="margin-top:8px"></div>
+        <p style="margin-top:14px"><a id="billingLink" class="btn-save" style="display:inline-block;text-decoration:none" href="#" onclick="return openBilling(event)">Upgrade to Pro ↗</a></p>
+        <div id="billingNote" style="margin-top:10px;font-size:0.85rem;color:#64748b">Secure checkout hosted by Stripe — opens in a new tab.</div>
       </div>
     </section>
 
@@ -940,6 +989,22 @@ async function loadSources() {
     if (j.success) STORED_SOURCES = j.sources || [];
   } catch(e) { console.error('loadSources', e); }
 }
+// Given a company/source string, return the canonical name of an already-tracked Source it
+// matches (exact after normalising, else a contains match), or '' if none. Used so a manually
+// added bridge lands under an existing Source rather than a separate "Manual" bucket.
+function matchExistingSource(company) {
+  const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\b(sa|sas|sarl|inc|llc|ltd|gmbh|group|groupe|co|company|pc)\b/g, '').replace(/\s+/g, ' ').trim();
+  const c = norm(company);
+  if (!c || typeof STORED_SOURCES === 'undefined' || !STORED_SOURCES) return '';
+  let best = '';
+  for (const s of STORED_SOURCES) {
+    const n = norm(s.name);
+    if (!n) continue;
+    if (n === c) return s.name;                       // exact (normalised) wins immediately
+    if (!best && (n.includes(c) || c.includes(n))) best = s.name;  // contains fallback
+  }
+  return best;
+}
 async function addSource() {
   const name = (document.getElementById('srcName').value || '').trim();
   const url  = (document.getElementById('srcUrl').value || '').trim();
@@ -950,16 +1015,26 @@ async function addSource() {
   const st   = document.getElementById('srcStatus');
   // Pull the numeric org id out of a Sales Nav / company URL, or accept a bare number.
   const orgId = (orgRaw.match(/(?:organization|company)\/(\d+)/) || orgRaw.match(/^(\d{3,})$/) || [])[1] || '';
-  if (!name) { st.textContent = 'Enter a source name.'; return; }
-  if (discoverNow && !orgId) { st.textContent = 'To collect bridges now, add the Sales Nav company URL or Org ID (or untick the box).'; return; }
+  // URL-only: a LinkedIn company page is enough. Derive the source name from the
+  // company slug if none was typed; the org ID (for bridge discovery) is resolved later.
+  let srcName = name;
+  if (!srcName) {
+    const slug = (url.split('?')[0].replace(/\/+$/, '').match(/\/company\/([^/]+)/) || [])[1] || '';
+    if (slug) { try { srcName = decodeURIComponent(slug).replace(/-/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase()); } catch(e) { srcName = slug.replace(/-/g, ' '); } }
+  }
+  if (!srcName) { st.textContent = 'Paste the LinkedIn company URL — that’s all you need.'; return; }
+  const srcBlock = sourceCapBlock();
+  if (srcBlock) { st.innerHTML = srcBlock + ' <a href="#" onclick="showView(\'billing\');return false;" style="color:#2563eb">Upgrade →</a>'; return; }
+  // Can't discover bridges without the org ID yet — save the source anyway; bridges come once it's resolved.
+  let effectiveDiscover = discoverNow && !!orgId;
   st.textContent = 'Adding…';
   try {
-    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: name, linkedin_url: url, category: cat, org_id: orgId, discover_keyword: keyword, discover_now: discoverNow }) });
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: srcName, linkedin_url: url, category: cat, org_id: orgId, discover_keyword: keyword, discover_now: effectiveDiscover }) });
     const d = await resp.json();
     if (d.saved) {
-      st.textContent = discoverNow
-        ? '✓ Added "' + name + '". Bridges queued — they’ll be collected on the next sync, or open the Radar extension and click Discover to run now.'
-        : '✓ Added "' + name + '". Bridges will be found on the monthly discovery run.';
+      st.textContent = effectiveDiscover
+        ? '✓ Added "' + srcName + '". Bridges queued — they’ll be collected on the next sync, or open the Radar extension and click Discover to run now.'
+        : '✓ Added "' + srcName + '". Radar resolves the company’s Sales Nav ID, then finds its bridges automatically.';
       document.getElementById('srcName').value = ''; document.getElementById('srcUrl').value = ''; document.getElementById('srcOrg').value = ''; document.getElementById('srcKeyword').value = '';
       await loadSources(); await load();
     } else { st.textContent = 'Error: ' + JSON.stringify(d); }
@@ -967,23 +1042,31 @@ async function addSource() {
 }
 
 async function addBridgeManual() {
-  const name   = (document.getElementById('mbName').value || '').trim();
   const url     = (document.getElementById('mbUrl').value || '').trim();
-  const source = (document.getElementById('mbSource').value || '').trim();
-  const title  = (document.getElementById('mbTitle').value || '').trim();
-  const conn   = document.getElementById('mbConn').value;
   const st     = document.getElementById('mbStatus');
-  if (!name) { st.textContent = 'Enter a name.'; return; }
-  if (!/linkedin\.com\/in\//i.test(url)) { st.textContent = 'Enter a linkedin.com/in/… profile URL.'; return; }
+  if (!/linkedin\.com\/in\//i.test(url)) { st.textContent = 'Paste a linkedin.com/in/… profile URL — that’s all you need.'; return; }
   const publicUrl = url.split('?')[0].replace(/\/+$/, '');
-  const slug = publicUrl.split('/in/')[1] || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const slug = (publicUrl.split('/in/')[1] || '').replace(/\/+$/, '');
+  // Everything else is optional — derive a readable name from the slug; the extension
+  // fills in the real name/title/degree from the profile on the next sync.
+  let name = (document.getElementById('mbName').value || '').trim();
+  if (!name) { try { name = decodeURIComponent(slug).replace(/-/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase()); } catch(e) { name = slug.replace(/-/g, ' '); } }
+  let source = (document.getElementById('mbSource').value || '').trim();
+  const title  = (document.getElementById('mbTitle').value || '').trim();
+  const conn   = document.getElementById('mbConn').value || '';
+  // If the entered company matches a Source we already track, nest this bridge under that
+  // Source instead of "Manual" (case/punctuation-insensitive, with a contains fallback).
+  const matchedSource = matchExistingSource(source);
+  if (matchedSource) source = matchedSource;
+  const brBlock = bridgeCapBlock(source || 'Manual');
+  if (brBlock) { st.innerHTML = brBlock + ' <a href="#" onclick="showView(\'billing\');return false;" style="color:#2563eb">Upgrade →</a>'; return; }
   const urn = 'manual:' + slug;
   st.textContent = 'Adding…';
   try {
     const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addBridges', source: source || 'Manual', bridges: [{ name: name, title: title, urn: urn, linkedin_url: publicUrl, connection: conn, active: true }] }) });
     const d = await resp.json();
     if (d && (d.saved || d.added != null || d.success)) {
-      st.textContent = '✓ Bridge "' + name + '" added.';
+      st.textContent = '✓ Bridge added under "' + (source || 'Manual') + '" — name, title and degree fill in from the profile on the next sync.';
       document.getElementById('mbName').value = ''; document.getElementById('mbUrl').value = ''; document.getElementById('mbSource').value = ''; document.getElementById('mbTitle').value = '';
       await loadBridges(); await load();
     } else if (d && d.error && /unknown action|addBridges/i.test(JSON.stringify(d))) {
@@ -1144,6 +1227,7 @@ function detectExtension(){
   try {
     var ver = document.documentElement.getAttribute('data-radar-ext');
     if (ver) {
+      window.__extLivePresent = true;   // proven present THIS page load by the content script
       localStorage.setItem('radar_ext_ok', '1');
       localStorage.setItem('radar_ext_ver', ver);
     }
@@ -1151,6 +1235,40 @@ function detectExtension(){
     if (sn === '1') { localStorage.setItem('radar_salesnav_ok', '1'); }
   } catch(e) {}
   renderOnboarding();
+  try { checkExtUpdate(); } catch(e) {}
+}
+
+// ===== Extension version offer (installed vs latest, like the Linalysis check) =====
+const LATEST_EXT_VERSION = '1.6.8';   // latest packaged extension offered on the platform
+function cmpVer(a, b){
+  const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
+  const pb = String(b||'0').split('.').map(n => parseInt(n,10)||0);
+  for (let i=0; i<Math.max(pa.length, pb.length); i++){ const d = (pa[i]||0)-(pb[i]||0); if (d) return d<0?-1:1; }
+  return 0;
+}
+function extUpdateDismissed(){ try { return localStorage.getItem('radar_ext_update_dismissed') === LATEST_EXT_VERSION; } catch(e){ return false; } }
+function dismissExtUpdate(){ try { localStorage.setItem('radar_ext_update_dismissed', LATEST_EXT_VERSION); } catch(e){} const b = document.getElementById('extUpdateBanner'); if (b) b.style.display='none'; }
+function toggleExtUpdateHelp(){ const h = document.getElementById('extUpdateHelp'); if (h) h.style.display = (h.style.display==='none' ? 'block' : 'none'); }
+function checkExtUpdate(){
+  // Live-only: trust ONLY what the extension announces this page load (never stale localStorage),
+  // so we never falsely claim "installed" after the extension has been removed.
+  let installed = document.documentElement.getAttribute('data-radar-ext') || '';
+  const behind = installed && cmpVer(installed, LATEST_EXT_VERSION) < 0;
+  const row = document.getElementById('extVersionRow');
+  if (row) {
+    row.innerHTML = !installed
+      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
+      : (behind
+        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
+        : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
+  }
+  const banner = document.getElementById('extUpdateBanner'), msg = document.getElementById('extUpdateMsg');
+  if (banner) {
+    if (behind && !extUpdateDismissed()) {
+      if (msg) msg.innerHTML = 'A new version of Radar is available — <strong>v'+LATEST_EXT_VERSION+'</strong> (you have v'+installed+').';
+      banner.style.display = 'block';
+    } else { banner.style.display = 'none'; }
+  }
 }
 
 let _extDetectInit = false;
@@ -1169,14 +1287,23 @@ function initExtDetect(){
     } catch(_) {}
     detectExtension();
   });
+  // Start each session assuming the extension is ABSENT — only a live announcement this page
+  // load proves it present. This prevents a stale localStorage flag from claiming "installed".
+  window.__extLivePresent = false;
+  try { localStorage.removeItem('radar_ext_ok'); localStorage.removeItem('radar_ext_ver'); } catch(e) {}
   // Nudge the extension to announce, then detect immediately.
   try { window.dispatchEvent(new Event('radar-ext-ping')); } catch(e) {}
   detectExtension();
-  // Poll a handful of times in case the content script injects late.
+  // Poll a handful of times in case the content script injects late; if it never announces,
+  // finalize as "not installed" (truthful) and refresh the UI.
   var tries = 0;
   var poll = setInterval(function(){
     tries++;
-    if (obFlag('radar_ext_ok') || tries >= 6) { clearInterval(poll); }
+    var live = !!document.documentElement.getAttribute('data-radar-ext');
+    if (live || tries >= 6) {
+      clearInterval(poll);
+      if (!live) { window.__extLivePresent = false; try { localStorage.removeItem('radar_ext_ok'); localStorage.removeItem('radar_ext_ver'); } catch(e){} renderOnboarding(); try { checkExtUpdate(); } catch(e){} }
+    }
     try { window.dispatchEvent(new Event('radar-ext-ping')); } catch(e) {}
     detectExtension();
   }, 1500);
@@ -1265,8 +1392,9 @@ function renderOnboarding(){
         (done.ext ? 'Extension installed' + (extVer ? ' (v' + extVer + ')' : '') : 'Install the Chrome extension') + '</div>' +
         (done.ext ?
         '<div class="ob-note">detected automatically</div>' :
+        '<div class="ob-note" style="margin-bottom:6px">Download it, then in <code>chrome://extensions</code> enable <strong>Developer mode</strong> → <strong>Load unpacked</strong> → pick the unzipped folder.</div>' +
         '<div class="ob-actions">' +
-          '<a class="ob-link" href="/extension.html" target="_blank" rel="noopener">Download &amp; install ↗</a>' +
+          '<a class="ob-link" href="/radar-extension.zip" download>Download the extension ↓</a>' +
           '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
         '</div>') +
       '</div>' +
@@ -1311,6 +1439,58 @@ function renderAll(){
   renderLog();
   renderCharts();
   renderFlow();
+  renderHome();
+}
+
+// ===== Dashboard command center =====
+function renderHome(){
+  const el = document.getElementById('homeBody');
+  if (!el) return;
+  const nSrc = (typeof STORED_SOURCES !== 'undefined' && STORED_SOURCES) ? STORED_SOURCES.length : 0;
+  const nBr  = (typeof BRIDGES !== 'undefined' && BRIDGES) ? BRIDGES.length : 0;
+  const rows = (typeof ROWS !== 'undefined' && ROWS) ? ROWS : [];
+  const nT = rows.length;
+  const pushed = rows.filter(r => r.botdog_pushed).length;
+  const dates = rows.map(r => r.collected_date).filter(Boolean).map(d => new Date(d)).filter(d => !isNaN(d));
+  const last = dates.length ? new Date(Math.max.apply(null, dates.map(d => d.getTime()))) : null;
+  const days = last ? Math.floor((Date.now() - last.getTime()) / 86400000) : null;
+  const weekAgo = Date.now() - 7*86400000;
+  const wk = dates.filter(d => d.getTime() >= weekAgo).length;
+  const bridged = new Set((typeof BRIDGES !== 'undefined' && BRIDGES ? BRIDGES : []).map(b => (b.source||'').trim().toLowerCase()).filter(Boolean));
+  const srcNoBr = (typeof STORED_SOURCES !== 'undefined' && STORED_SOURCES ? STORED_SOURCES : []).filter(s => !bridged.has((s.name||'').trim().toLowerCase())).length;
+  const noUrl = rows.filter(r => !r.linkedin_url).length;
+
+  let hb;
+  if (days === null) hb = { c:'#dc2626', bg:'#fef2f2', bd:'#fecaca', t:'No prospects captured yet — run a collection to get started.' };
+  else if (days <= 2) hb = { c:'#166534', bg:'#f0fdf4', bd:'#bbf7d0', t:'✓ Capture healthy — last new prospect ' + (days===0 ? 'today' : days + ' day' + (days>1?'s':'') + ' ago') + '.' };
+  else hb = { c:'#b45309', bg:'#fffbeb', bd:'#fde68a', t:'⚠ No new prospects for ' + days + ' days (last capture ' + last.toISOString().slice(0,10) + '). Check the Radar extension is installed and running.' };
+
+  const card = (label, val, sub, color) =>
+    '<div style="flex:1;min-width:140px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px">' +
+      '<div style="font-size:30px;font-weight:700;line-height:1;color:' + (color||'#0f172a') + '">' + val + '</div>' +
+      '<div style="font-size:12px;color:#64748b;margin-top:6px;text-transform:uppercase;letter-spacing:.04em">' + label + '</div>' +
+      (sub ? '<div style="font-size:12px;color:#94a3b8;margin-top:3px">' + sub + '</div>' : '') +
+    '</div>';
+
+  const attention = [];
+  if (srcNoBr > 0) attention.push(srcNoBr + ' source' + (srcNoBr>1?'s':'') + ' with no bridges yet');
+  if (days !== null && days > 2) attention.push('Collector idle for ' + days + ' days — reload the extension');
+  if (noUrl > 0) attention.push(noUrl + ' prospect' + (noUrl>1?'s':'') + ' missing a LinkedIn URL');
+
+  el.innerHTML =
+    '<div style="background:' + hb.bg + ';border:1px solid ' + hb.bd + ';color:' + hb.c + ';border-radius:12px;padding:14px 16px;font-weight:600;margin-bottom:16px">' + hb.t + '</div>' +
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">' +
+      card('Sources', nSrc, srcNoBr ? (nSrc - srcNoBr) + ' producing bridges' : 'all producing') +
+      card('Bridges', nBr, '') +
+      card('Prospects', nT, '+' + wk + ' this week', '#2563eb') +
+      card('Pushed to Botdog', pushed, nT ? Math.round(pushed/nT*100) + '% of prospects' : '') +
+    '</div>' +
+    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px">' +
+      '<h3 style="margin:0 0 8px;font-size:0.95rem">Needs attention</h3>' +
+      (attention.length
+        ? '<ul style="margin:0;padding-left:18px;color:#334155;font-size:0.9rem;line-height:1.7">' + attention.map(a => '<li>' + a + '</li>').join('') + '</ul>'
+        : '<div style="color:#16a34a;font-size:0.9rem">All clear — nothing needs attention.</div>') +
+    '</div>';
 }
 
 // ----- Collection Log view -----
@@ -2104,6 +2284,8 @@ function showView(name){
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.getElementById('nav-' + name).classList.add('active');
+  // refresh the command center when opened
+  if (name === 'home') { try { renderHome(); } catch(e){} }
   // charts need a resize nudge when their container becomes visible
   if (name === 'dashboard') Object.values(CHARTS).forEach(c => { try{ c.resize(); }catch(e){} });
   // (re)populate the onboarding checklist when the Setup view opens
@@ -2295,9 +2477,134 @@ async function saveSettings() {
     try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if(botdog)cur.botdog=botdog; if(resend)cur.resend=resend; if(pappers)cur.pappers=pappers; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
+
+// ===== Sales Navigator list (where new prospects get placed) =====
+async function saveSalesNavList() {
+  const el = document.getElementById('inputSalesNavList');
+  const url = (el ? el.value : '').trim();
+  const status = document.getElementById('salesNavListStatus');
+  if (url && !/linkedin\.com\/sales\/lists\//i.test(url)) {
+    status.textContent = 'That doesn’t look like a Sales Navigator list URL (…/sales/lists/…).'; return;
+  }
+  status.textContent = 'Saving…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', salesnav_list_url: url }) });
+    const data = await resp.json();
+    status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
+    if (data.saved) {
+      try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); cur.salesnav_list_url = url; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
+      // Hand the list URL to the Chrome extension so it can add new prospects to it.
+      try { window.dispatchEvent(new CustomEvent('radar-ext-set-salesnav-list', { detail:{ url: url } })); } catch(e) {}
+    }
+  } catch(e) { status.textContent = 'Error: ' + e.message; }
+}
+// Load the saved Sales Nav list URL from the backend (cross-device) into the field.
+async function loadSalesNavList() {
+  const el = document.getElementById('inputSalesNavList');
+  if (!el) return;
+  try {
+    const cfg = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r=>r.text());
+    const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (j && j.salesnav_list_url && !el.value) el.value = j.salesnav_list_url;
+  } catch(e) {
+    try { const k = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if (k.salesnav_list_url && !el.value) el.value = k.salesnav_list_url; } catch(_){}
+  }
+}
+
+// ===== Daily lead target (how many new prospects/day to collect) =====
+async function saveLeadTarget() {
+  const el = document.getElementById('inputLeadTarget');
+  const val = el ? parseInt(el.value, 10) : 25;
+  const st = document.getElementById('leadTargetStatus');
+  if (st) st.textContent = 'Saving…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', daily_lead_target: String(val) }) });
+    const d = await resp.json();
+    if (st) st.textContent = d.saved ? ('Saved — aiming for ' + val + ' new leads/day.') : ('Error: ' + JSON.stringify(d));
+    if (d.saved) {
+      try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); cur.daily_lead_target = val; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
+      // Hand the target to the Chrome extension so its collection caps at this number.
+      try { window.dispatchEvent(new CustomEvent('radar-ext-set-lead-target', { detail:{ target: val } })); } catch(e) {}
+    }
+  } catch(e) { if (st) st.textContent = 'Error: ' + e.message; }
+}
+async function loadLeadTarget() {
+  const el = document.getElementById('inputLeadTarget');
+  const lbl = document.getElementById('leadTargetVal');
+  if (!el) return;
+  try {
+    const cfg = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r=>r.text());
+    const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (j && j.daily_lead_target) { el.value = j.daily_lead_target; if (lbl) lbl.textContent = j.daily_lead_target; }
+  } catch(e) {}
+}
+// ===== Plans / free-tier limits =====
+const PLAN_LIMITS = {
+  free: { sources: 1, bridgesPerSource: 5, prospectsPerBridge: 10 },
+  pro:  { sources: Infinity, bridgesPerSource: Infinity, prospectsPerBridge: Infinity }
+};
+function currentPlan(){ return window.__PLAN || 'free'; }
+function isFreePlan(){ return currentPlan() === 'free'; }
+function planLimits(){ return PLAN_LIMITS[currentPlan()] || PLAN_LIMITS.free; }
+function fmtLimit(n){ return n === Infinity ? 'Unlimited' : n; }
+// Count current sources / bridges-in-a-source from the loaded state.
+function sourceCount(){ return (typeof STORED_SOURCES !== 'undefined' && STORED_SOURCES) ? STORED_SOURCES.length : 0; }
+function bridgeCountForSource(src){
+  if (typeof BRIDGES === 'undefined' || !BRIDGES) return 0;
+  const s = (src || '').trim().toLowerCase();
+  return BRIDGES.filter(b => ((b.source || '') + '').trim().toLowerCase() === s).length;
+}
+// Returns a blocking message if the free plan cap is hit, or '' if allowed.
+function sourceCapBlock(){
+  if (!isFreePlan()) return '';
+  const lim = planLimits().sources;
+  if (sourceCount() >= lim) {
+    return '🔒 Free plan is limited to ' + lim + ' source. You already have ' + sourceCount() +
+      '. Upgrade to Pro for unlimited sources — open Billing to subscribe.';
+  }
+  return '';
+}
+function bridgeCapBlock(src){
+  if (!isFreePlan()) return '';
+  const lim = planLimits().bridgesPerSource;
+  const have = bridgeCountForSource(src);
+  if (have >= lim) {
+    return '🔒 Free plan allows ' + lim + ' bridges per source. "' + (src || 'this source') +
+      '" already has ' + have + '. Upgrade to Pro for unlimited bridges — open Billing to subscribe.';
+  }
+  return '';
+}
+// Render the plan panel (Billing view) with live limits + upgrade incentive.
+function renderPlanPanel(){
+  const plan = currentPlan();
+  const lim = planLimits();
+  const planEl = document.getElementById('billingPlan');
+  const featEl = document.getElementById('planFeatures');
+  if (planEl) planEl.innerHTML = plan === 'pro'
+    ? '<strong>Pro</strong> — unlimited sources, bridges and prospects.'
+    : '<strong>Free</strong> — a taste of Radar. Upgrade to Pro to remove the limits.';
+  if (!featEl) return;
+  const row = (label, free, pro) =>
+    '<tr><td style="padding:6px 12px 6px 0">' + label + '</td>' +
+    '<td style="padding:6px 18px;color:' + (plan==='free'?'#0f172a':'#94a3b8') + ';font-weight:600">' + free + '</td>' +
+    '<td style="padding:6px 0;color:' + (plan==='pro'?'#0f172a':'#94a3b8') + ';font-weight:600">' + pro + '</td></tr>';
+  featEl.innerHTML =
+    '<table style="border-collapse:collapse;font-size:0.9rem;margin-top:6px">' +
+    '<tr style="color:#64748b;font-size:0.8rem"><td></td><td style="padding:0 18px">FREE</td><td>PRO</td></tr>' +
+    row('Sources', fmtLimit(PLAN_LIMITS.free.sources), 'Unlimited') +
+    row('Bridges per source', fmtLimit(PLAN_LIMITS.free.bridgesPerSource), 'Unlimited') +
+    row('Prospects per bridge', fmtLimit(PLAN_LIMITS.free.prospectsPerBridge), 'Unlimited') +
+    '</table>' +
+    (plan === 'free'
+      ? '<p style="margin-top:12px;font-size:0.9rem;color:#0f172a">You\'re on the <strong>Free</strong> plan (' +
+        fmtLimit(lim.sources) + ' source, ' + fmtLimit(lim.bridgesPerSource) + ' bridges/source, ' +
+        fmtLimit(lim.prospectsPerBridge) + ' prospects/bridge). Go Pro to unlock the full engine.</p>'
+      : '<p style="margin-top:12px;font-size:0.9rem;color:#16a34a">✓ You\'re on <strong>Pro</strong> — no limits.</p>');
+}
+
 // ===== Billing / Referrals / Feedback =====
-// Stripe customer-portal link. Set STRIPE_BILLING_URL once Olivier provides it.
-const STRIPE_BILLING_URL = '';
+// Stripe hosted payment link (public checkout URL — no API keys involved).
+const STRIPE_BILLING_URL = 'https://buy.stripe.com/6oU7sNedVfrR4Az9Z09R600';
 function openBilling(ev){
   ev.preventDefault();
   if (!STRIPE_BILLING_URL) {
@@ -2391,12 +2698,27 @@ async function loadKeyStatus() {
       return valid ? '<span style="color:#16a34a;font-weight:600">Set &amp; Valid ✓</span>'
                    : '<span style="color:#dc2626;font-weight:600">Set but Invalid ✗</span>';
     };
-    const when = json.tested_at ? 'Last tested: ' + new Date(json.tested_at).toLocaleString() : '';
+    const when = json.tested_at ? 'Last tested: ' + new Date(json.tested_at).toLocaleString() : 'Not tested yet — click “Test keys now”.';
     document.getElementById('keyStatus').innerHTML =
       'Botdog: ' + fmt(json.botdog_set, json.botdog_valid) + '<br>' +
       'Resend: ' + fmt(json.resend_set, json.resend_valid) + '<br>' +
-      '<small style="color:#94a3b8">' + when + ' · auto-tested daily</small>';
+      'Pappers: ' + fmt(json.pappers_set, json.pappers_valid) + '<br>' +
+      '<small style="color:#94a3b8">' + when + '</small>';
   } catch(e) {}
+}
+// Validate all saved keys (Botdog, Resend, Pappers) against their live APIs.
+async function testAllKeys() {
+  const st = document.getElementById('testKeysStatus');
+  if (st) st.textContent = 'Testing keys against Botdog, Resend and Pappers…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'testKeys' }) });
+    const d = await resp.json();
+    if (d && d.ok) {
+      const mark = (set, valid) => !set ? 'not set' : (valid ? 'valid ✓' : 'invalid ✗');
+      if (st) st.innerHTML = 'Botdog: ' + mark(d.botdog_set, d.botdog_valid) + ' · Resend: ' + mark(d.resend_set, d.resend_valid) + ' · Pappers: ' + mark(d.pappers_set, d.pappers_valid);
+      await loadKeyStatus();
+    } else if (st) { st.textContent = 'Error: ' + JSON.stringify(d).slice(0, 160); }
+  } catch(e) { if (st) st.textContent = 'Error: ' + e.message; }
 }
 
 // ----- Botdog campaign selection -----
@@ -2506,15 +2828,20 @@ async function initAuth(){
   const av = document.getElementById('userAvatar'); if (av) av.textContent = ((user.name || user.email || '?').charAt(0) || '?').toUpperCase();
   const chip = document.getElementById('userChip'); if (chip) chip.style.display = 'flex';
   window.__ME = me;   // used by the referral link builder
+  // Plan: admins and anyone flagged pro are unlimited; everyone else is on the free tier.
+  window.__PLAN = (me.isAdmin || user.isAdmin || user.plan === 'pro' || me.plan === 'pro') ? 'pro' : 'free';
   setLiStatus('connected', (user.name || '').split(' ')[0] || '');
   // Only admins see the Admin link (server enforces this too).
   if (me.isAdmin || user.isAdmin) { const a = document.getElementById('nav-admin'); if (a) a.style.display = 'flex'; }
+  try { renderPlanPanel(); } catch(e) {}
   if (overlay) overlay.classList.add('hidden');
   const shell = document.getElementById('appShell'); if (shell) shell.style.display = 'flex';
   // Boot the app
   initSorting();
   load();
   loadCampaigns();
+  loadSalesNavList();
+  loadLeadTarget();
   // Start auto-detecting the Chrome extension (and best-effort Sales Nav).
   initExtDetect();
   // Record this login in the Users store (fire-and-forget, through the authenticated proxy).
