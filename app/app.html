@@ -424,7 +424,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.9.2</div>
+      <div class="ver" id="sideVer">v1.9.3</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -772,6 +772,16 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         </div>
         <button class="btn-save" onclick="saveCampaign()">Save Campaigns</button>
         <div id="campaignStatus" style="margin-top:8px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card">
+        <h2>Your ICP search (Sales Navigator)</h2>
+        <p>This defines who counts as a prospect for <strong>you</strong>. In Sales Navigator, build a people search with your ideal filters (seniority, geography, industry, keywords) — <strong>without</strong> a “Connection of” filter — and paste the URL here. Radar injects each bridge into it automatically to find your prospects.</p>
+        <div class="field">
+          <label>Sales Nav search URL (your ICP)</label>
+          <input type="text" id="inputIcpTemplate" placeholder="https://www.linkedin.com/sales/search/people?query=…">
+        </div>
+        <button class="btn-save" onclick="saveIcpTemplate()">Save ICP search</button>
+        <div id="icpTemplateStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
         <h2>Sales Navigator list</h2>
@@ -1343,9 +1353,9 @@ async function obSaveBotdog(){
 function renderOnboarding(){
   const wrap = document.getElementById('onboardingWrap');
   if (!wrap) return;
-  const done = { signin:true, salesnav:obFlag(OB_KEYS.salesnav), ext:obFlag(OB_KEYS.ext), botdog:obFlag(OB_KEYS.botdog) };
-  const count = (done.signin?1:0) + (done.salesnav?1:0) + (done.ext?1:0) + (done.botdog?1:0);
-  const all = count === 4;
+  const done = { signin:true, salesnav:obFlag(OB_KEYS.salesnav), ext:obFlag(OB_KEYS.ext), botdog:obFlag(OB_KEYS.botdog), icp: !!window.__hasIcp, source: (window.__srcCount||0) > 0 };
+  const count = (done.signin?1:0) + (done.salesnav?1:0) + (done.ext?1:0) + (done.botdog?1:0) + (done.icp?1:0) + (done.source?1:0);
+  const all = count === 6;
   const onboarded = obFlag('radar_onboarded');
 
   // Fully set up and dismissed → just a small "Setup" reopen link.
@@ -1412,14 +1422,30 @@ function renderOnboarding(){
         '<div class="ob-note">Don\'t have Botdog? <a href="https://tolt.link/gershonAI" target="_blank" rel="noopener">Create your Botdog account →</a></div>' +
       '</div>' +
     '</div>');
+  // 5) Your ICP search link — defines who counts as a prospect for this user.
+  steps.push(
+    '<div class="ob-step">' + obDot(done.icp) +
+      '<div class="ob-body"><div class="ob-title' + (done.icp?' done':'') + '">Set your ICP search</div>' +
+        (done.icp ? '<div class="ob-note">Your Sales Navigator search is saved.</div>' :
+        '<div class="ob-note">Build your ideal prospect search in Sales Navigator (all your filters, <strong>no “Connection of”</strong>) and paste the URL in <a href="#" onclick="showView(\'settings\');return false">Settings → Your ICP search</a>.</div>') +
+      '</div>' +
+    '</div>');
+  // 6) First Source — an organization whose network holds this user's prospects.
+  steps.push(
+    '<div class="ob-step">' + obDot(done.source) +
+      '<div class="ob-body"><div class="ob-title' + (done.source?' done':'') + '">Add your first Source</div>' +
+        (done.source ? '<div class="ob-note">You have ' + (window.__srcCount||0) + ' source(s).</div>' :
+        '<div class="ob-note">Add an organization whose network holds your prospects — paste its LinkedIn company URL in <a href="#" onclick="showView(\'sources\');return false">Sources</a>.</div>') +
+      '</div>' +
+    '</div>');
 
-  const pct = Math.round((count/4)*100);
+  const pct = Math.round((count/6)*100);
   wrap.innerHTML =
     '<div class="onboard">' +
       '<div class="ob-head">' +
         '<h3>Get set up</h3>' +
         '<div class="ob-progress">' +
-          '<span class="ob-count">' + count + ' of 4 done</span>' +
+          '<span class="ob-count">' + count + ' of 6 done</span>' +
           '<span class="ob-bar"><i style="width:' + pct + '%"></i></span>' +
         '</div>' +
       '</div>' +
@@ -2478,6 +2504,40 @@ async function saveSettings() {
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
 
+// ===== ICP search template (per-user prospect definition) =====
+async function saveIcpTemplate() {
+  const el = document.getElementById('inputIcpTemplate');
+  const url = (el ? el.value : '').trim();
+  const status = document.getElementById('icpTemplateStatus');
+  if (url && !/linkedin\.com\/sales\/search\/people/i.test(url)) {
+    status.textContent = 'That doesn’t look like a Sales Navigator people-search URL (…/sales/search/people?query=…).'; return;
+  }
+  if (url && /CONNECTION_OF/i.test(url)) {
+    status.textContent = 'Please remove the “Connection of” filter — Radar adds each bridge itself.'; return;
+  }
+  status.textContent = 'Saving…';
+  try {
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', salesnav_search_template: url }) });
+    const data = await resp.json();
+    status.textContent = data.saved ? 'Saved! Radar will use this as your prospect definition.' : 'Error: ' + JSON.stringify(data);
+    if (data.saved) {
+      try { window.dispatchEvent(new CustomEvent('radar-ext-set-search-template', { detail:{ template: url } })); } catch(e) {}
+      try { renderOnboarding(); } catch(e) {}
+    }
+  } catch(e) { status.textContent = 'Error: ' + e.message; }
+}
+async function loadIcpTemplate() {
+  const el = document.getElementById('inputIcpTemplate');
+  if (!el) return;
+  try {
+    const cfg = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r=>r.text());
+    const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    if (j && j.salesnav_search_template && !el.value) el.value = j.salesnav_search_template;
+    window.__hasIcp = !!(j && j.salesnav_search_template);
+    window.__srcCount = (typeof STORED_SOURCES !== 'undefined' && STORED_SOURCES) ? STORED_SOURCES.length : 0;
+  } catch(e) {}
+}
+
 // ===== Sales Navigator list (where new prospects get placed) =====
 async function saveSalesNavList() {
   const el = document.getElementById('inputSalesNavList');
@@ -2828,6 +2888,33 @@ async function initAuth(){
   const av = document.getElementById('userAvatar'); if (av) av.textContent = ((user.name || user.email || '?').charAt(0) || '?').toUpperCase();
   const chip = document.getElementById('userChip'); if (chip) chip.style.display = 'flex';
   window.__ME = me;   // used by the referral link builder
+  // ===== Per-user data isolation =====
+  // Every hub call must carry the signed-in user's owner_key so each user reads/writes ONLY
+  // their own sources/bridges/targets. We inject it once via a fetch wrapper (no need to touch
+  // every call site). Set BEFORE the app boots (load() etc. run just below).
+  window.__OWNER = (user && user.owner_key) || '';
+  if (!window.__hubOwnerWrap) {
+    window.__hubOwnerWrap = true;
+    const _hubFetch = window.fetch;
+    window.fetch = function(input, init){
+      try {
+        const u = (typeof input === 'string') ? input : (input && input.url) || '';
+        if (u && CONFIG.WEBAPP_URL && u.indexOf(CONFIG.WEBAPP_URL) === 0 && window.__OWNER) {
+          const method = (init && init.method ? init.method : 'GET').toUpperCase();
+          if (method === 'GET') {
+            if (typeof input === 'string' && input.indexOf('owner=') === -1) {
+              input = input + (input.indexOf('?') >= 0 ? '&' : '?') + 'owner=' + encodeURIComponent(window.__OWNER);
+            }
+          } else if (init && typeof init.body === 'string') {
+            try { const b = JSON.parse(init.body); if (b && typeof b === 'object' && b.owner === undefined) { b.owner = window.__OWNER; init = Object.assign({}, init, { body: JSON.stringify(b) }); } } catch(e){}
+          }
+        }
+      } catch(e){}
+      return _hubFetch.call(this, input, init);
+    };
+  }
+  // Hand the owner_key to the Chrome extension so its collection writes to THIS user's data.
+  try { window.dispatchEvent(new CustomEvent('radar-ext-set-owner', { detail: { owner: window.__OWNER } })); } catch(e) {}
   // Plan: admins and anyone flagged pro are unlimited; everyone else is on the free tier.
   window.__PLAN = (me.isAdmin || user.isAdmin || user.plan === 'pro' || me.plan === 'pro') ? 'pro' : 'free';
   setLiStatus('connected', (user.name || '').split(' ')[0] || '');
@@ -2842,6 +2929,7 @@ async function initAuth(){
   loadCampaigns();
   loadSalesNavList();
   loadLeadTarget();
+  loadIcpTemplate();
   // Start auto-detecting the Chrome extension (and best-effort Sales Nav).
   initExtDetect();
   // Record this login in the Users store (fire-and-forget, through the authenticated proxy).
