@@ -424,7 +424,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.9.3</div>
+      <div class="ver" id="sideVer">v1.9.4</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -501,7 +501,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
       <div id="extUpdateBanner" class="banner" style="display:none;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
+        <a id="extUpdateDl" href="/radar-extension-v1.6.8.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
         <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#2563eb;text-decoration:none">How to update</a>
         <a href="#" onclick="dismissExtUpdate();return false" style="margin-left:12px;color:#64748b;text-decoration:none">Dismiss</a>
         <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#334155;font-weight:400">To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.)</div>
@@ -703,7 +703,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.6.8.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -1267,9 +1267,9 @@ function checkExtUpdate(){
   const row = document.getElementById('extVersionRow');
   if (row) {
     row.innerHTML = !installed
-      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
+      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.6.8.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
       : (behind
-        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
+        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.6.8.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
         : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
   }
   const banner = document.getElementById('extUpdateBanner'), msg = document.getElementById('extUpdateMsg');
@@ -1404,7 +1404,7 @@ function renderOnboarding(){
         '<div class="ob-note">detected automatically</div>' :
         '<div class="ob-note" style="margin-bottom:6px">Download it, then in <code>chrome://extensions</code> enable <strong>Developer mode</strong> → <strong>Load unpacked</strong> → pick the unzipped folder.</div>' +
         '<div class="ob-actions">' +
-          '<a class="ob-link" href="/radar-extension.zip" download>Download the extension ↓</a>' +
+          '<a class="ob-link" href="/radar-extension-v1.6.8.zip" download>Download the extension ↓</a>' +
           '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
         '</div>') +
       '</div>' +
