@@ -424,7 +424,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.9.4</div>
+      <div class="ver" id="sideVer">v1.9.6</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -501,7 +501,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
       <div id="extUpdateBanner" class="banner" style="display:none;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension-v1.6.8.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
+        <a id="extUpdateDl" href="/radar-extension-v1.7.0.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
         <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#2563eb;text-decoration:none">How to update</a>
         <a href="#" onclick="dismissExtUpdate();return false" style="margin-left:12px;color:#64748b;text-decoration:none">Dismiss</a>
         <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#334155;font-weight:400">To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.)</div>
@@ -703,7 +703,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.6.8.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.7.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -1249,7 +1249,7 @@ function detectExtension(){
 }
 
 // ===== Extension version offer (installed vs latest, like the Linalysis check) =====
-const LATEST_EXT_VERSION = '1.6.8';   // latest packaged extension offered on the platform
+const LATEST_EXT_VERSION = '1.7.0';   // latest packaged extension offered on the platform
 function cmpVer(a, b){
   const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
   const pb = String(b||'0').split('.').map(n => parseInt(n,10)||0);
@@ -1267,9 +1267,9 @@ function checkExtUpdate(){
   const row = document.getElementById('extVersionRow');
   if (row) {
     row.innerHTML = !installed
-      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.6.8.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
+      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.7.0.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
       : (behind
-        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.6.8.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
+        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.7.0.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
         : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
   }
   const banner = document.getElementById('extUpdateBanner'), msg = document.getElementById('extUpdateMsg');
@@ -1404,7 +1404,7 @@ function renderOnboarding(){
         '<div class="ob-note">detected automatically</div>' :
         '<div class="ob-note" style="margin-bottom:6px">Download it, then in <code>chrome://extensions</code> enable <strong>Developer mode</strong> → <strong>Load unpacked</strong> → pick the unzipped folder.</div>' +
         '<div class="ob-actions">' +
-          '<a class="ob-link" href="/radar-extension-v1.6.8.zip" download>Download the extension ↓</a>' +
+          '<a class="ob-link" href="/radar-extension-v1.7.0.zip" download>Download the extension ↓</a>' +
           '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
         '</div>') +
       '</div>' +
@@ -1469,54 +1469,247 @@ function renderAll(){
 }
 
 // ===== Dashboard command center =====
+const HOME_GRADE_COLORS = { 'A+':'#059669', 'A':'#10b981', 'B':'#3b82f6', 'C':'#f59e0b', 'D':'#94a3b8' };
+let HOME_CHARTS = {};
+let HOME_RANGE = 30;            // trend window in days; 0 = all-time
+function setHomeRange(n){ HOME_RANGE = n; renderHome(); }
+// Leaderboard click-through: open Targets pre-filtered by a source or a bridge.
+function homeGoSource(name){
+  if (typeof STAT_FILTER !== 'undefined') STAT_FILTER = '';
+  const so=document.getElementById('tSource'); if(so) so.value=name||'';
+  const b=document.getElementById('tBridge'); if(b) b.value='';
+  const s=document.getElementById('tSearch'); if(s) s.value='';
+  showView('targets'); if (typeof renderTargets==='function') renderTargets();
+}
+function homeGoBridge(name){
+  if (typeof STAT_FILTER !== 'undefined') STAT_FILTER = '';
+  const b=document.getElementById('tBridge'); if(b) b.value=name||'';
+  const so=document.getElementById('tSource'); if(so) so.value='';
+  const s=document.getElementById('tSearch'); if(s) s.value='';
+  showView('targets'); if (typeof renderTargets==='function') renderTargets();
+}
+function _homeCss(){
+  if (document.getElementById('homeCss')) return;
+  const s=document.createElement('style'); s.id='homeCss';
+  s.textContent =
+  '.hc-wrap{display:flex;flex-direction:column;gap:16px}'+
+  '.hc-hero{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-radius:14px;padding:14px 16px;font-weight:600}'+
+  '.hc-actions{display:flex;gap:8px;flex-wrap:wrap}'+
+  '.hc-btn{border:0;border-radius:9px;padding:9px 14px;font-size:.85rem;font-weight:700;cursor:pointer}'+
+  '.hc-btn.pri{background:#2563eb;color:#fff}.hc-btn.pri:hover{background:#1d4ed8}'+
+  '.hc-btn.sec{background:#fff;border:1px solid #cbd5e1;color:#334155}.hc-btn.sec:hover{border-color:#94a3b8}'+
+  '.hc-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}'+
+  '.hc-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:15px 16px;cursor:pointer;transition:.15s;position:relative}'+
+  '.hc-kpi:hover{border-color:#93c5fd;box-shadow:0 4px 14px rgba(37,99,235,.09);transform:translateY(-1px)}'+
+  '.hc-kpi .n{font-size:29px;font-weight:800;line-height:1;color:#0f172a}'+
+  '.hc-kpi .l{font-size:11px;color:#64748b;margin-top:7px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}'+
+  '.hc-kpi .s{font-size:12px;color:#94a3b8;margin-top:3px}'+
+  '.hc-kpi .arr{position:absolute;top:13px;right:14px;color:#cbd5e1;font-size:13px}'+
+  '.hc-grid2{display:grid;grid-template-columns:3fr 2fr;gap:16px}'+
+  '.hc-grid2b{display:grid;grid-template-columns:1fr 1fr;gap:16px}'+
+  '@media(max-width:900px){.hc-grid2,.hc-grid2b{grid-template-columns:1fr}}'+
+  '.hc-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 18px}'+
+  '.hc-card h3{margin:0 0 12px;font-size:.95rem;display:flex;align-items:center;justify-content:space-between;gap:8px}'+
+  '.hc-card h3 .hint{font-weight:400;color:#94a3b8;font-size:.78rem}'+
+  '.hc-range{display:flex;gap:4px}'+
+  '.hc-range button{border:1px solid #e2e8f0;background:#f8fafc;color:#475569;font-size:11px;padding:3px 9px;border-radius:999px;cursor:pointer;font-weight:600}'+
+  '.hc-range button.on{background:#2563eb;color:#fff;border-color:#2563eb}'+
+  '.hc-lb{display:flex;flex-direction:column;gap:9px}'+
+  '.hc-lb .row{display:grid;grid-template-columns:130px 1fr auto;gap:10px;align-items:center;cursor:pointer}'+
+  '.hc-lb .nm{font-size:.85rem;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+  '.hc-lb .row:hover .nm{color:#2563eb}'+
+  '.hc-lb .track{background:#f1f5f9;border-radius:6px;overflow:hidden}'+
+  '.hc-lb .bar{height:20px;border-radius:6px;min-width:4px}'+
+  '.hc-lb .ct{font-size:.8rem;color:#475569;font-weight:700;text-align:right;min-width:30px}'+
+  '.hc-act{display:flex;flex-direction:column;gap:8px}'+
+  '.hc-act .a{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid #eef2f7;border-radius:10px;cursor:pointer;transition:.15s;background:#fff}'+
+  '.hc-act .a:hover{border-color:#93c5fd;background:#f8fbff}'+
+  '.hc-act .ic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex:0 0 auto}'+
+  '.hc-act .tx{font-size:.88rem;color:#334155}.hc-act .tx b{color:#0f172a}'+
+  '.hc-act .go{margin-left:auto;color:#cbd5e1;font-size:15px}'+
+  '.hc-feed{display:flex;flex-direction:column}'+
+  '.hc-feed .f{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #f1f5f9;font-size:.85rem}'+
+  '.hc-feed .f:first-child{border-top:0}'+
+  '.hc-feed .g{font-weight:800;font-size:.72rem;width:28px;text-align:center;border-radius:5px;padding:2px 0;color:#fff;flex:0 0 auto}'+
+  '.hc-feed .nm{font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}'+
+  '.hc-feed .mt{color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+  '.hc-feed .lk{margin-left:auto;text-decoration:none;color:#2563eb;flex:0 0 auto}'+
+  '.hc-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}'+
+  '.hc-legend span{font-size:.78rem;color:#475569;display:flex;align-items:center;gap:5px}'+
+  '.hc-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}'+
+  '.hc-empty{color:#94a3b8;font-size:.85rem;padding:6px 0}';
+  document.head.appendChild(s);
+}
 function renderHome(){
   const el = document.getElementById('homeBody');
   if (!el) return;
-  const nSrc = (typeof STORED_SOURCES !== 'undefined' && STORED_SOURCES) ? STORED_SOURCES.length : 0;
-  const nBr  = (typeof BRIDGES !== 'undefined' && BRIDGES) ? BRIDGES.length : 0;
-  const rows = (typeof ROWS !== 'undefined' && ROWS) ? ROWS : [];
-  const nT = rows.length;
-  const pushed = rows.filter(r => r.botdog_pushed).length;
-  const dates = rows.map(r => r.collected_date).filter(Boolean).map(d => new Date(d)).filter(d => !isNaN(d));
-  const last = dates.length ? new Date(Math.max.apply(null, dates.map(d => d.getTime()))) : null;
-  const days = last ? Math.floor((Date.now() - last.getTime()) / 86400000) : null;
-  const weekAgo = Date.now() - 7*86400000;
-  const wk = dates.filter(d => d.getTime() >= weekAgo).length;
-  const bridged = new Set((typeof BRIDGES !== 'undefined' && BRIDGES ? BRIDGES : []).map(b => (b.source||'').trim().toLowerCase()).filter(Boolean));
-  const srcNoBr = (typeof STORED_SOURCES !== 'undefined' && STORED_SOURCES ? STORED_SOURCES : []).filter(s => !bridged.has((s.name||'').trim().toLowerCase())).length;
-  const noUrl = rows.filter(r => !r.linkedin_url).length;
+  _homeCss();
+  const rows    = (typeof ROWS!=='undefined' && ROWS) ? ROWS : [];
+  const sources = (typeof STORED_SOURCES!=='undefined' && STORED_SOURCES) ? STORED_SOURCES : [];
+  const bridges = (typeof BRIDGES!=='undefined' && BRIDGES) ? BRIDGES : [];
+  const norm = (typeof _norm==='function') ? _norm : (x=>String(x||'').toLowerCase().trim());
 
+  // ---- per-prospect facts ----
+  const facts = rows.map(r => {
+    const t = (typeof cleanTitle==='function') ? cleanTitle(r.title) : (r.title||'');
+    return {
+      r,
+      name:   (typeof fullName==='function') ? fullName(r) : ((r.first_name||'')+' '+(r.last_name||'')).trim(),
+      grade:  (typeof icpGrade==='function') ? icpGrade(t) : (r.grade||'D'),
+      title:  t,
+      source: (typeof leadSource==='function') ? (leadSource(r)||'Unassigned') : (r.source||'Unassigned'),
+      bridge: r.radar_person||'—',
+      pushed: !!r.botdog_pushed,
+      url:    String(r.linkedin_url||'').trim(),
+      when:   r.collected_date ? new Date(r.collected_date) : null
+    };
+  });
+  const esc2 = (typeof esc==='function') ? esc : (x=>String(x==null?'':x).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])));
+
+  const nT = facts.length;
+  const nSrc = sources.length;
+  const totBr = bridges.length;
+  const actBr = bridges.filter(b => b.active === true).length;
+  const connBr = bridges.filter(b => norm(b.connection) === '1st').length;
+  const pushed = facts.filter(f => f.pushed).length;
+  const linked = facts.filter(f => f.url).length;
+  const topGrade = facts.filter(f => f.grade==='A+'||f.grade==='A').length;
+  const readyPush = facts.filter(f => (f.grade==='A+'||f.grade==='A') && f.url && !f.pushed).length;
+
+  const now = Date.now();
+  const wk = facts.filter(f => f.when && (now - f.when.getTime()) <= 7*864e5).length;
+  const dates = facts.map(f=>f.when).filter(Boolean);
+  const last = dates.length ? new Date(Math.max.apply(null, dates.map(d=>d.getTime()))) : null;
+  const days = last ? Math.floor((now - last.getTime())/864e5) : null;
+
+  const bridgedSrc = new Set(bridges.map(b => norm(b.source)).filter(Boolean));
+  const idleSources = sources.filter(s => !bridgedSrc.has(norm(s.name)));
+  const noUrl = facts.filter(f => !f.url).length;
+  const inactiveBr = bridges.filter(b => b.active !== true).length;
+
+  // ---- health hero ----
   let hb;
-  if (days === null) hb = { c:'#dc2626', bg:'#fef2f2', bd:'#fecaca', t:'No prospects captured yet — run a collection to get started.' };
-  else if (days <= 2) hb = { c:'#166534', bg:'#f0fdf4', bd:'#bbf7d0', t:'✓ Capture healthy — last new prospect ' + (days===0 ? 'today' : days + ' day' + (days>1?'s':'') + ' ago') + '.' };
-  else hb = { c:'#b45309', bg:'#fffbeb', bd:'#fde68a', t:'⚠ No new prospects for ' + days + ' days (last capture ' + last.toISOString().slice(0,10) + '). Check the Radar extension is installed and running.' };
+  if (days === null) hb = { c:'#991b1b', bg:'#fef2f2', bd:'#fecaca', t:'No prospects captured yet — run a collection to get started.' };
+  else if (days <= 2) hb = { c:'#166534', bg:'#f0fdf4', bd:'#bbf7d0', t:'✓ Capture healthy — last new prospect ' + (days===0?'today':days+' day'+(days>1?'s':'')+' ago') + '.' };
+  else hb = { c:'#b45309', bg:'#fffbeb', bd:'#fde68a', t:'⚠ No new prospects for ' + days + ' days (last ' + last.toISOString().slice(0,10) + '). Check the Radar extension is running.' };
 
-  const card = (label, val, sub, color) =>
-    '<div style="flex:1;min-width:140px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px">' +
-      '<div style="font-size:30px;font-weight:700;line-height:1;color:' + (color||'#0f172a') + '">' + val + '</div>' +
-      '<div style="font-size:12px;color:#64748b;margin-top:6px;text-transform:uppercase;letter-spacing:.04em">' + label + '</div>' +
-      (sub ? '<div style="font-size:12px;color:#94a3b8;margin-top:3px">' + sub + '</div>' : '') +
-    '</div>';
+  // ---- KPI cards ----
+  const kpi = (n,l,s,go,color) =>
+    '<div class="hc-kpi" onclick="'+go+'"><span class="arr">→</span>'+
+      '<div class="n"'+(color?(' style="color:'+color+'"'):'')+'>'+n+'</div>'+
+      '<div class="l">'+l+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>';
+  const pct = (a,b)=> b? Math.round(a/b*100)+'%':'0%';
+  const kpis =
+    kpi(nSrc,'Sources', idleSources.length?(idleSources.length+' idle'):'all producing', "statGo('sources','')") +
+    kpi(actBr,'Bridges active','of '+totBr+' found', "statGo('bridges','')") +
+    kpi(nT,'Prospects','+'+wk+' this week', "statGo('targets','')", '#2563eb') +
+    kpi(topGrade,'A+ / A grade','best-fit prospects', "showView('targets')", '#059669') +
+    kpi(pct(linked,nT),'Have LinkedIn', linked+' of '+nT, "statGo('targets','nolink')") +
+    kpi(pct(pushed,nT),'On Botdog', pushed+' pushed', "statGo('targets','pushed')");
 
-  const attention = [];
-  if (srcNoBr > 0) attention.push(srcNoBr + ' source' + (srcNoBr>1?'s':'') + ' with no bridges yet');
-  if (days !== null && days > 2) attention.push('Collector idle for ' + days + ' days — reload the extension');
-  if (noUrl > 0) attention.push(noUrl + ' prospect' + (noUrl>1?'s':'') + ' missing a LinkedIn URL');
+  // ---- trend buckets ----
+  let spanDays = HOME_RANGE;
+  if (!spanDays) {
+    const first = dates.length ? new Date(Math.min.apply(null, dates.map(d=>d.getTime()))) : new Date();
+    spanDays = Math.min(180, Math.max(14, Math.ceil((now - first.getTime())/864e5)+1));
+  }
+  const buckets = [], counts = [];
+  for (let i=spanDays-1; i>=0; i--){ const d=new Date(now - i*864e5); buckets.push(d); counts.push(0); }
+  const startMs = buckets.length ? buckets[0].setHours(0,0,0,0) : now;
+  facts.forEach(f => { if(!f.when) return; const idx = Math.floor((f.when.setHours(0,0,0,0) - startMs)/864e5); if(idx>=0 && idx<counts.length) counts[idx]++; });
+  const trendLabels = buckets.map(d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  const rangeBtn = (n,lbl)=> '<button class="'+(HOME_RANGE===n?'on':'')+'" onclick="setHomeRange('+n+')">'+lbl+'</button>';
+
+  // ---- grade mix ----
+  const gOrder = ['A+','A','B','C','D'];
+  const gCount = {}; gOrder.forEach(g=>gCount[g]=0); facts.forEach(f=> gCount[f.grade]=(gCount[f.grade]||0)+1);
+
+  // ---- leaderboards ----
+  const agg = (keyFn) => { const m={}; facts.forEach(f=>{ const k=keyFn(f)||'—'; m[k]=(m[k]||0)+1; }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); };
+  const topSrc = agg(f=>f.source).slice(0,6);
+  const topBrg = agg(f=>f.bridge).filter(e=>e[0] && e[0]!=='—').slice(0,6);
+  const srcColor = (typeof sourceColor==='function') ? sourceColor : (()=> '#3b82f6');
+  const lbRows = (arr, colorFn, goFn) => {
+    if(!arr.length) return '<div class="hc-empty">No data yet.</div>';
+    const max = arr[0][1] || 1;
+    return '<div class="hc-lb">' + arr.map(([nm,ct]) =>
+      '<div class="row" onclick="'+goFn+'(\''+String(nm).replace(/'/g,"\\'").replace(/"/g,'')+'\')" title="'+esc2(nm)+' — view '+ct+' prospects">'+
+        '<div class="nm">'+esc2(nm)+'</div>'+
+        '<div class="track"><div class="bar" style="width:'+Math.max(4,Math.round(ct/max*100))+'%;background:'+colorFn(nm)+'"></div></div>'+
+        '<div class="ct">'+ct+'</div>'+
+      '</div>').join('') + '</div>';
+  };
+
+  // ---- next best actions ----
+  const acts = [];
+  if (days!==null && days>2) acts.push(['#fef2f2','#dc2626','⚡','Collector idle <b>'+days+' days</b> — reload the extension & Sync','showView(\'setup\')']);
+  if (readyPush>0)     acts.push(['#ecfdf5','#059669','🚀','<b>'+readyPush+'</b> A/A+ prospect'+(readyPush>1?'s':'')+' ready to push to Botdog','showView(\'targets\')']);
+  if (idleSources.length>0) acts.push(['#fffbeb','#b45309','🏢','<b>'+idleSources.length+'</b> source'+(idleSources.length>1?'s':'')+' with no bridges yet — discover bridges','showView(\'sources\')']);
+  if (noUrl>0)         acts.push(['#eff6ff','#2563eb','🔗','<b>'+noUrl+'</b> prospect'+(noUrl>1?'s':'')+' missing a LinkedIn URL','statGo(\'targets\',\'nolink\')']);
+  if (inactiveBr>0)    acts.push(['#f5f3ff','#7c3aed','🌉','<b>'+inactiveBr+'</b> bridge'+(inactiveBr>1?'s':'')+' found but switched off','showView(\'bridges\')']);
+  const actsHtml = acts.length
+    ? '<div class="hc-act">' + acts.map(a =>
+        '<div class="a" onclick="'+a[4]+'"><div class="ic" style="background:'+a[0]+';color:'+a[1]+'">'+a[2]+'</div>'+
+        '<div class="tx">'+a[3]+'</div><div class="go">→</div></div>').join('') + '</div>'
+    : '<div style="color:#16a34a;font-size:.9rem;padding:6px 0">✓ All clear — nothing needs attention right now.</div>';
+
+  // ---- recent activity ----
+  const recent = facts.filter(f=>f.when).sort((a,b)=>b.when-a.when).slice(0,8);
+  const fmtWhen = (typeof fmtDate==='function') ? fmtDate : (d=> d ? new Date(d).toLocaleDateString() : '');
+  const feedHtml = recent.length
+    ? '<div class="hc-feed">' + recent.map(f =>
+        '<div class="f"><span class="g" style="background:'+(HOME_GRADE_COLORS[f.grade]||'#94a3b8')+'">'+esc2(f.grade)+'</span>'+
+        '<span class="nm">'+esc2(f.name||'(unknown)')+'</span>'+
+        '<span class="mt">· '+esc2(f.source)+' › '+esc2(f.bridge)+'</span>'+
+        (f.url?'<a class="lk" href="'+esc2(f.url)+'" target="_blank" rel="noopener">↗</a>':'<span class="lk" style="color:#cbd5e1">—</span>')+
+        '</div>').join('') + '</div>'
+    : '<div class="hc-empty">No prospects collected yet.</div>';
 
   el.innerHTML =
-    '<div style="background:' + hb.bg + ';border:1px solid ' + hb.bd + ';color:' + hb.c + ';border-radius:12px;padding:14px 16px;font-weight:600;margin-bottom:16px">' + hb.t + '</div>' +
-    '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">' +
-      card('Sources', nSrc, srcNoBr ? (nSrc - srcNoBr) + ' producing bridges' : 'all producing') +
-      card('Bridges', nBr, '') +
-      card('Prospects', nT, '+' + wk + ' this week', '#2563eb') +
-      card('Pushed to Botdog', pushed, nT ? Math.round(pushed/nT*100) + '% of prospects' : '') +
-    '</div>' +
-    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px">' +
-      '<h3 style="margin:0 0 8px;font-size:0.95rem">Needs attention</h3>' +
-      (attention.length
-        ? '<ul style="margin:0;padding-left:18px;color:#334155;font-size:0.9rem;line-height:1.7">' + attention.map(a => '<li>' + a + '</li>').join('') + '</ul>'
-        : '<div style="color:#16a34a;font-size:0.9rem">All clear — nothing needs attention.</div>') +
+    '<div class="hc-wrap">'+
+      '<div class="hc-hero" style="background:'+hb.bg+';border:1px solid '+hb.bd+';color:'+hb.c+'">'+
+        '<span>'+hb.t+'</span>'+
+        '<span class="hc-actions">'+
+          '<button class="hc-btn pri" onclick="showView(\'dashboard\');triggerSync&&triggerSync()">🔄 Sync now</button>'+
+          '<button class="hc-btn sec" onclick="showView(\'targets\')">View targets →</button>'+
+        '</span>'+
+      '</div>'+
+      '<div class="hc-kpis">'+kpis+'</div>'+
+      '<div class="hc-grid2">'+
+        '<div class="hc-card"><h3>Daily collection trend <span class="hc-range">'+rangeBtn(14,'14d')+rangeBtn(30,'30d')+rangeBtn(90,'90d')+rangeBtn(0,'All')+'</span></h3>'+
+          '<div style="height:220px"><canvas id="homeTrend"></canvas></div></div>'+
+        '<div class="hc-card"><h3>ICP grade mix <span class="hint">quality of prospects</span></h3>'+
+          '<div style="height:190px"><canvas id="homeGrades"></canvas></div>'+
+          '<div class="hc-legend">'+gOrder.map(g=>'<span><i style="background:'+HOME_GRADE_COLORS[g]+'"></i>'+g+' · '+gCount[g]+'</span>').join('')+'</div></div>'+
+      '</div>'+
+      '<div class="hc-grid2b">'+
+        '<div class="hc-card"><h3>Top sources <span class="hint">click to drill in</span></h3>'+lbRows(topSrc, srcColor, 'homeGoSource')+'</div>'+
+        '<div class="hc-card"><h3>Top bridges <span class="hint">your best relationships</span></h3>'+lbRows(topBrg, (()=> '#6366f1'), 'homeGoBridge')+'</div>'+
+      '</div>'+
+      '<div class="hc-grid2b">'+
+        '<div class="hc-card"><h3>Next best actions</h3>'+actsHtml+'</div>'+
+        '<div class="hc-card"><h3>Recent activity <span class="hint">latest captures</span></h3>'+feedHtml+'</div>'+
+      '</div>'+
     '</div>';
+
+  // ---- charts ----
+  if (typeof Chart !== 'undefined') {
+    try { if (HOME_CHARTS.trend) HOME_CHARTS.trend.destroy(); const c1=document.getElementById('homeTrend');
+      if (c1) HOME_CHARTS.trend = new Chart(c1.getContext('2d'), {
+        type:'line',
+        data:{ labels:trendLabels, datasets:[{ label:'New prospects', data:counts, borderColor:'#2563eb',
+          backgroundColor:'rgba(37,99,235,.12)', fill:true, tension:.3, pointRadius:spanDays>45?0:3, pointBackgroundColor:'#2563eb', borderWidth:2 }] },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{precision:0}}, x:{ticks:{maxTicksLimit:8, autoSkip:true}} } }
+      });
+    } catch(e){}
+    try { if (HOME_CHARTS.grades) HOME_CHARTS.grades.destroy(); const c2=document.getElementById('homeGrades');
+      if (c2) HOME_CHARTS.grades = new Chart(c2.getContext('2d'), {
+        type:'doughnut',
+        data:{ labels:gOrder, datasets:[{ data:gOrder.map(g=>gCount[g]), backgroundColor:gOrder.map(g=>HOME_GRADE_COLORS[g]), borderWidth:2, borderColor:'#fff' }] },
+        options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{legend:{display:false}} }
+      });
+    } catch(e){}
+  }
 }
 
 // ----- Collection Log view -----
