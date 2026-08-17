@@ -362,6 +362,32 @@ td a:hover{ text-decoration:underline; }
 .switch input:disabled + .track{ opacity:0.55; cursor:default; }
 
 /* ---------- Settings ---------- */
+/* ===== Extension page ===== */
+.ext-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px; align-items:start; max-width:1100px; }
+.ext-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:22px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.ext-card h3{ font-size:1.02rem; font-weight:700; color:#0f172a; margin-bottom:3px; }
+.ext-card .sub{ color:var(--muted); font-size:0.84rem; margin-bottom:14px; }
+.ext-pill{ display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border-radius:999px; font-size:0.84rem; font-weight:700; }
+.ext-pill.ok{ background:#ecfdf5; color:#065f46; } .ext-pill.warn{ background:#fffbeb; color:#92400e; }
+.ext-pill.err{ background:#fef2f2; color:#991b1b; } .ext-pill.idle{ background:#f1f5f9; color:#475569; }
+.ext-actions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+.ext-btn{ display:inline-flex; align-items:center; gap:7px; background:var(--brand,#4f46e5); color:#fff; border:none; border-radius:9px; padding:10px 17px; font-size:0.88rem; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:none; }
+.ext-btn:hover{ background:var(--brand-ink,#4338ca); }
+.ext-btn.ghost{ background:#fff; color:var(--brand-ink,#4338ca); border:1px solid #c7d2fe; }
+.ext-btn.ghost:hover{ background:#f5f6fb; }
+.ext-btn:disabled{ opacity:0.55; cursor:wait; }
+.diag{ display:flex; flex-direction:column; gap:2px; }
+.diag-row{ display:flex; align-items:flex-start; gap:11px; padding:10px 2px; border-bottom:1px solid #f1f5f9; font-size:0.87rem; }
+.diag-row:last-child{ border-bottom:none; }
+.diag-ico{ flex:0 0 18px; width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:800; color:#fff; margin-top:1px; }
+.diag-ico.ok{ background:#16a34a; } .diag-ico.err{ background:#dc2626; } .diag-ico.warn{ background:#f59e0b; }
+.diag-ico.pending{ background:#cbd5e1; } .diag-ico.idle{ background:#e2e8f0; color:#94a3b8; }
+.diag-txt strong{ display:block; color:#0f172a; font-weight:600; }
+.diag-txt span{ color:var(--muted); font-size:0.82rem; }
+.ext-steps{ margin:0; padding-left:20px; color:#334155; font-size:0.86rem; line-height:1.75; }
+.ext-steps code{ background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:0.82rem; }
+.ext-logtail{ background:#0f1e3d; border-radius:9px; padding:12px 14px; max-height:240px; overflow-y:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:0.76rem; line-height:1.6; color:#cbd5e1; }
+.ext-logtail .l-error{ color:#fca5a5; } .ext-logtail .l-warn{ color:#fcd34d; } .ext-logtail .l-ts{ color:#64748b; }
 .settings-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:18px; max-width:560px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
 .settings-card h2{ font-size:1.05rem; font-weight:600; margin-bottom:4px; }
 .settings-card p{ color:var(--muted); font-size:0.85rem; margin-bottom:16px; }
@@ -424,7 +450,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.9.6</div>
+      <div class="ver" id="sideVer">v1.9.7</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -446,6 +472,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
       <div class="nav-sec">Activity</div>
       <button class="nav-item"        id="nav-setup"       onclick="showView('setup')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Setup</button>
+      <button class="nav-item"        id="nav-extension"   onclick="showView('extension')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></svg></span> Extension <span class="nav-count" id="extNavBadge" style="display:none;background:#fee2e2;color:#b91c1c">!</span></button>
       <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span> Collections</button>
       <button class="nav-item"        id="nav-log"         onclick="showView('log')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg></span> Log</button>
       <div class="nav-sec">Account</div>
@@ -501,7 +528,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
       <div id="extUpdateBanner" class="banner" style="display:none;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension-v1.7.0.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
+        <a id="extUpdateDl" href="/radar-extension-v1.7.2.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
         <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#2563eb;text-decoration:none">How to update</a>
         <a href="#" onclick="dismissExtUpdate();return false" style="margin-left:12px;color:#64748b;text-decoration:none">Dismiss</a>
         <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#334155;font-weight:400">To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.)</div>
@@ -571,6 +598,66 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <h2>Radar extension version</h2>
         <p>Radar collects through the Chrome extension. Keep it up to date to get the latest fixes.</p>
         <div id="extVersionRow" style="font-size:0.92rem;color:#334155">Checking…</div>
+      </div>
+    </section>
+
+    <!-- ===== Extension (download / test / sync) ===== -->
+    <section id="view-extension" class="view">
+      <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+        <div><h2>Extension</h2><p>Radar collects through its Chrome extension. Download it, check it's wired up, and launch a collection from here.</p></div>
+        <button id="extSyncBtn" class="sync-btn" onclick="extRunSync()">&#128260; Launch sync</button>
+      </div>
+      <div id="extSyncStatus" class="sync-status" style="display:none"></div>
+
+      <div class="ext-grid">
+        <!-- Status + download -->
+        <div class="ext-card">
+          <h3>Installed version</h3>
+          <div class="sub">What this browser is running right now.</div>
+          <div id="extStatePill" class="ext-pill idle">Checking&hellip;</div>
+          <div id="extStateNote" style="margin-top:10px;font-size:0.85rem;color:#334155"></div>
+          <div class="ext-actions">
+            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.7.2.zip" download>&#11015; Download latest</a>
+            <button class="ext-btn ghost" onclick="extRunDiag()">Test installation</button>
+          </div>
+        </div>
+
+        <!-- Diagnostics -->
+        <div class="ext-card">
+          <h3>Health check</h3>
+          <div class="sub">Everything Radar needs to collect on its own.</div>
+          <div class="diag" id="extDiag"></div>
+          <div class="ext-actions">
+            <button class="ext-btn ghost" id="extDiagBtn" onclick="extRunDiag()">Re-run check</button>
+          </div>
+        </div>
+
+        <!-- Install / update -->
+        <div class="ext-card">
+          <h3>Install &amp; update</h3>
+          <div class="sub">Takes about a minute — no Chrome Web Store needed.</div>
+          <ol class="ext-steps">
+            <li>Download the zip above and unzip it.</li>
+            <li>Open <code>chrome://extensions</code>.</li>
+            <li>Turn on <strong>Developer mode</strong> (top-right).</li>
+            <li>Click <strong>Load unpacked</strong> and pick the unzipped folder.</li>
+            <li>Come back here and hit <strong>Test installation</strong>.</li>
+          </ol>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;font-size:0.86rem;color:#334155">
+            <strong>Already installed?</strong> To update: unzip the new download over the old folder, then click <strong>Reload</strong> on &ldquo;Radar — Sales Nav Collector&rdquo; in <code>chrome://extensions</code>.
+          </div>
+          <div style="margin-top:12px;font-size:0.82rem;color:#94a3b8">Keep Chrome running and stay logged into Sales Navigator — the extension collects on its schedule in the background.</div>
+        </div>
+
+        <!-- Activity -->
+        <div class="ext-card">
+          <h3>Extension activity</h3>
+          <div class="sub" id="extSchedLine">Its own log — newest first.</div>
+          <div class="ext-logtail" id="extLogTail">Waiting for the extension&hellip;</div>
+          <div class="ext-actions">
+            <button class="ext-btn ghost" onclick="extLoadLog()">Refresh log</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -703,7 +790,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.7.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.7.2.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -1249,7 +1336,8 @@ function detectExtension(){
 }
 
 // ===== Extension version offer (installed vs latest, like the Linalysis check) =====
-const LATEST_EXT_VERSION = '1.7.0';   // latest packaged extension offered on the platform
+const LATEST_EXT_VERSION = '1.7.2';   // latest packaged extension offered on the platform
+const EXT_ZIP_URL = '/radar-extension-v' + LATEST_EXT_VERSION + '.zip';
 function cmpVer(a, b){
   const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
   const pb = String(b||'0').split('.').map(n => parseInt(n,10)||0);
@@ -1267,11 +1355,18 @@ function checkExtUpdate(){
   const row = document.getElementById('extVersionRow');
   if (row) {
     row.innerHTML = !installed
-      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.7.0.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
+      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.7.2.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
       : (behind
-        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.7.0.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
+        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.7.2.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
         : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
   }
+  const badge = document.getElementById('extNavBadge');
+  if (badge) {
+    if (!installed) { badge.style.display = ''; badge.textContent = '!'; badge.title = 'Extension not installed'; }
+    else if (behind) { badge.style.display = ''; badge.textContent = '\u2191'; badge.title = 'Update available'; }
+    else { badge.style.display = 'none'; }
+  }
+  try { if (document.getElementById('view-extension') && document.getElementById('view-extension').classList.contains('active')) extRenderState(); } catch(e) {}
   const banner = document.getElementById('extUpdateBanner'), msg = document.getElementById('extUpdateMsg');
   if (banner) {
     if (behind && !extUpdateDismissed()) {
@@ -1279,6 +1374,208 @@ function checkExtUpdate(){
       banner.style.display = 'block';
     } else { banner.style.display = 'none'; }
   }
+}
+
+// ===== Extension page (download / health check / launch a sync) =====
+// Everything here talks to the content script over the same window-event protocol the rest of
+// the app uses (radar-ext-*). No stale localStorage: only what the extension announces counts.
+function extInstalledVer(){ return document.documentElement.getAttribute('data-radar-ext') || ''; }
+
+function extRenderState(){
+  const pill = document.getElementById('extStatePill');
+  const note = document.getElementById('extStateNote');
+  const dl   = document.getElementById('extDownloadBtn');
+  if (dl) dl.setAttribute('href', EXT_ZIP_URL);
+  if (!pill) return;
+  const v = extInstalledVer();
+  const behind = v && cmpVer(v, LATEST_EXT_VERSION) < 0;
+  if (!v) {
+    pill.className = 'ext-pill err'; pill.textContent = 'Not installed';
+    if (note) note.innerHTML = 'Radar can\'t collect without it. Download v' + LATEST_EXT_VERSION + ' and follow the install steps.';
+  } else if (behind) {
+    pill.className = 'ext-pill warn'; pill.textContent = 'v' + v + ' — update available';
+    if (note) note.innerHTML = 'Latest is <strong>v' + LATEST_EXT_VERSION + '</strong>. Download it, then Reload the extension.';
+  } else {
+    pill.className = 'ext-pill ok'; pill.textContent = 'v' + v + ' — up to date';
+    if (note) note.innerHTML = 'This browser is running the latest Radar extension.';
+  }
+}
+
+// --- health check ---
+const EXT_DIAG_ROWS = [
+  { id:'inst',    label:'Extension installed' },
+  { id:'ver',     label:'Version up to date' },
+  { id:'salesnav',label:'Sales Navigator session' },
+  { id:'sched',   label:'Collection schedule' },
+  { id:'owner',   label:'Linked to your account' },
+  { id:'hub',     label:'Radar backend reachable' }
+];
+function extDiagPaint(id, state, detail){
+  const row = document.getElementById('diag-' + id);
+  if (!row) return;
+  const ico = row.querySelector('.diag-ico');
+  const det = row.querySelector('.diag-det');
+  const glyph = { ok:'✓', err:'✕', warn:'!', pending:'', idle:'' };
+  ico.className = 'diag-ico ' + state;
+  ico.textContent = glyph[state] || '';
+  if (det) det.innerHTML = detail || '';
+}
+function extDiagInit(){
+  const wrap = document.getElementById('extDiag');
+  if (!wrap) return;
+  wrap.innerHTML = EXT_DIAG_ROWS.map(r =>
+    '<div class="diag-row" id="diag-' + r.id + '"><div class="diag-ico idle"></div>' +
+    '<div class="diag-txt"><strong>' + r.label + '</strong><span class="diag-det">not checked yet</span></div></div>').join('');
+}
+// Ask the extension something and resolve with its answer (or null on timeout).
+function extAsk(sendEvent, replyEvent, ms){
+  return new Promise(resolve => {
+    let done = false;
+    const on = (e) => { if (done) return; done = true; window.removeEventListener(replyEvent, on); resolve((e && e.detail) || {}); };
+    window.addEventListener(replyEvent, on);
+    try { window.dispatchEvent(new CustomEvent(sendEvent)); } catch(err) {}
+    setTimeout(() => { if (done) return; done = true; window.removeEventListener(replyEvent, on); resolve(null); }, ms || 6000);
+  });
+}
+let EXT_DIAG_RUNNING = false;
+async function extRunDiag(){
+  if (EXT_DIAG_RUNNING) return;
+  EXT_DIAG_RUNNING = true;
+  const btn = document.getElementById('extDiagBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+  extDiagInit();
+  EXT_DIAG_ROWS.forEach(r => extDiagPaint(r.id, 'pending', 'checking…'));
+
+  // 1 + 2 — presence and version. Nudge, then give the content script a moment to answer.
+  try { window.dispatchEvent(new Event('radar-ext-ping')); } catch(e) {}
+  let v = extInstalledVer();
+  for (let i = 0; i < 6 && !v; i++) { await new Promise(r => setTimeout(r, 400)); v = extInstalledVer(); }
+  detectExtension();
+  extRenderState();
+
+  if (!v) {
+    extDiagPaint('inst', 'err', 'No extension detected in this browser. <a href="' + EXT_ZIP_URL + '" download style="color:#2563eb;font-weight:600">Download it ↓</a>');
+    ['ver','salesnav','sched','owner'].forEach(id => extDiagPaint(id, 'idle', 'needs the extension'));
+  } else {
+    extDiagPaint('inst', 'ok', 'Detected and talking to this page.');
+    const behind = cmpVer(v, LATEST_EXT_VERSION) < 0;
+    extDiagPaint('ver', behind ? 'warn' : 'ok',
+      behind ? 'Running v' + v + ' — latest is v' + LATEST_EXT_VERSION + '. Download, then Reload it.' : 'v' + v + ' — latest.');
+
+    // 3 — Sales Nav session, straight from the extension's own login check.
+    const sn = document.documentElement.getAttribute('data-radar-salesnav');
+    if (sn === '1') extDiagPaint('salesnav', 'ok', 'Logged in — collection can run.');
+    else if (sn === '0') extDiagPaint('salesnav', 'err', 'Not logged in. Open <a href="https://www.linkedin.com/sales/home" target="_blank" rel="noopener" style="color:#2563eb">Sales Navigator</a>, sign in, then re-run this check.');
+    else extDiagPaint('salesnav', 'warn', 'The extension didn\'t report a LinkedIn session yet.');
+
+    // 4 — schedule (proves the service worker answers, not just the content script).
+    const sc = await extAsk('radar-ext-get-schedule', 'radar-ext-schedule', 6000);
+    if (sc && sc.ok) {
+      const s = sc.schedule || {};
+      const bits = [];
+      if (s.targetsEveryHours) bits.push('targets every ' + s.targetsEveryHours + 'h');
+      if (s.bridgesMode) bits.push('bridges: ' + s.bridgesMode + (s.bridgesMode === 'periodic' && s.bridgesEveryDays ? ' (' + s.bridgesEveryDays + 'd)' : ''));
+      extDiagPaint('sched', 'ok', bits.length ? bits.join(' · ') : 'Schedule active.');
+      const line = document.getElementById('extSchedLine');
+      if (line && bits.length) line.textContent = bits.join(' · ') + ' — newest log entries first.';
+    } else {
+      extDiagPaint('sched', 'warn', 'No answer from the extension\'s background worker. Reload it in chrome://extensions.');
+    }
+
+    // 5 — owner key relayed, so collected rows land under this account.
+    if (window.__OWNER) {
+      try { window.dispatchEvent(new CustomEvent('radar-ext-set-owner', { detail:{ owner: window.__OWNER } })); } catch(e) {}
+      extDiagPaint('owner', 'ok', 'Collections will be filed under your account.');
+    } else {
+      extDiagPaint('owner', 'warn', 'No signed-in owner key on this page — reload the app.');
+    }
+  }
+
+  // 6 — backend, independent of the extension.
+  try {
+    const txt = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r => r.text());
+    JSON.parse(txt.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    extDiagPaint('hub', 'ok', 'Radar hub answered — collected targets can be saved.');
+  } catch(e) {
+    extDiagPaint('hub', 'err', 'Could not reach the Radar backend (' + (e.message || 'error') + ').');
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Re-run check'; }
+  EXT_DIAG_RUNNING = false;
+  extLoadLog();
+}
+
+// --- extension log tail ---
+async function extLoadLog(){
+  const box = document.getElementById('extLogTail');
+  if (!box) return;
+  if (!extInstalledVer()) { box.textContent = 'No extension detected — nothing to show.'; return; }
+  box.textContent = 'Loading…';
+  const d = await extAsk('radar-ext-get-log', 'radar-ext-log', 6000);
+  if (!d || !d.ok) { box.textContent = 'The extension didn\'t return its log. Try reloading it in chrome://extensions.'; return; }
+  const rows = (d.log || []).slice(0, 60);
+  if (!rows.length) { box.textContent = 'No activity logged yet — launch a sync to get started.'; return; }
+  box.innerHTML = rows.map(r => {
+    const ts = String(r.ts || '').replace('T', ' ').slice(0, 19);
+    const cls = r.level === 'error' ? 'l-error' : (r.level === 'warn' ? 'l-warn' : '');
+    let extra = '';
+    if (r.data != null && typeof r.data === 'object') { try { extra = ' ' + JSON.stringify(r.data); } catch(e){} }
+    else if (r.data != null) extra = ' ' + String(r.data);
+    return '<div class="' + cls + '"><span class="l-ts">' + esc(ts) + '</span> ' + esc(String(r.msg || '') + extra) + '</div>';
+  }).join('');
+}
+
+// --- launch a sync from this page ---
+let EXT_SYNC_RUNNING = false;
+function extSyncMsg(text, kind){
+  const el = document.getElementById('extSyncStatus');
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = 'sync-status ' + (kind || 'info');
+  el.innerHTML = text;
+}
+function extRunSync(){
+  if (EXT_SYNC_RUNNING) return;
+  const btn = document.getElementById('extSyncBtn');
+  if (!extInstalledVer()) {
+    extSyncMsg('Chrome extension not detected — install it first, then run <strong>Test installation</strong>.', 'err');
+    return;
+  }
+  EXT_SYNC_RUNNING = true;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Syncing…'; }
+  extSyncMsg('Sync started — collecting from your active bridges in the background. This can take a few minutes; you can keep working.', 'info');
+  const tail = setInterval(extLoadLog, 15000);
+  let done = false;
+  const finish = () => { clearInterval(tail); EXT_SYNC_RUNNING = false; if (btn) { btn.disabled = false; btn.textContent = '🔄 Launch sync'; } extLoadLog(); };
+  const onResult = (e) => {
+    if (done) return; done = true;
+    window.removeEventListener('radar-ext-sync-result', onResult);
+    finish();
+    const d = (e && e.detail) || {};
+    if (d.ok) {
+      const nw = d.result && (d.result.written != null ? d.result.written : d.result.newLeads);
+      extSyncMsg('✓ Sync complete' + (nw != null ? ' — ' + nw + ' new prospects written.' : '.') + ' Refreshing your data…', 'ok');
+      try { load(); } catch(err) {}
+    } else {
+      extSyncMsg('Sync error: ' + esc(d.error || 'unknown') + '. Make sure you\'re logged into Sales Navigator.', 'err');
+    }
+  };
+  window.addEventListener('radar-ext-sync-result', onResult);
+  window.dispatchEvent(new CustomEvent('radar-ext-sync'));
+  setTimeout(() => {
+    if (done) return; done = true;
+    window.removeEventListener('radar-ext-sync-result', onResult);
+    finish();
+    extSyncMsg('Still running in the background — watch the activity log below, or come back in a few minutes.', 'info');
+  }, 180000);
+}
+
+// Opening the page: paint state from what we already know, then run the full check once.
+let _extPageChecked = false;
+function extOpenPage(){
+  extRenderState();
+  if (!document.getElementById('extDiag').children.length) extDiagInit();
+  if (!_extPageChecked) { _extPageChecked = true; extRunDiag(); }
 }
 
 let _extDetectInit = false;
@@ -1404,7 +1701,7 @@ function renderOnboarding(){
         '<div class="ob-note">detected automatically</div>' :
         '<div class="ob-note" style="margin-bottom:6px">Download it, then in <code>chrome://extensions</code> enable <strong>Developer mode</strong> → <strong>Load unpacked</strong> → pick the unzipped folder.</div>' +
         '<div class="ob-actions">' +
-          '<a class="ob-link" href="/radar-extension-v1.7.0.zip" download>Download the extension ↓</a>' +
+          '<a class="ob-link" href="/radar-extension-v1.7.2.zip" download>Download the extension ↓</a>' +
           '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
         '</div>') +
       '</div>' +
@@ -2509,6 +2806,8 @@ function showView(name){
   if (name === 'dashboard') Object.values(CHARTS).forEach(c => { try{ c.resize(); }catch(e){} });
   // (re)populate the onboarding checklist when the Setup view opens
   if (name === 'setup') { try { renderOnboarding(); } catch(e){} }
+  // extension page: refresh the installed-version state + run the health check
+  if (name === 'extension') { try { extOpenPage(); } catch(e){} }
   // refresh bridge candidates each time the Bridges view is opened
   if (name === 'bridges') { loadBridges().then(() => { try { applyInviteQueue(); } catch(e){} renderBridges(); }); }
   // pull the latest replies each time the Leads view is opened
@@ -3133,4 +3432,3 @@ initAuth();
 </script>
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
