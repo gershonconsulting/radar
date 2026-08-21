@@ -3,19 +3,20 @@
 // 1. Validates CSRF state cookie.
 // 2. Exchanges authorization code for tokens (server-side only — secret never leaves here).
 // 3. Fetches user info from LinkedIn.
-// 4. Resolves the user against the Supabase `users` store (invite-only):
+// 4. OPEN SELF-REGISTRATION against the Supabase `users` store:
 //      - match by linkedin_sub, then by email; claims invited rows on first login
 //      - legacy ALLOWLIST emails claim the solo owner row (bootstrap for Olivier)
-//      - unknown users get a `pending` row and land on /?pending=1 (request access)
+//      - UNKNOWN users are auto-created as `active` and let straight in (self-serve sign-up)
 //      - suspended users land on /?denied=1
-//    If Supabase isn't configured, falls back to the old ALLOWLIST-only gate so
-//    login can never break.
+//    Every user is scoped by a stable owner_key: their DB owner_key when available, else a
+//    deterministic key derived from their LinkedIn sub (so isolation holds even if the DB is
+//    momentarily unreachable, and the same person always maps to the same bucket).
 // 5. Issues a signed HMAC session cookie carrying { sub, email, name, owner_key, adm }.
 
 import { sign } from '../../../_lib/session.js';
 
 const SUPABASE_URL = 'https://pkzeeqehwmtnqxdpdesl.supabase.co';
-const SOLO_OWNER = 'xTVW0K1qKi'; // pre-multi-user owner of all existing data
+const SOLO_OWNER = 'xTVW0K1qKi'; // pre-multi-user owner of all existing data (Olivier)
 
 function parseCookies(header) {
   const result = {};
@@ -49,19 +50,33 @@ function allowlisted(email, env) {
   return !!email && list.includes(String(email).toLowerCase());
 }
 
+const OWNER_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
 function makeOwnerKey() {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const bytes = new Uint8Array(10);
   crypto.getRandomValues(bytes);
   let out = '';
-  for (let i = 0; i < bytes.length; i++) out += alphabet[bytes[i] % alphabet.length];
+  for (let i = 0; i < bytes.length; i++) out += OWNER_ALPHABET[bytes[i] % OWNER_ALPHABET.length];
   return out;
+}
+
+// Deterministic owner_key from a LinkedIn sub — same person always maps to the same bucket,
+// even without a DB round-trip. Used as the fallback when Supabase is unreachable.
+async function ownerFromSub(sub) {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('radar-owner:' + sub));
+    const bytes = new Uint8Array(buf);
+    let out = '';
+    for (let i = 0; i < 10; i++) out += OWNER_ALPHABET[bytes[i] % OWNER_ALPHABET.length];
+    return out;
+  } catch (e) {
+    return makeOwnerKey();
+  }
 }
 
 const enc = encodeURIComponent;
 
-// Find (and claim) the users row for this LinkedIn identity.
-// Returns { user } or null when the user is unknown.
+// Find (and claim) the users row for this LinkedIn identity. Returns { user } or null when unknown.
 async function resolveUser(env, who) {
   // 1. Exact match on linkedin_sub (returning user).
   let rows = await sb(env, `users?linkedin_sub=eq.${enc(who.sub)}&select=*&limit=1`);
@@ -93,7 +108,6 @@ async function resolveUser(env, who) {
       });
       return { user: (claimed && claimed[0]) || rows[0] };
     }
-    // Solo row already claimed — create an active row for this allowlisted email.
     const created = await sb(env, 'users', {
       method: 'POST',
       body: JSON.stringify({
@@ -153,60 +167,76 @@ export async function onRequestGet({ request, env }) {
   }
 
   const deny = (flag) => Response.redirect('https://radar.gershoncrm.com/app.html?' + flag + '=1', 302);
+  const email = String(who.email || '').toLowerCase();
 
-  // ---- Resolve against the users store (invite-only gate) ----
+  // ---- Resolve / self-register against the users store (OPEN sign-up) ----
   let user = null;
+  let ownerKey = null;
+  let isAdmin = false;
+
   if (env.SUPABASE_SERVICE_KEY) {
     try {
       const hit = await resolveUser(env, who);
-
-      if (!hit || !hit.user) {
-        // Unknown user → record an access request (pending) once, then show the pending state.
+      if (hit && hit.user) {
+        user = hit.user;
+        if (user.status === 'suspended') return deny('denied');
+      } else {
+        // SELF-REGISTRATION: unknown user → create an ACTIVE account and let them straight in.
+        const ok = makeOwnerKey();
         try {
-          await sb(env, 'users', {
+          const rows = await sb(env, 'users', {
             method: 'POST',
             body: JSON.stringify({
-              owner_key: makeOwnerKey(), email: String(who.email || '').toLowerCase() || null,
-              display_name: who.name || null, linkedin_sub: who.sub, status: 'pending', is_admin: false
-            }),
-            prefer: 'return=minimal'
+              owner_key: ok, email: email || null, display_name: who.name || null,
+              linkedin_sub: who.sub, status: 'active', is_admin: false
+            })
           });
-        } catch (e) { /* row may already exist from a prior attempt */ }
-        return deny('pending');
+          user = Array.isArray(rows) ? rows[0] : rows;
+        } catch (e) {
+          // Row may already exist (e.g. a prior pending attempt) — fetch it.
+          try {
+            const rows = await sb(env, `users?linkedin_sub=eq.${enc(who.sub)}&select=*&limit=1`);
+            if (rows && rows.length) user = rows[0];
+          } catch (_) { /* ignore */ }
+        }
+        if (!user) user = { owner_key: ok }; // DB write failed — keep a unique owner so isolation holds
       }
 
-      user = hit.user;
-      if (user.status === 'suspended') return deny('denied');
-      if (user.status === 'pending') return deny('pending');
+      ownerKey = user.owner_key || (await ownerFromSub(who.sub));
+      isAdmin = !!user.is_admin;
 
-      // invited → active on first successful login; stamp last_login.
+      // Activate + stamp last_login + log the sign-in (best-effort).
       try {
-        await sb(env, `users?id=eq.${enc(user.id)}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'active', last_login_at: new Date().toISOString() }),
-          prefer: 'return=minimal'
-        });
+        if (user.id) {
+          await sb(env, `users?id=eq.${enc(user.id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'active', last_login_at: new Date().toISOString() }),
+            prefer: 'return=minimal'
+          });
+        }
         await sb(env, 'activity_log', {
           method: 'POST',
-          body: JSON.stringify({ owner_key: user.owner_key, action: 'login', detail: { email: who.email || null, via: 'oauth' } }),
+          body: JSON.stringify({ owner_key: ownerKey, action: 'login', detail: { email: who.email || null, via: 'oauth' } }),
           prefer: 'return=minimal'
         });
       } catch (e) { /* non-fatal */ }
     } catch (e) {
-      // Supabase down — fall back to the ALLOWLIST so the owner is never locked out.
-      if (!allowlisted(who.email, env)) return deny('denied');
+      // Supabase unreachable — still let them in on a STABLE per-user owner (isolation preserved).
+      ownerKey = allowlisted(email, env) ? SOLO_OWNER : await ownerFromSub(who.sub);
+      isAdmin = allowlisted(email, env);
     }
   } else {
-    // No Supabase configured — legacy ALLOWLIST-only behavior.
-    if (!allowlisted(who.email, env)) return deny('denied');
+    // No Supabase configured — open registration with a deterministic per-user owner_key.
+    ownerKey = allowlisted(email, env) ? SOLO_OWNER : await ownerFromSub(who.sub);
+    isAdmin = allowlisted(email, env);
   }
 
   // Issue signed session cookie
   const token = await sign(
     {
       sub: who.sub, email: who.email, name: who.name,
-      owner_key: (user && user.owner_key) || null,
-      adm: !!(user && user.is_admin),
+      owner_key: ownerKey,
+      adm: isAdmin,
       iat: Date.now()
     },
     env.SESSION_SECRET
