@@ -188,6 +188,52 @@ tr.row-excluded td:first-child{ text-decoration:none; }
 .stat-chip{ display:inline-flex; align-items:center; gap:6px; background:var(--brand-soft,#eef0fe); color:var(--brand-ink,#4f46e5); font-size:0.78rem; font-weight:600; padding:3px 10px; border-radius:12px; margin-right:10px; cursor:pointer; }
 .stat-chip .x{ font-weight:700; }
 
+/* ---------- First-run tour ---------- */
+.tour-ov{ position:fixed; inset:0; background:rgba(15,23,42,0.55); backdrop-filter:blur(2px); z-index:900; display:none; align-items:center; justify-content:center; padding:24px; }
+.tour-card{ background:#fff; border-radius:18px; width:min(680px,100%); max-height:90vh; overflow:auto; box-shadow:0 24px 60px rgba(15,23,42,0.28); }
+.tour-top{ padding:26px 30px 0; }
+.tour-eyebrow{ font-size:0.72rem; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color:var(--brand-ink,#1d4ed8); }
+.tour-card h2{ font-size:1.42rem; font-weight:800; color:#0f172a; margin:8px 0 0; line-height:1.25; }
+.tour-lede{ margin-top:10px; font-size:0.98rem; line-height:1.6; color:#334155; }
+.tour-body{ padding:18px 30px 4px; }
+.tour-body p{ font-size:0.93rem; line-height:1.62; color:#475569; margin-bottom:12px; }
+.tour-body strong{ color:#0f172a; }
+.tour-eg{ background:#f8fafc; border:1px solid var(--line,#e2e8f0); border-left:3px solid var(--brand,#2563eb); border-radius:10px; padding:12px 14px; margin:4px 0 12px; }
+.tour-eg .t{ font-size:0.72rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#94a3b8; margin-bottom:6px; }
+.tour-eg ul{ margin:0; padding-left:18px; }
+.tour-eg li{ font-size:0.88rem; line-height:1.55; color:#475569; }
+.tour-chain{ display:flex; align-items:stretch; gap:8px; margin:6px 0 14px; flex-wrap:wrap; }
+.tour-chain .n{ flex:1 1 150px; border:1px solid var(--line,#e2e8f0); border-radius:12px; padding:12px 13px; background:#fff; }
+.tour-chain .n.on{ border-color:var(--brand,#2563eb); box-shadow:0 0 0 3px rgba(37,99,235,0.10); }
+.tour-chain .n .k{ font-size:0.7rem; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#94a3b8; }
+.tour-chain .n .v{ font-size:0.95rem; font-weight:700; color:#0f172a; margin-top:3px; }
+.tour-chain .n .d{ font-size:0.79rem; color:#64748b; margin-top:4px; line-height:1.45; }
+.tour-chain .ar{ align-self:center; color:#cbd5e1; font-size:1.1rem; }
+.tour-list{ margin:0 0 12px; padding:0; list-style:none; }
+.tour-list li{ display:flex; gap:10px; align-items:flex-start; font-size:0.9rem; color:#475569; line-height:1.55; padding:7px 0; border-bottom:1px solid #f1f5f9; }
+.tour-list li:last-child{ border-bottom:none; }
+.tour-list li b{ color:#0f172a; }
+.tour-list .num{ flex:none; width:22px; height:22px; border-radius:50%; background:var(--brand-soft,#eff6ff); color:var(--brand-ink,#1d4ed8); font-size:0.75rem; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.tour-foot{ display:flex; align-items:center; gap:10px; padding:16px 30px 24px; border-top:1px solid var(--line,#e2e8f0); margin-top:14px; }
+.tour-dots{ display:flex; gap:6px; margin-right:auto; }
+.tour-dots i{ width:7px; height:7px; border-radius:50%; background:#dbe1ea; display:block; cursor:pointer; }
+.tour-dots i.on{ background:var(--brand,#2563eb); width:20px; border-radius:4px; }
+.tour-btn{ font:inherit; font-size:0.88rem; font-weight:600; padding:9px 16px; border-radius:9px; cursor:pointer; border:1px solid var(--line,#e2e8f0); background:#fff; color:#334155; }
+.tour-btn:hover{ background:#f8fafc; }
+.tour-btn.pri{ background:var(--brand,#2563eb); border-color:var(--brand,#2563eb); color:#fff; }
+.tour-btn.pri:hover{ filter:brightness(1.06); }
+.tour-skip{ background:none; border:none; color:#94a3b8; font:inherit; font-size:0.83rem; font-weight:600; cursor:pointer; }
+.tour-skip:hover{ color:#475569; text-decoration:underline; }
+/* ---------- Welcome / empty coaching ---------- */
+.wel{ background:var(--card,#fff); border:1px solid var(--line,#e2e8f0); border-radius:16px; padding:26px 28px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+.wel h2{ font-size:1.3rem; font-weight:800; color:#0f172a; }
+.wel .sub{ margin-top:8px; font-size:0.95rem; line-height:1.6; color:#475569; max-width:70ch; }
+.wel-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+.coach{ background:var(--card,#fff); border:1px dashed #cbd5e1; border-radius:14px; padding:22px 24px; }
+.coach h3{ font-size:1.02rem; font-weight:700; color:#0f172a; margin-bottom:8px; }
+.coach p{ font-size:0.9rem; line-height:1.6; color:#64748b; margin-bottom:10px; max-width:70ch; }
+.coach ul{ margin:0 0 12px; padding-left:18px; }
+.coach li{ font-size:0.88rem; line-height:1.6; color:#475569; }
 /* ---------- Onboarding ---------- */
 .onboard{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:24px; box-shadow:0 1px 2px rgba(15,23,42,0.04); border-top:3px solid var(--brand); }
 .onboard .ob-head{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
@@ -442,6 +488,20 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 
 <div class="app" id="appShell" style="display:none">
 
+  <!-- ===== First-run tour (how Radar works) ===== -->
+  <div class="tour-ov" id="tourOverlay" onclick="if(event.target===this)tourSkip()">
+    <div class="tour-card" role="dialog" aria-modal="true" aria-label="How Radar works">
+      <div id="tourContent"></div>
+      <div class="tour-foot">
+        <div class="tour-dots" id="tourDots"></div>
+        <button class="tour-skip" onclick="tourSkip()">Skip</button>
+        <button class="tour-btn" id="tourBack" onclick="tourPrev()">Back</button>
+        <button class="tour-btn pri" id="tourNext" onclick="tourNext()">Next</button>
+      </div>
+    </div>
+  </div>
+
+
   <!-- ===== Sidebar ===== -->
   <aside class="sidebar">
     <div class="brand">
@@ -450,7 +510,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.9.7</div>
+      <div class="ver" id="sideVer">v1.9.8</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -472,6 +532,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <button class="nav-item"        id="nav-targets"     onclick="showView('targets')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span> Targets <span class="nav-count" id="leadCount">0</span></button>
       <div class="nav-sec">Activity</div>
       <button class="nav-item"        id="nav-setup"       onclick="showView('setup')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Setup</button>
+      <button class="nav-item"        id="nav-howitworks"  onclick="openTour(0)"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> How Radar works</button>
       <button class="nav-item"        id="nav-extension"   onclick="showView('extension')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/></svg></span> Extension <span class="nav-count" id="extNavBadge" style="display:none;background:#fee2e2;color:#b91c1c">!</span></button>
       <button class="nav-item"        id="nav-collections" onclick="showView('collections')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13l3.5 7v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/></svg></span> Collections</button>
       <button class="nav-item"        id="nav-log"         onclick="showView('log')"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="8" y1="9" x2="10" y2="9"/></svg></span> Log</button>
@@ -513,6 +574,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     <!-- ===== Dashboard (command center) ===== -->
     <section id="view-home" class="view active">
       <div class="page-head"><h2>Dashboard</h2><p>Your engine at a glance — capture health, pipeline totals, and what needs attention today.</p></div>
+      <div id="onboardingWrapHome"></div>
       <div id="homeBody"><div class="empty">Loading…</div></div>
     </section>
 
@@ -528,7 +590,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
       <div id="extUpdateBanner" class="banner" style="display:none;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension-v1.7.2.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
+        <a id="extUpdateDl" href="/radar-extension-v1.7.4.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
         <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#2563eb;text-decoration:none">How to update</a>
         <a href="#" onclick="dismissExtUpdate();return false" style="margin-left:12px;color:#64748b;text-decoration:none">Dismiss</a>
         <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#334155;font-weight:400">To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.)</div>
@@ -617,7 +679,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <div id="extStatePill" class="ext-pill idle">Checking&hellip;</div>
           <div id="extStateNote" style="margin-top:10px;font-size:0.85rem;color:#334155"></div>
           <div class="ext-actions">
-            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.7.2.zip" download>&#11015; Download latest</a>
+            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.7.4.zip" download>&#11015; Download latest</a>
             <button class="ext-btn ghost" onclick="extRunDiag()">Test installation</button>
           </div>
         </div>
@@ -790,7 +852,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.7.2.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.7.4.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -984,15 +1046,11 @@ const CONFIG = {
   // the LinkedIn session cookie server-side and injects the verified owner + HUB_SECRET, so the
   // browser never holds the hub secret and data stays scoped per user. Same-origin → cookie sent.
   WEBAPP_URL: 'https://pkzeeqehwmtnqxdpdesl.supabase.co/functions/v1/hub',
-  // bridge (person) -> the Source organization they represent
-  BRIDGE_SOURCE: {
-    'Elie Cohen':                { source: 'The Triana Group', category: 'partner', results: 55  },
-    'Jabril Bensedrine':         { source: 'The Triana Group', category: 'partner', results: 45  },
-    'Phil Jeudy':                { source: 'The Triana Group', category: 'partner', results: 207 },
-    'Mathias Cohen':             { source: 'The Triana Group', category: 'partner', results: 30  },
-    'Anne Charlotte Le Bourhis': { source: 'The Triana Group', category: 'partner', results: 53  },
-    'Marie-Josée Rodi-Andrieu':  { source: 'The Triana Group', category: 'partner', results: 336 },
-  }
+  // bridge (person) -> the Source organization they represent.
+  // Deliberately EMPTY: every account starts with a blank slate. Sources and bridges come
+  // from the user's own hub data (getSources / getBridges). Never seed demo organizations
+  // here — a new user must see zero sources, not somebody else's network.
+  BRIDGE_SOURCE: {}
 };
 function _norm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim(); }
 function bridgeSource(name) {
@@ -1001,7 +1059,7 @@ function bridgeSource(name) {
   //    both carry the Source they came from — use that, not just the hardcoded seed list.
   for (var i = 0; i < BRIDGES.length; i++) { if (BRIDGES[i] && BRIDGES[i].source && _norm(BRIDGES[i].name) === n) return BRIDGES[i].source; }
   for (var j = 0; j < ROWS.length; j++) { if (ROWS[j] && ROWS[j].source && _norm(ROWS[j].radar_person) === n) return ROWS[j].source; }
-  // 2) Fallback: the original hardcoded Triana seed bridges.
+  // 2) Fallback: optional local mapping (empty by default).
   for (var k in CONFIG.BRIDGE_SOURCE) { if (_norm(k) === n) return CONFIG.BRIDGE_SOURCE[k].source; }
   return 'Unassigned';
 }
@@ -1302,6 +1360,112 @@ function connBadge(connection){
   return '<span class="lvl-badge lvl-0">Level ?</span>';
 }
 
+// ===== First-run tour: what Radar is and how it works =====
+// Shown once per browser to every new account (flag radar_tour_seen). Replayable any time
+// from the sidebar ("How Radar works"), from the welcome panel, and from the Setup view.
+const TOUR_KEY = 'radar_tour_seen';
+function chain(active){
+  const n = [
+    ['Step 1','Source','An organization whose network is full of your buyers'],
+    ['Step 2','Bridge','A senior person inside that organization'],
+    ['Step 3','Target','A prospect in their network who fits your ICP']
+  ];
+  return '<div class="tour-chain">' + n.map(function(x,i){
+    return (i? '<span class="ar">&rsaquo;</span>' : '') +
+      '<div class="n' + (i===active?' on':'') + '"><div class="k">' + x[0] + '</div><div class="v">' + x[1] + '</div><div class="d">' + x[2] + '</div></div>';
+  }).join('') + '</div>';
+}
+const TOUR = [
+  { eyebrow:'Welcome to Radar',
+    title:'Your next customers are already in someone else&rsquo;s network',
+    html:
+      '<p class="tour-lede">Radar finds them. Every day it looks inside the LinkedIn networks of organizations you choose, pulls out the people who match your ideal customer, grades them, and hands you a clean list ready for outreach.</p>' +
+      '<p>It works in three steps &mdash; and the whole app is built around them:</p>' +
+      chain(-1) +
+      '<p>Two minutes here and the vocabulary will make sense for good.</p>' },
+  { eyebrow:'Step 1',
+    title:'A Source is an organization whose network you want',
+    html:
+      chain(0) +
+      '<p>Not a company you want to sell to &mdash; a company whose <strong>people already know your buyers</strong>. Their connections are the pool Radar fishes in.</p>' +
+      '<div class="tour-eg"><div class="t">Good sources look like</div><ul>' +
+        '<li>A consulting or advisory firm that serves your market</li>' +
+        '<li>An accelerator, incubator, or investor whose portfolio is full of your buyers</li>' +
+        '<li>A trade association, chamber, or club your customers all belong to</li>' +
+        '<li>A partner who sells alongside you &mdash; or a competitor, whose network is by definition your market</li>' +
+      '</ul></div>' +
+      '<p>Adding one takes a paste: drop the organization&rsquo;s <strong>LinkedIn company page URL</strong> into <strong>Sources &rarr; Add a Source</strong>. Radar names it, resolves its Sales Navigator ID, and starts looking inside.</p>' },
+  { eyebrow:'Step 2',
+    title:'A Bridge is a person inside that Source',
+    html:
+      chain(1) +
+      '<p>An organization has no network &mdash; its <strong>people</strong> do. A bridge is a senior individual inside a Source: a partner, a founder, a managing director, a C-level. Their personal connections are the door.</p>' +
+      '<p>You don&rsquo;t have to find them. Radar searches each Source in Sales Navigator and proposes the senior people it finds as <strong>candidate bridges</strong>. You look at the list and switch on the ones worth following &mdash; each one you activate gets harvested on every run.</p>' +
+      '<p>Bridges you are not yet connected to are flagged, so you know who is worth an invitation.</p>' },
+  { eyebrow:'Step 3',
+    title:'A Target is a prospect worth contacting',
+    html:
+      chain(2) +
+      '<p>For every active bridge, Radar walks their network and keeps only the people who match <strong>your ICP search</strong> &mdash; the Sales Navigator filters you define once in Settings.</p>' +
+      '<p>Each target is graded <strong>A+ down to D</strong> on title fit, deduplicated against everything you have ever collected, and checked against your own connections so you never chase someone you already know. Unselect anyone you don&rsquo;t want and they never come back.</p>' +
+      '<p>The best ones get pushed to <strong>Botdog</strong>, which runs the connection requests and follow-ups for you.</p>' },
+  { eyebrow:'How it runs',
+    title:'Set it up once, then it works on its own',
+    html:
+      '<p>Collection happens in a <strong>Chrome extension</strong> that acts through your own logged-in LinkedIn session &mdash; nothing is scraped from outside your account, and it paces itself like a human. Once installed it runs on a schedule and this dashboard fills up by itself.</p>' +
+      '<ul class="tour-list">' +
+        '<li><span class="num">1</span><span><b>Sales Navigator</b> &mdash; Radar searches through your subscription.</span></li>' +
+        '<li><span class="num">2</span><span><b>The Chrome extension</b> &mdash; the collector and the scheduler.</span></li>' +
+        '<li><span class="num">3</span><span><b>Your ICP search</b> &mdash; the Sales Nav filters that define a good prospect.</span></li>' +
+        '<li><span class="num">4</span><span><b>Botdog</b> &mdash; optional, but it turns the list into conversations.</span></li>' +
+        '<li><span class="num">5</span><span><b>Your first Source</b> &mdash; one organization to start. You can add more any time.</span></li>' +
+      '</ul>' +
+      '<p>The checklist on your dashboard tracks all five and ticks them off as it detects them.</p>' }
+];
+let TOUR_I = 0;
+function tourSeen(){ try { return localStorage.getItem(TOUR_KEY) === '1'; } catch(e){ return false; } }
+function tourMarkSeen(){ try { localStorage.setItem(TOUR_KEY, '1'); } catch(e){} }
+function tourOpen(){ const o = document.getElementById('tourOverlay'); return !!(o && o.style.display === 'flex'); }
+function openTour(i){
+  TOUR_I = (typeof i === 'number' && i >= 0 && i < TOUR.length) ? i : 0;
+  renderTour();
+  const o = document.getElementById('tourOverlay'); if (o) o.style.display = 'flex';
+}
+function closeTour(){ const o = document.getElementById('tourOverlay'); if (o) o.style.display = 'none'; tourMarkSeen(); }
+function tourSkip(){ closeTour(); try { renderOnboarding(); } catch(e){} }
+function tourGo(i){ TOUR_I = i; renderTour(); }
+function tourPrev(){ if (TOUR_I > 0) { TOUR_I--; renderTour(); } }
+function tourNext(){
+  if (TOUR_I < TOUR.length - 1) { TOUR_I++; renderTour(); return; }
+  closeTour();
+  try { showView('setup'); } catch(e){}
+  try { renderOnboarding(); } catch(e){}
+}
+function renderTour(){
+  const c = document.getElementById('tourContent'); if (!c) return;
+  const t = TOUR[TOUR_I];
+  c.innerHTML =
+    '<div class="tour-top"><div class="tour-eyebrow">' + t.eyebrow + '</div><h2>' + t.title + '</h2></div>' +
+    '<div class="tour-body">' + t.html + '</div>';
+  const dots = document.getElementById('tourDots');
+  if (dots) dots.innerHTML = TOUR.map(function(_, i){ return '<i class="' + (i===TOUR_I?'on':'') + '" onclick="tourGo(' + i + ')"></i>'; }).join('');
+  const back = document.getElementById('tourBack');
+  if (back) back.style.visibility = TOUR_I === 0 ? 'hidden' : 'visible';
+  const next = document.getElementById('tourNext');
+  if (next) next.textContent = TOUR_I === TOUR.length - 1 ? 'Start setup →' : 'Next';
+}
+// Auto-open on a brand-new account: never seen the tour on this browser.
+function maybeStartTour(){
+  if (tourSeen() || tourOpen()) return;
+  openTour(0);
+}
+document.addEventListener('keydown', function(e){
+  if (!tourOpen()) return;
+  if (e.key === 'Escape') tourSkip();
+  else if (e.key === 'ArrowRight') tourNext();
+  else if (e.key === 'ArrowLeft') tourPrev();
+});
+
 // ===== Getting-started onboarding =====
 // Four setup flags tracked in localStorage. Step 1 (signed in) is always true here
 // because renderAll only runs after initAuth reveals the app. The rest are manual/
@@ -1336,7 +1500,7 @@ function detectExtension(){
 }
 
 // ===== Extension version offer (installed vs latest, like the Linalysis check) =====
-const LATEST_EXT_VERSION = '1.7.2';   // latest packaged extension offered on the platform
+const LATEST_EXT_VERSION = '1.7.4';   // latest packaged extension offered on the platform
 const EXT_ZIP_URL = '/radar-extension-v' + LATEST_EXT_VERSION + '.zip';
 function cmpVer(a, b){
   const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
@@ -1355,9 +1519,9 @@ function checkExtUpdate(){
   const row = document.getElementById('extVersionRow');
   if (row) {
     row.innerHTML = !installed
-      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.7.2.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
+      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.7.4.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
       : (behind
-        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.7.2.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
+        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.7.4.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
         : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
   }
   const badge = document.getElementById('extNavBadge');
@@ -1647,8 +1811,17 @@ async function obSaveBotdog(){
   }
 }
 
+// Paints the checklist into every slot that wants it: the Setup view AND the Dashboard —
+// a new user lands on the Dashboard, so a checklist only in Setup is a checklist nobody sees.
+// `quiet` is what the secondary (Dashboard) slot shows once everything is done.
+function obPaint(html, quiet){
+  const setup = document.getElementById('onboardingWrap');
+  if (setup) setup.innerHTML = html;
+  const home = document.getElementById('onboardingWrapHome');
+  if (home) home.innerHTML = (quiet === undefined) ? html : quiet;
+}
 function renderOnboarding(){
-  const wrap = document.getElementById('onboardingWrap');
+  const wrap = document.getElementById('onboardingWrap') || document.getElementById('onboardingWrapHome');
   if (!wrap) return;
   const done = { signin:true, salesnav:obFlag(OB_KEYS.salesnav), ext:obFlag(OB_KEYS.ext), botdog:obFlag(OB_KEYS.botdog), icp: !!window.__hasIcp, source: (window.__srcCount||0) > 0 };
   const count = (done.signin?1:0) + (done.salesnav?1:0) + (done.ext?1:0) + (done.botdog?1:0) + (done.icp?1:0) + (done.source?1:0);
@@ -1657,17 +1830,17 @@ function renderOnboarding(){
 
   // Fully set up and dismissed → just a small "Setup" reopen link.
   if (all && onboarded) {
-    wrap.innerHTML = '<div class="onboard-reopen"><a onclick="obReopen()">⚙ Setup</a></div>';
+    obPaint('<div class="onboard-reopen"><a onclick="obReopen()">⚙ Setup</a> &nbsp;·&nbsp; <a onclick="openTour(0)">How Radar works</a></div>', '');
     return;
   }
   // All four done but not yet dismissed → collapsed "all set" line.
   if (all) {
-    wrap.innerHTML =
+    obPaint(
       '<div class="onboard-done">' +
         '<div class="ob-dot done">&#10003;</div>' +
         '<span class="ok-txt">You\'re all set — Radar is fully configured.</span>' +
         '<button class="dismiss" onclick="obDismiss()">dismiss</button>' +
-      '</div>';
+      '</div>');
     return;
   }
 
@@ -1701,7 +1874,7 @@ function renderOnboarding(){
         '<div class="ob-note">detected automatically</div>' :
         '<div class="ob-note" style="margin-bottom:6px">Download it, then in <code>chrome://extensions</code> enable <strong>Developer mode</strong> → <strong>Load unpacked</strong> → pick the unzipped folder.</div>' +
         '<div class="ob-actions">' +
-          '<a class="ob-link" href="/radar-extension-v1.7.2.zip" download>Download the extension ↓</a>' +
+          '<a class="ob-link" href="/radar-extension-v1.7.4.zip" download>Download the extension ↓</a>' +
           '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
         '</div>') +
       '</div>' +
@@ -1737,17 +1910,18 @@ function renderOnboarding(){
     '</div>');
 
   const pct = Math.round((count/6)*100);
-  wrap.innerHTML =
+  obPaint(
     '<div class="onboard">' +
       '<div class="ob-head">' +
         '<h3>Get set up</h3>' +
         '<div class="ob-progress">' +
+          '<a class="ob-link" onclick="openTour(0)" style="cursor:pointer">How Radar works</a>' +
           '<span class="ob-count">' + count + ' of 6 done</span>' +
           '<span class="ob-bar"><i style="width:' + pct + '%"></i></span>' +
         '</div>' +
       '</div>' +
       steps.join('') +
-    '</div>';
+    '</div>');
 }
 
 // ===== Render orchestration =====
@@ -1763,6 +1937,7 @@ function renderAll(){
   renderCharts();
   renderFlow();
   renderHome();
+  try { maybeStartTour(); } catch(e) {}
 }
 
 // ===== Dashboard command center =====
@@ -1841,6 +2016,31 @@ function renderHome(){
   const el = document.getElementById('homeBody');
   if (!el) return;
   _homeCss();
+  // Brand-new account: no sources, no bridges, no prospects. Don't greet them with a red
+  // "nothing collected" alarm and eight empty charts — explain the product instead.
+  const _blank = !( (typeof STORED_SOURCES!=='undefined' && STORED_SOURCES && STORED_SOURCES.length)
+                 || (typeof BRIDGES!=='undefined' && BRIDGES && BRIDGES.length)
+                 || (typeof ROWS!=='undefined' && ROWS && ROWS.length) );
+  if (_blank) {
+    el.innerHTML =
+      '<div class="wel">' +
+        '<h2>Welcome to Radar</h2>' +
+        '<div class="sub">Radar finds your next customers inside other people\u2019s networks. You pick the organizations worth watching \u2014 it does the rest, every day, on its own.</div>' +
+        '<div class="tour-chain" style="margin-top:18px">' +
+          '<div class="n"><div class="k">Step 1</div><div class="v">Source</div><div class="d">An organization whose network is full of your buyers. You add it by pasting its LinkedIn company URL.</div></div>' +
+          '<span class="ar">&rsaquo;</span>' +
+          '<div class="n"><div class="k">Step 2</div><div class="v">Bridge</div><div class="d">A senior person inside that organization. Radar finds them; you switch on the ones you want.</div></div>' +
+          '<span class="ar">&rsaquo;</span>' +
+          '<div class="n"><div class="k">Step 3</div><div class="v">Target</div><div class="d">A prospect in their network who matches your ICP \u2014 graded, deduplicated, ready for outreach.</div></div>' +
+        '</div>' +
+        '<div class="wel-actions">' +
+          '<button class="tour-btn pri" onclick="openTour(0)">Show me how Radar works</button>' +
+          '<button class="tour-btn" onclick="showView(\'setup\')">Finish setup</button>' +
+          '<button class="tour-btn" onclick="showView(\'sources\')">Add my first Source</button>' +
+        '</div>' +
+      '</div>';
+    return;
+  }
   const rows    = (typeof ROWS!=='undefined' && ROWS) ? ROWS : [];
   const sources = (typeof STORED_SOURCES!=='undefined' && STORED_SOURCES) ? STORED_SOURCES : [];
   const bridges = (typeof BRIDGES!=='undefined' && BRIDGES) ? BRIDGES : [];
@@ -2308,7 +2508,6 @@ function initSorting(){
 function bridgeCounts(){
   const byBridge = {};
   ROWS.forEach(r => { const k = r.radar_person || '—'; (byBridge[k] = byBridge[k] || []).push(r); });
-  Object.keys(CONFIG.BRIDGE_SOURCE).forEach(k => { if (!byBridge[k]) byBridge[k] = []; });
   return byBridge;
 }
 // # of targets already collected via a bridge (match row.radar_person to bridge.name)
@@ -2589,7 +2788,19 @@ function renderSources(){
       counts +
       '<p style="margin-top:8px;font-size:0.84rem;color:#64748b">' + via + '</p>' +
       '<div style="margin-top:12px">' + btn + '<div class="src-bridge-note" data-note style="display:none"></div></div></div>';
-  }).join('') : '<div class="empty">No sources yet — add one above.</div>';
+  }).join('') : (
+    '<div class="coach" style="grid-column:1/-1">' +
+      '<h3>No sources yet — this is where Radar starts</h3>' +
+      '<p>A <strong>Source</strong> is an organization whose network is full of your buyers. Not a company you want to sell to — a company whose <em>people already know</em> the people you want to sell to.</p>' +
+      '<ul>' +
+        '<li>A consulting or advisory firm that serves your market</li>' +
+        '<li>An accelerator, incubator, or investor whose portfolio is full of your buyers</li>' +
+        '<li>A trade association, chamber, or club your customers belong to</li>' +
+        '<li>A partner who sells alongside you — or a competitor, whose network is by definition your market</li>' +
+      '</ul>' +
+      '<p>Paste its LinkedIn company URL in the box above. Radar names it, finds the senior people inside it (your <strong>bridges</strong>), and starts collecting the prospects in their networks.</p>' +
+      '<button class="btn-secondary" onclick="openTour(1)">See how Radar works →</button>' +
+    '</div>');
 }
 
 // Per-source "Find Bridges": look up org_id + discover_keyword in STORED_SOURCES,
