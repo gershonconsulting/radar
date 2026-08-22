@@ -3302,12 +3302,16 @@ async function loadLeadTarget() {
   } catch(e) {}
 }
 // ===== Plans / free-tier limits =====
+// OPEN BETA (2026-08-21, Olivier): the site is deliberately wide open — anyone can register and
+// every account runs with NO limits while the first users are friends & family. To re-enable the
+// free tier later, return false here; nothing else needs changing.
+function isOpenBeta(){ return true; }
 const PLAN_LIMITS = {
   free: { sources: 1, bridgesPerSource: 5, prospectsPerBridge: 10 },
   pro:  { sources: Infinity, bridgesPerSource: Infinity, prospectsPerBridge: Infinity }
 };
 function currentPlan(){ return window.__PLAN || 'free'; }
-function isFreePlan(){ return currentPlan() === 'free'; }
+function isFreePlan(){ return !isOpenBeta() && currentPlan() === 'free'; }
 function planLimits(){ return PLAN_LIMITS[currentPlan()] || PLAN_LIMITS.free; }
 function fmtLimit(n){ return n === Infinity ? 'Unlimited' : n; }
 // Count current sources / bridges-in-a-source from the loaded state.
@@ -3343,6 +3347,16 @@ function renderPlanPanel(){
   const lim = planLimits();
   const planEl = document.getElementById('billingPlan');
   const featEl = document.getElementById('planFeatures');
+  const upgradeEl = document.getElementById('billingLink');
+  const noteEl = document.getElementById('billingNote');
+  if (isOpenBeta()) {
+    if (planEl) planEl.innerHTML = '<strong>Open beta</strong> — everything unlocked. No limits, no card, nothing to upgrade.';
+    if (featEl) featEl.innerHTML = '<p style="margin-top:6px;font-size:0.9rem;color:#16a34a">\u2713 Unlimited sources, bridges and prospects while Radar is in open beta.</p>';
+    if (upgradeEl) upgradeEl.style.display = 'none';
+    if (noteEl) noteEl.textContent = 'Paid plans arrive later — you will be told well before anything changes.';
+    return;
+  }
+  if (upgradeEl) upgradeEl.style.display = '';
   if (planEl) planEl.innerHTML = plan === 'pro'
     ? '<strong>Pro</strong> — unlimited sources, bridges and prospects.'
     : '<strong>Free</strong> — a taste of Radar. Upgrade to Pro to remove the limits.';
@@ -3619,7 +3633,7 @@ async function initAuth(){
   // Hand the owner_key to the Chrome extension so its collection writes to THIS user's data.
   try { window.dispatchEvent(new CustomEvent('radar-ext-set-owner', { detail: { owner: window.__OWNER } })); } catch(e) {}
   // Plan: admins and anyone flagged pro are unlimited; everyone else is on the free tier.
-  window.__PLAN = (me.isAdmin || user.isAdmin || user.plan === 'pro' || me.plan === 'pro') ? 'pro' : 'free';
+  window.__PLAN = (isOpenBeta() || me.isAdmin || user.isAdmin || user.plan === 'pro' || me.plan === 'pro') ? 'pro' : 'free';
   setLiStatus('connected', (user.name || '').split(' ')[0] || '');
   // Only admins see the Admin link (server enforces this too).
   if (me.isAdmin || user.isAdmin) { const a = document.getElementById('nav-admin'); if (a) a.style.display = 'flex'; }
