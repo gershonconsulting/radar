@@ -7,26 +7,43 @@
 
 // Radar hub is now the Supabase-backed Cloudflare Function (the Google Sheet is retired).
 // The extension posts here with the shared INGEST_SECRET; the function maps that to the owner.
-const WEBAPP_URL    = 'https://radar.gershoncrm.com/api/hub';
+const WEBAPP_URL    = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/functions/v1/hub';
 const INGEST_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 const MAX_PAGES     = 25;
 const MAX_RESOLVE_PER_RUN = 100;
 
-// Each bridge belongs to a Source (the organization it represents).
-// Add new bridges from other Sources here: { bridge, source, category, urn, results }.
-// NOTE: These 6 are now a SEED FALLBACK only. Live collection uses ACTIVE bridges
-// pulled from the hub (getBridges). If the hub returns zero bridges, we fall back
-// to these AND push them to the hub via addBridges (source 'The Triana Group') so
-// they can be activated there. (addBridges can't set active=true - that's a hub-side
-// toggle - so the seed still runs this first time via the fallback path.)
-const BRIDGES = [
-  { bridge: 'Elie Cohen',                source: 'The Triana Group', category: 'partner', urn: 'ACwAAAALvckBqvkWA1X60puCvmWbDTndKhJyWdw', results: 55  },
-  { bridge: 'Jabril Bensedrine',         source: 'The Triana Group', category: 'partner', urn: 'ACwAAAAZ62QBFLpds_ZGdkq4MHkHmJvovRixzkM', results: 45  },
-  { bridge: 'Phil Jeudy',                source: 'The Triana Group', category: 'partner', urn: 'ACwAAAAbEFEBcIoDyt1Se4852krlmZrdxTryE-I', results: 207 },
-  { bridge: 'Mathias Cohen',             source: 'The Triana Group', category: 'partner', urn: 'ACwAAAARL38BwmwLt6iIb6vHgLP6Up5fXq3Qoms', results: 30  },
-  { bridge: 'Anne Charlotte Le Bourhis', source: 'The Triana Group', category: 'partner', urn: 'ACwAAABWZEIB8mgZv6MlSCv22joSKYhvnrBylvU', results: 53  },
-  { bridge: 'Marie-Josee Rodi-Andrieu',  source: 'The Triana Group', category: 'partner', urn: 'ACwAAABSExEBFWA3dHRNEffTytW-ivqxxt45vDg', results: 336 },
-];
+// ===== Per-user isolation =====
+// The signed-in user's owner_key is relayed from the web app (radar-ext-set-owner) and cached
+// here, then injected into EVERY hub call so this browser's collection writes to THIS user's
+// data — never the shared bucket. Without it the hub falls back to the legacy solo owner.
+let CURRENT_OWNER = '';
+try { chrome.storage.local.get('radar_owner').then(function(r){ CURRENT_OWNER = (r && r.radar_owner) || ''; }); } catch(e) {}
+(function(){
+  const _origFetch = self.fetch.bind(self);
+  self.fetch = function(input, init){
+    try {
+      const u = (typeof input === 'string') ? input : (input && input.url) || '';
+      if (u && u.indexOf(WEBAPP_URL) === 0 && CURRENT_OWNER) {
+        const method = (init && init.method ? init.method : 'GET').toUpperCase();
+        if (method === 'GET') {
+          if (typeof input === 'string' && input.indexOf('owner=') === -1) {
+            input = input + (input.indexOf('?') >= 0 ? '&' : '?') + 'owner=' + encodeURIComponent(CURRENT_OWNER);
+          }
+        } else if (init && typeof init.body === 'string') {
+          try { const b = JSON.parse(init.body); if (b && typeof b === 'object' && b.owner === undefined) { b.owner = CURRENT_OWNER; init = Object.assign({}, init, { body: JSON.stringify(b) }); } } catch(e) {}
+        }
+      }
+    } catch(e) {}
+    return _origFetch(input, init);
+  };
+})();
+
+// Bridges are ALWAYS the user's own: they come from the hub (getBridges) and are the
+// ones the user switched on in the Radar dashboard. There is deliberately NO hardcoded
+// seed here. v1.7.3 and earlier shipped six demo bridges belonging to another account and
+// pushed them into any hub that had no active bridges yet — which handed every new user a
+// stranger's network and scraped it. Never reintroduce a seed list.
+const BRIDGES = [];
 
 const SEARCH_FILTERS = {
   seniority:       ['Owner / Partner', 'CXO'],
@@ -44,6 +61,11 @@ const MAX_CANDIDATES_PER_SOURCE = 40;
 // look for new candidate bridges ~monthly. Prospect COLLECTION from active bridges still
 // runs every daily sync. Tracked via chrome.storage.local 'lastDiscoverAt'.
 const DISCOVER_INTERVAL_DAYS = 30;
+
+// Installed build number, read from the manifest. Stamped into the run log so the server-side
+// daily report can tell whether an outdated extension is still doing the collecting.
+let EXT_VERSION = '0.0.0';
+try { EXT_VERSION = chrome.runtime.getManifest().version; } catch (e) {}
 
 // --- Logging ---
 const MAX_LOG_ENTRIES = 200;
@@ -82,14 +104,42 @@ async function applySchedule(sched) {
   await log('info', 'schedule:applied', { everyHours: s.targetsEveryHours, bridgesMode: s.bridgesMode, bridgesEveryDays: s.bridgesEveryDays });
   return s;
 }
+// Automatic collection runs AT MOST once per ~day. Every automatic trigger — Chrome startup
+// (the primary one), the backup daily alarm, or a sync request relayed from the web app — is
+// gated by AUTO_MIN_MS so it can never fire every few minutes again. The popup "Sync Now"
+// button bypasses this (force=true) so a manual run always works.
+const AUTO_MIN_MS = 20 * 60 * 60 * 1000;  // 20h — guarantees ~once/day without double runs
+async function getLastRunAt() { try { const s = await chrome.storage.local.get('radar_last_run_at'); return s.radar_last_run_at ? new Date(s.radar_last_run_at).getTime() : 0; } catch (e) { return 0; } }
+async function maybeAutoRun(trigger) {
+  const age = Date.now() - (await getLastRunAt());
+  if (age < AUTO_MIN_MS) { await log('info', 'run:skip-auto', { trigger, ranHoursAgo: Math.round(age / 3600000) }); return { status: 'skipped-recent' }; }
+  const r = await runSync();
+  try { await pushLog(); } catch (e) {}
+  return r;
+}
 chrome.runtime.onInstalled.addListener(async () => { await applySchedule(await getSchedule()); await log('info', 'Extension installed, schedule set'); });
-chrome.runtime.onStartup.addListener(async () => { await applySchedule(await getSchedule()); });
-chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'dailySync') runSync(); });
+// PRIMARY trigger: the first time Chrome opens each day (gated to once/day by maybeAutoRun).
+chrome.runtime.onStartup.addListener(async () => { await applySchedule(await getSchedule()); await maybeAutoRun('startup'); });
+// BACKUP: if Chrome stays open for many hours, the daily alarm still fires it (also gated).
+chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'dailySync') maybeAutoRun('alarm'); });
 
 // --- Messages ---
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'setOwner') {
+    // The web app relays the signed-in user's owner_key here so collection stays per-user.
+    CURRENT_OWNER = String(msg.owner || '');
+    try { chrome.storage.local.set({ radar_owner: CURRENT_OWNER }); } catch (e) {}
+    sendResponse({ ok: true });
+    return true;
+  }
   if (msg.action === 'syncNow') {
-    runSync().then(async r => { await pushLog(); sendResponse({ ok: true, result: r }); }).catch(async e => { await pushLog(); sendResponse({ ok: false, error: String(e) }); });
+    // force=true (popup "Sync Now" button) always runs; anything else (web-app relay) is gated
+    // to once/~day by maybeAutoRun so an open app tab can't trigger a run every few minutes.
+    if (msg.force) {
+      runSync().then(async r => { await pushLog(); sendResponse({ ok: true, result: r }); }).catch(async e => { await pushLog(); sendResponse({ ok: false, error: String(e) }); });
+    } else {
+      maybeAutoRun('message').then(r => sendResponse({ ok: true, result: r })).catch(e => sendResponse({ ok: false, error: String(e) }));
+    }
     return true;
   }
   if (msg.action === 'discoverNow') {
@@ -99,6 +149,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg.action === 'getLog') {
     chrome.storage.local.get('radarLog', d => sendResponse({ ok: true, log: d.radarLog || [] }));
+    return true;
+  }
+  if (msg.action === 'getNotifLog') {
+    chrome.storage.local.get(['radarNotifLog', 'radar_unsaved_leads'], d =>
+      sendResponse({ ok: true, notifs: d.radarNotifLog || [], buffered: (d.radar_unsaved_leads || []).length }));
     return true;
   }
   if (msg.action === 'clearLog') { clearLog().then(() => sendResponse({ ok: true })); return true; }
@@ -129,6 +184,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.storage.local.set(upd).then(() => sendResponse({ ok: true })).catch(e => sendResponse({ ok: false, error: String(e) }));
     return true;
   }
+  if (msg.action === 'salesnavListNow') {
+    // Triggered from the dashboard / popup — file pending prospects into the Sales Nav list now.
+    saveTargetsToSalesNavList()
+      .then(async r => { await closeScrapeWindow(); await pushLog(); sendResponse({ ok: true, result: r }); })
+      .catch(async e => { await closeScrapeWindow(); await pushLog(); sendResponse({ ok: false, error: String(e) }); });
+    return true;
+  }
   if (msg.action === 'pushBridgesNow') {
     // Triggered from the dashboard — invite non-1st bridges to the Botdog campaign now.
     pushBridgesToBotdog().then(async r => { await pushLog(); sendResponse({ ok: true, result: r }); })
@@ -155,10 +217,15 @@ async function clearDiscoverPending(names) {
 }
 
 // --- Main sync ---
+let SYNC_RUNNING = false;
 async function runSync() {
+  if (SYNC_RUNNING) { await log('warn', 'run:already-running'); return { status: 'already-running' }; }
+  SYNC_RUNNING = true;
+  // Stamp the run time up front so a near-simultaneous trigger (e.g. the +1min alarm) is gated out.
+  try { await chrome.storage.local.set({ radar_last_run_at: new Date().toISOString() }); } catch (e) {}
   await clearLog();
-  await log('info', 'run:start');
-  notify('Sync started', 'Scanning Sales Navigator slowly to stay under the radar…');
+  await log('info', 'run:start', { version: EXT_VERSION });
+  // (No desktop "Sync started" popup — collection runs quietly; see notify() level gating.)
   const loggedIn = await checkLogin();
   await log('info', 'login-check', { loggedIn });
   if (!loggedIn) { await log('warn', 'No Sales Nav tab detected - proceeding anyway (opened tabs use your logged-in session)'); }
@@ -225,45 +292,101 @@ async function runSync() {
     const bridges = shuffle(await resolveActiveBridges());
     await log('info', 'scrape:bridges', { count: bridges.length, order: 'randomized' });
 
-    const allLeads = [];
+    if (!WEBAPP_URL || WEBAPP_URL === '__WEBAPP_URL__') { await log('warn', 'WEBAPP_URL not set'); return { status: 'no-webapp-url' }; }
+
+    // First, flush anything a previous (interrupted) run scraped but couldn't save.
+    let savedTotal = 0, foundTotal = 0;
+    try { const f = await flushBuffer(); savedTotal += f; if (f) await pushLog(); } catch (e) { await log('warn', 'buffer:flush-error', { error: String(e) }); }
+
+    // Shared URL-resolution budget for the whole run (resolving opens a tab per lead).
+    const resolveState = { left: MAX_RESOLVE_PER_RUN };
+
+    // CRITICAL: write EACH bridge's leads to the hub as soon as they're scraped. Previously the
+    // run hoarded all ~80 bridges' leads in memory and wrote once at the very end - with dozens of
+    // active bridges that end never arrives (the MV3 service worker is killed first), so nothing
+    // saved even though every bridge popped "found N". Per-bridge writes = data lands immediately
+    // and an interrupted run keeps everything up to the point it stopped.
     for (const bridge of bridges) {
+      let leads = [];
+      // A bridge without a real Sales Navigator member urn can never be searched: the
+      // CONNECTION_OF filter is invalid, so LinkedIn quietly returns a generic result set.
+      if (!/^ACwAA/.test(String(bridge.urn || ''))) {
+        await log('warn', 'scrape:invalid-urn', { bridge: bridge.bridge, urn: String(bridge.urn || '').slice(0, 12) });
+        continue;
+      }
       try {
         await log('info', 'scrape:start', { bridge: bridge.bridge });
-        const leads = await scrapeBridge(bridge);
+        leads = await scrapeBridge(bridge);
         await log('info', 'scrape:done', { bridge: bridge.bridge, leadCount: leads.length });
-        if (leads.length) notify('New targets', leads.length + ' new connections via ' + bridge.bridge);
-        allLeads.push(...leads);
-      } catch (err) { await log('error', 'scrape:error', { bridge: bridge.bridge, error: String(err) }); }
+      } catch (err) { await log('error', 'scrape:error', { bridge: bridge.bridge, error: String(err) }); leads = []; }
+
+      // Guard: an identical result set already seen from ANOTHER bridge means Sales Nav dropped
+      // the CONNECTION_OF filter. Never ingest it - it would be credited to the wrong bridge.
+      try {
+        const dup = await filterWasIgnored(bridge, leads);
+        if (dup) {
+          await log('warn', 'scrape:filter-ignored', {
+            bridge: bridge.bridge,
+            matched: dup.owner,
+            count: leads.length,
+            reason: 'Same ' + leads.length + ' results as "' + dup.owner + '" - Sales Nav dropped the CONNECTION_OF filter (this bridge is probably not a 1st-degree connection)'
+          });
+          notify('Bridge switched off', bridge.bridge + ' returns a generic search, not their network - switched off.', 'error');
+          leads = [];
+        }
+      } catch (e) { await log('warn', 'filter-guard:error', { bridge: bridge.bridge, error: String(e) }); }
+
+      foundTotal += leads.length;
+
+      if (leads.length) {
+        try { await resolvePublicUrls(leads, resolveState); } catch (e) { await log('warn', 'resolve:error', { bridge: bridge.bridge, error: String(e) }); }
+        try {
+          const res = await postToHub(leads);
+          const nn = (res && (res.upserted != null ? res.upserted : res.written)) || 0;
+          savedTotal += nn;
+          await log('info', 'ingest:bridge', { bridge: bridge.bridge, found: leads.length, saved: nn });
+          // Silent (info-level) — logged to the in-app notification log, no desktop popup.
+          notify('New targets', leads.length + ' found via ' + bridge.bridge + ' - ' + nn + ' saved.');
+        } catch (err) {
+          // A failed save now throws (see postToHub): hold the leads for retry AND surface it
+          // as a real desktop error, instead of silently reporting "0 saved".
+          await log('error', 'ingest:bridge-error', { bridge: bridge.bridge, error: String(err) });
+          await bufferLeads(leads);
+          notify('Save issue', leads.length + ' via ' + bridge.bridge + ' held for retry — ' + String(err), 'error');
+        }
+        try { await pushLog(); } catch (e) {}
+      }
       await humanDelay(12000, 28000);
     }
-    await log('info', 'scrape:total', { totalLeads: allLeads.length });
 
-    await log('info', 'resolve:start', { toResolve: Math.min(allLeads.filter(l => !l.linkedin_url).length, MAX_RESOLVE_PER_RUN) });
-    const resolved = await resolvePublicUrls(allLeads);
-    await log('info', 'resolve:done', { resolvedCount: resolved.filter(l => l.linkedin_url).length });
+    // File every new prospect into the dedicated Sales Navigator lead list. Runs on EVERY sync,
+    // including runs that found nothing new, so any backlog keeps draining. Best-effort: a
+    // failure here must never lose the leads we just saved.
+    let listedTotal = 0;
+    try {
+      const listRes = await saveTargetsToSalesNavList();
+      listedTotal = (listRes && listRes.added) || 0;
+    } catch (e) { await log('warn', 'salesnav-list:error', { error: String(e) }); }
 
     // Invite non-1st-degree bridges into the dedicated Botdog campaign (best-effort; never blocks the run).
     try { await pushBridgesToBotdog(); } catch (e) { await log('warn', 'bridge-push:error', { error: String(e) }); }
 
-    if (!WEBAPP_URL || WEBAPP_URL === '__WEBAPP_URL__') { await log('warn', 'WEBAPP_URL not set'); return { status: 'no-webapp-url' }; }
-
-    try {
-      await log('info', 'ingest:start', { leads: resolved.length });
-      const result = await postToHub(resolved);
-      await log('info', 'run:done', { written: result.written, status: result.status || 'ok' });
-      notify('Sync complete', ((result && result.written) || 0) + ' new targets added.');
-      return result;
-    } catch(err) { await log('error', 'ingest:error', { error: String(err) }); return { status: 'ingest-error', error: String(err) }; }
+    await log('info', 'run:done', { version: EXT_VERSION, found: foundTotal, saved: savedTotal, listed: listedTotal, status: 'ok' });
+    // Silent summary (info) unless nothing saved despite finding people — then flag it.
+    notify('Sync complete', savedTotal + ' new targets saved (' + foundTotal + ' found), ' + listedTotal + ' added to your Sales Nav list.', (foundTotal > 0 && savedTotal === 0) ? 'error' : undefined);
+    return { status: 'ok', found: foundTotal, saved: savedTotal, listed: listedTotal, written: savedTotal, upserted: savedTotal };
   } finally {
     // Always clean up the dedicated background scrape window at the end of the run.
     await closeScrapeWindow();
+    SYNC_RUNNING = false;
   }
 }
 
 // --- Hub reads (JSONP-style: hub wraps the JSON in a callback we strip) ---
-async function fetchHubJsonp(action) {
+async function fetchHubJsonp(action, extra) {
   const cb  = 'cb';
-  const url = WEBAPP_URL + '?action=' + encodeURIComponent(action) + '&callback=' + cb + '&_=' + Date.now();
+  let url = WEBAPP_URL + '?action=' + encodeURIComponent(action) + '&callback=' + cb + '&_=' + Date.now();
+  if (extra) for (const k in extra) url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(extra[k]);
   const resp = await fetch(url);
   let text = await resp.text();
   text = text.trim();
@@ -286,15 +409,168 @@ async function getBridges() {
   return (data && data.bridges) ? data.bridges : [];
 }
 
+// ─── New prospects → dedicated Sales Navigator lead list ────────────────────
+// Every new target is filed into Olivier's dedicated Sales Nav lead list (Settings → "Sales
+// Navigator list URL", stored on the hub as `salesnav_list_url`) as soon as it is collected.
+//
+// HOW (discovered live 2026-08-15 by intercepting Sales Navigator's own XHR when clicking
+// Lists → "Add <name> to <list> list" on a lead page):
+//
+//   POST https://www.linkedin.com/sales-api/salesApiLeads?action=bulkSaveByMembers
+//   headers: content-type: application/json
+//            csrf-token: <the JSESSIONID cookie value, quotes stripped>
+//            x-restli-protocol-version: 2.0.0
+//   body:    {"entities":["urn:li:fs_salesProfile:(<MEMBER_URN>,NAME_SEARCH,undefined)", ...],
+//             "lists":["<numeric list id>"]}
+//
+// This is Sales Navigator's own BULK endpoint (the same one its "select all → Add to list"
+// button uses), so:
+//   * it takes many members in ONE call — no per-person work;
+//   * it needs NO profile page visit, so it costs ZERO profile views (unlike the old
+//     "open /in/<slug> and click Save in Sales Navigator" plan, which burned a view per person
+//     and only reached My Saved Leads, never the named list);
+//   * saving to a list implicitly saves the lead, so one call does both steps.
+//
+// The call must be made FROM a logged-in linkedin.com page (it needs the session cookies and a
+// matching csrf token), so it is injected into a tab in the off-screen scrape window.
+//
+// Progress is tracked server-side on targets.salesnav_listed_at, so a prospect is never added
+// twice and an interrupted run resumes exactly where it stopped. Because the hub returns
+// newest-pending-first, brand new prospects reach the list on the very next sync while the
+// historical backlog drains behind them at the same capped rate.
+const SALESNAV_LIST_MAX_PER_RUN = 200;  // prospects filed per run (no profile views, so generous)
+const SALESNAV_LIST_CHUNK       = 25;   // = Sales Nav's own page size for "select all → Add to list"
+
+// Injected into a logged-in Sales Navigator tab. Adds ONE chunk of member urns to the list.
+// Kept deliberately small and self-contained: the service worker drives the loop so that each
+// chunk is a fresh extension API call, which keeps the MV3 worker alive across a long backlog.
+function salesNavAddChunkInPage(listId, urns) {
+  const csrf = (document.cookie.match(/JSESSIONID="?([^";]+)"?/) || [])[1];
+  if (!csrf) return Promise.resolve({ ok: false, error: 'no JSESSIONID cookie (not logged in to LinkedIn)' });
+  return fetch('/sales-api/salesApiLeads?action=bulkSaveByMembers', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'content-type': 'application/json',
+      'csrf-token': csrf,
+      'x-restli-protocol-version': '2.0.0'
+    },
+    body: JSON.stringify({
+      entities: urns.map(function (u) { return 'urn:li:fs_salesProfile:(' + u + ',NAME_SEARCH,undefined)'; }),
+      lists: [String(listId)]
+    })
+  }).then(function (r) {
+    return r.text().then(function (t) {
+      return { ok: r.status >= 200 && r.status < 300, status: r.status, body: String(t).slice(0, 160) };
+    });
+  }).catch(function (e) { return { ok: false, error: String(e) }; });
+}
+
+// Tell the hub which prospects made it into the list (stamps targets.salesnav_listed_at).
+async function markSalesNavListed(leadIds) {
+  if (!leadIds || !leadIds.length) return 0;
+  const body = { secret: INGEST_SECRET, action: 'markSalesnavListed', lead_ids: leadIds };
+  if (CURRENT_OWNER) body.owner = CURRENT_OWNER;
+  const resp = await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  let out = null; try { out = await resp.json(); } catch (e) {}
+  if (!resp.ok || (out && out.ok === false)) throw new Error('hub ' + resp.status + ': ' + ((out && out.error) || 'mark failed'));
+  return (out && out.marked) || 0;
+}
+
+// Main phase. Safe to call on every run: if nothing is pending it does nothing and opens no tab.
+async function saveTargetsToSalesNavList() {
+  let pending = null;
+  try {
+    pending = await fetchHubJsonp('salesnavPending', { cap: SALESNAV_LIST_MAX_PER_RUN });
+  } catch (err) {
+    await log('warn', 'salesnav-list:hub-error', { error: String(err) });
+    return { ok: false, added: 0, reason: 'hub-error' };
+  }
+
+  const listId = (pending && pending.list_id) || '';
+  const ids    = (pending && pending.lead_ids) || [];
+  const total  = (pending && pending.pending_total) || ids.length;
+
+  if (!listId) {
+    await log('warn', 'salesnav-list:not-configured', { hint: 'Set Settings -> Sales Navigator list URL in the Radar dashboard' });
+    notify('Sales Nav list not set', 'New prospects cannot be filed — add your lead-list URL in Radar Settings.', 'error');
+    return { ok: false, added: 0, reason: 'no-list' };
+  }
+  if (!ids.length) {
+    await log('info', 'salesnav-list:nothing-pending');
+    return { ok: true, added: 0 };
+  }
+
+  await log('info', 'salesnav-list:start', { listId, thisRun: ids.length, pendingTotal: total });
+
+  // Open the list itself in the off-screen scrape window: it is a normal Sales Nav page, so the
+  // request carries exactly the cookies, origin and referer Sales Navigator's own UI would send.
+  const tab = await openScrapeTab('https://www.linkedin.com/sales/lists/people/' + listId);
+  if (!tab) {
+    await log('warn', 'salesnav-list:no-tab');
+    return { ok: false, added: 0, reason: 'no-tab' };
+  }
+  await sleep(7000);  // let the SPA boot so the session is warm before the first call
+
+  let added = 0;
+  const errors = [];
+  try {
+    for (let i = 0; i < ids.length; i += SALESNAV_LIST_CHUNK) {
+      const batch = ids.slice(i, i + SALESNAV_LIST_CHUNK);
+      let res = null;
+      try {
+        const out = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: salesNavAddChunkInPage,
+          args: [String(listId), batch]
+        });
+        res = (out && out[0]) ? out[0].result : null;
+      } catch (err) {
+        res = { ok: false, error: String(err) };
+      }
+
+      if (res && res.ok) {
+        // Stamp each chunk immediately, so an interrupted run never re-adds what already landed.
+        try { await markSalesNavListed(batch); } catch (err) { await log('warn', 'salesnav-list:mark-failed', { error: String(err), n: batch.length }); }
+        added += batch.length;
+        await log('info', 'salesnav-list:chunk', { added: batch.length, runningTotal: added });
+      } else {
+        const msg = (res && (res.error || (res.status + ' ' + res.body))) || 'unknown error';
+        errors.push(msg);
+        await log('error', 'salesnav-list:chunk-failed', { n: batch.length, error: msg });
+        // A 401/403 means the Sales Nav session is gone — stop rather than hammer it.
+        if (res && (res.status === 401 || res.status === 403 || /not logged in/i.test(String(res.error || '')))) {
+          await log('error', 'salesnav-list:abort', { reason: 'session invalid' });
+          break;
+        }
+      }
+      await humanDelay(2500, 6000);
+    }
+  } finally {
+    try { chrome.tabs.remove(tab.id); } catch (e) {}
+  }
+
+  const left = Math.max(0, total - added);
+  await log('info', 'salesnav-list:done', { added, remaining: left, errors: errors.slice(0, 5) });
+  if (added) {
+    notify('Added to Sales Navigator', added + ' new prospect' + (added === 1 ? '' : 's') + ' filed into your lead list' + (left ? ' (' + left + ' still queued).' : '.'));
+  } else if (errors.length) {
+    notify('Sales Nav list failed', errors[0], 'error');
+  }
+  return { ok: !errors.length, added, remaining: left, errors: errors.slice(0, 5) };
+}
+
 // ─── Bridge invites → dedicated Botdog campaign ─────────────────────────────
 // Every sync, invite the bridges you are NOT connected to (not 1st-degree) into the
 // dedicated "bridges" Botdog campaign, so they become 1st-degree and their networks
 // open up. enricherPro fills the public /in/ URL when it's missing. Deduped via storage.
 const BRIDGES_CAMPAIGN_ID_DEFAULT = '3e07e3ee-8144-4429-b73a-1751d1466d35';
 const ENRICHER_BASE = 'https://enricherpro.com';
-// Verified against Botdog's live OpenAPI spec (api.botdog.co/docs): the host is
-// api.botdog.CO (.io does not resolve) and auth is the x-api-key header, NOT Bearer.
-const BOTDOG_CONTACTS_URL = 'https://api.botdog.co/v1/campaigns/contacts';
+// Verified against Botdog's live OpenAPI spec (api.botdog.co/docs, 2026-07-28): host is
+// api.botdog.CO (.io does not resolve), auth is the x-api-key header (NOT Bearer), and the
+// add-to-campaign endpoint is /v1/leads/add_to_campaign with body {campaignId, leads:[{linkedinUrl}]}.
+// (The old /v1/campaigns/contacts with {campaign_id, profiles} does NOT exist — it 404s.)
+const BOTDOG_CONTACTS_URL = 'https://api.botdog.co/v1/leads/add_to_campaign';
 // Adding contacts to a campaign is not the same as sending invites — Botdog paces the
 // actual connection requests itself. So this cap only limits how many we enqueue per run.
 const MAX_BRIDGE_PUSH_PER_RUN = 100;
@@ -451,7 +727,7 @@ async function pushBridgesToBotdog() {
     try {
       const resp = await fetch(BOTDOG_CONTACTS_URL, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': key },
-        body: JSON.stringify({ campaign_id: campaign, profiles: [{ linkedin_url: url.split('?')[0] }] })
+        body: JSON.stringify({ campaignId: campaign, leads: [{ linkedinUrl: url.split('?')[0], name: cleanPersonName(b.name || '') || undefined, title: b.title || undefined }] })
       });
       if (resp.ok) { pushed.add(b.urn); sent++; }
     } catch (e) {}
@@ -492,10 +768,10 @@ async function activateBridges(bridges) {
   }
 }
 
-// Resolve the bridges to COLLECT from. Prefer ACTIVE hub bridges; else fall back to the
-// hardcoded seed AND push the seed into the hub so it can be activated there next time.
-// Returns objects shaped like the BRIDGES entries scrapeBridge expects:
-//   { bridge, source, category, urn }
+// Resolve the bridges to COLLECT from: the ACTIVE bridges on this user's hub, nothing else.
+// No bridges active → nothing to collect. The dashboard tells the user what to do about it
+// (add a Source, discover its bridges, switch some on); the extension does not invent any.
+// Returns objects shaped the way scrapeBridge expects: { bridge, source, category, urn }
 async function resolveActiveBridges() {
   let hubBridges = [];
   try { hubBridges = await getBridges(); }
@@ -512,20 +788,12 @@ async function resolveActiveBridges() {
     }));
   }
 
-  // Fallback: no active bridges on the hub - use the hardcoded seed and register it.
-  await log('warn', 'bridges:none-active-using-seed', { seedCount: BRIDGES.length });
-  try {
-    const payload = BRIDGES.map(b => ({
-      name:         b.bridge,
-      title:        '',
-      urn:          b.urn,
-      linkedin_url: '',
-      connection:   b.category || '',
-    }));
-    const res = await addBridges('The Triana Group', payload);
-    await log('info', 'bridges:seed-pushed', { added: (res && res.added) || null, ok: !!(res && res.success) });
-  } catch (err) { await log('warn', 'bridges:seed-push-failed', { error: String(err) }); }
-  return BRIDGES;
+  // Nothing switched on: collect nothing. Never fabricate bridges.
+  await log('warn', 'bridges:none-active', {
+    found: (hubBridges || []).length,
+    hint: 'Add a Source in Radar, run Find Bridges, then switch the bridges you want to ON.'
+  });
+  return [];
 }
 
 // --- Bridge discovery ---
@@ -556,6 +824,18 @@ async function discoverBridges(sourcesArg) {
       const url = 'https://www.linkedin.com/sales/search/people?query=' + encodeURIComponent(query);
       const candidates = await scrapeDiscoveryInTab(url);
       const trimmed = candidates.slice(0, MAX_CANDIDATES_PER_SOURCE);
+      // Resolve each new bridge's public /in/ URL from its lead page (via the stable fs_salesProfile
+      // URN captured during discovery) so the bridge is pushable to Botdog and openable. Capped +
+      // paced per source to stay human-like; unresolved ones can be retried on a later run.
+      let _rb = 0;
+      for (const b of trimmed) {
+        if (_rb >= 12) break;
+        if (b.linkedin_url && /linkedin\.com\/in\//i.test(b.linkedin_url)) continue;
+        if (!b.urn) continue;
+        try { const u = await resolveUrn(b.urn); if (u) b.linkedin_url = u; } catch (e) {}
+        _rb++;
+        await sleep(700);
+      }
       if (trimmed.length > 0) {
         const res = await addBridges(src.name, trimmed);
         // Auto-activate so the next sync collects prospects from them (no manual step).
@@ -595,10 +875,14 @@ async function getScrapeWindow() {
     }
   }
   try {
-    const win = await chrome.windows.create({ focused: false, state: 'normal', width: 1280, height: 900, top: 40, left: 40 });
+    // Position the window OFF-SCREEN (large negative coords) rather than at 40,40. Keeping it
+    // 'normal' (not minimized) means the page still renders — Sales Nav's virtualized list needs
+    // a live viewport to populate — but the window sits outside the visible desktop, so it never
+    // covers what the user is doing. Size is kept full so the virtualized list loads rows.
+    const win = await chrome.windows.create({ focused: false, state: 'normal', width: 1280, height: 900, top: -2000, left: -2000 });
     scrapeWindowId = win.id;
-    // Defensively re-assert unfocused (some platforms briefly focus a new window).
-    try { await chrome.windows.update(scrapeWindowId, { focused: false }); } catch (e) {}
+    // Re-assert off-screen + unfocused (some platforms nudge a new window on-screen/focused).
+    try { await chrome.windows.update(scrapeWindowId, { focused: false, top: -2000, left: -2000 }); } catch (e) {}
   } catch (e) {
     scrapeWindowId = null;
   }
@@ -612,8 +896,8 @@ async function openScrapeTab(url) {
   if (winId === null) return null;
   try {
     const tab = await chrome.tabs.create({ windowId: winId, url, active: true });
-    // Re-assert unfocused right after, defensively — the window must never grab focus.
-    try { await chrome.windows.update(winId, { focused: false }); } catch (e) {}
+    // Re-assert off-screen + unfocused right after — adding a tab can nudge the window back.
+    try { await chrome.windows.update(winId, { focused: false, top: -2000, left: -2000 }); } catch (e) {}
     return tab;
   } catch (e) {
     return null;
@@ -680,71 +964,32 @@ async function extractCandidatesFromPage() {
   };
 
   // Extract every currently-rendered lead card into the Map (defensive per-card).
+  // NEW (2026 Sales Nav DOM): result cards no longer contain /sales/lead/ links or
+  // data-anonymize attributes. Each result wraps a
+  //   <div data-scroll-into-view="urn:li:fs_salesProfile:(MEMBER_ID,NAME_SEARCH,ctx)">
+  // and the person's name lives in <span class="a11y-text">Add {Name} to selection</span>.
+  // Title/company/degree are no longer exposed in search results — they're resolved
+  // downstream from the lead page (resolveUrn) / enricherPro.
   const harvest = () => {
-    document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
+    document.querySelectorAll('[data-scroll-into-view^="urn:li:fs_salesProfile"]').forEach(node => {
       try {
-        const name = cleanName(linkEl.textContent || '');
-        if (!name) return;
-        const urnMatch = linkEl.href.match(/\/sales\/lead\/([^,?\/]+)/);
-        if (!urnMatch) return;
-        const urn = urnMatch[1];
+        const dsv = node.getAttribute('data-scroll-into-view') || '';
+        const m = dsv.match(/fs_salesProfile:\(([^,]+),/);
+        if (!m) return;
+        const urn = m[1];
         if (byUrn.has(urn)) return;  // already captured this person
-        const linkedin_url = linkEl.href.split('?')[0];  // Sales Nav profile link (open to connect)
-
-        // Climb to the card.
-        let card = linkEl;
-        for (let i = 0; i < 7 && card && card.parentElement; i++) {
-          card = card.parentElement;
-          if (card.querySelector('a[href*="/sales/company/"]') || (card.textContent || '').length > 60) break;
-        }
-        if (!card) card = linkEl.parentElement || linkEl;
-
-        // Text leaves in the card.
-        const txts = Array.from(card.querySelectorAll('span, div'))
-          .map(e => e.childElementCount === 0 ? (e.textContent || '').replace(/\s+/g, ' ').trim() : '')
-          .filter(Boolean);
-        const compEl  = card.querySelector('a[href*="/sales/company/"]');
-        const company = compEl ? compEl.textContent.replace(/\s+/g, ' ').trim() : '';
-
-        // Connection degree - look for a 1st/2nd/3rd token in the card text AND aria-labels.
-        // Handles "· 1st", "1st degree", a leading-dot form, or a standalone token.
-        let connection = '';
-        const degSources = [card.textContent || ''];
-        try {
-          card.querySelectorAll('[aria-label]').forEach(el => degSources.push(el.getAttribute('aria-label') || ''));
-        } catch (e) {}
-        for (const src of degSources) {
-          const m = src.match(/(?:[·•.]\s*)?\b(1st|2nd|3rd)\b(?:\s*degree)?/i);
-          if (m) { connection = m[1].toLowerCase(); break; }
-        }
-
-        // Title/headline = the LONGEST descriptive leaf that isn't the name, a status
-        // phrase, a lone degree token, the company, "mutual connections"/"connection"
-        // text, or "Message"/"View … profile" UI text.
-        const nlow = name.toLowerCase();
-        const clow = company.toLowerCase();
-        let title = '';
-        for (const t of txts) {
-          if (!t || t.length < 3) continue;
-          const tl = t.toLowerCase();
-          if (tl === nlow || tl.indexOf(nlow) === 0) continue;
-          if (clow && (tl === clow || tl.indexOf(clow) === 0)) continue;
-          if (/^[·•.\s]*(1st|2nd|3rd)(\s*degree)?[·•.\s]*$/i.test(t)) continue;
-          if (/\b(is|was)\s+(reachable|last active|open to work|a group member|hiring|online|out of office)\b/i.test(t)) continue;
-          if (/mutual connection|connections?$|^shared|degree connection/i.test(t)) continue;
-          if (/^message$|view .* profile|^view profile|^connect$|^save$|^more$/i.test(t)) continue;
-          if (t.length > title.length) title = t;  // keep the longest qualifying leaf
-        }
-        if (title.length > 200) title = title.slice(0, 200);
-
-        byUrn.set(urn, { name, title: title, urn, linkedin_url: linkedin_url, connection });
+        const li = node.closest('li') || node.parentElement || node;
+        const a11y = li.querySelector('span.a11y-text') || li.querySelector('.a11y-text');
+        const name = a11y ? cleanName((a11y.textContent || '').replace(/^\s*Add\s+/i, '').replace(/\s+to selection\s*$/i, '')) : '';
+        if (!name) return;
+        byUrn.set(urn, { name, title: '', urn, linkedin_url: '', connection: '' });
       } catch (e) {}
     });
   };
 
-  // 1) Wait for the first lead link to appear (poll up to ~15s, scrolling to bottom each pass).
+  // 1) Wait for the first result card to appear (poll up to ~15s, scrolling each pass).
   for (let _p = 0; _p < 15; _p++) {
-    if (document.querySelectorAll('a[href*="/sales/lead/"]').length > 0) break;
+    if (document.querySelectorAll('[data-scroll-into-view^="urn:li:fs_salesProfile"]').length > 0) break;
     try { window.scrollTo(0, document.body.scrollHeight); } catch (e) {}
     await new Promise(r => setTimeout(r, 1000));
   }
@@ -773,6 +1018,49 @@ async function checkLogin() {
       chrome.tabs.query({ url: 'https://www.linkedin.com/*' }, t => resolve(t.length > 0));
     });
   });
+}
+
+// ---- Dropped-filter guard -------------------------------------------------------------
+// Sales Navigator does NOT error when it rejects a CONNECTION_OF filter (typically because the
+// bridge is not one of YOUR 1st-degree connections, or the urn is not a real member urn). It
+// silently runs the REST of the query and returns a generic result set. That reads as a perfect
+// scrape ("found 324 / saved 324") while being nobody's network - and because every such bridge
+// returns the SAME people, dedup then throws them all away and the bridge shows 0 forever.
+//
+// Detection: fingerprint each bridge's result set. If that exact set has already been returned
+// by a DIFFERENT bridge, the filter was ignored. Fingerprints persist across runs.
+const FP_STORE = 'radar_lead_fingerprints';
+const FP_MAX   = 400;
+const FP_MIN_LEADS = 8;   // below this a collision is plausible by chance
+
+function leadSetFingerprint(leads) {
+  const ids = (leads || []).map(l => l && l.lead_id).filter(Boolean).sort();
+  if (ids.length < FP_MIN_LEADS) return '';
+  const s = ids.length + ':' + ids.join(',');
+  let h1 = 0x811c9dc5, h2 = 0x01000193;
+  for (let i = 0; i < s.length; i++) {
+    h1 = ((h1 ^ s.charCodeAt(i)) >>> 0);
+    h1 = (Math.imul(h1, 16777619) >>> 0);
+    h2 = ((h2 + s.charCodeAt(i) * (i + 1)) >>> 0);
+  }
+  return ids.length + '-' + h1.toString(36) + h2.toString(36);
+}
+
+// Returns { fp, owner } when this exact result set already belongs to another bridge, else false.
+async function filterWasIgnored(bridge, leads) {
+  const fp = leadSetFingerprint(leads);
+  if (!fp) return false;
+  let store = {};
+  try { const r = await chrome.storage.local.get(FP_STORE); store = (r && r[FP_STORE]) || {}; } catch (e) {}
+  const owner = store[fp];
+  if (owner && owner !== bridge.bridge) return { fp: fp, owner: owner };
+  if (!owner) {
+    store[fp] = bridge.bridge;
+    const keys = Object.keys(store);
+    if (keys.length > FP_MAX) keys.slice(0, keys.length - FP_MAX).forEach(k => { delete store[k]; });
+    try { const o = {}; o[FP_STORE] = store; await chrome.storage.local.set(o); } catch (e) {}
+  }
+  return false;
 }
 
 async function scrapeBridge(bridge) {
@@ -845,23 +1133,23 @@ async function extractLeadsFromPage(radarPerson, category, source) {
 
   // Extract every currently-rendered lead card into the Map (defensive per-card).
   const harvest = () => {
-    // Anchor on the lead link, then climb to the card that also holds a company link.
-    document.querySelectorAll('a[href*="/sales/lead/"]').forEach(linkEl => {
+    // NEW (2026 Sales Nav DOM): anchor on data-scroll-into-view (carries the fs_salesProfile
+    // URN) and read the name from the .a11y-text selection label. Title/company/location/degree
+    // are no longer in the results DOM — they resolve downstream (lead page / enricherPro /
+    // Pappers), so the card-scan below simply yields blanks now (kept for forward-compat).
+    document.querySelectorAll('[data-scroll-into-view^="urn:li:fs_salesProfile"]').forEach(node => {
       try {
-        // Clean status suffixes / emoji off the name BEFORE splitting into first/last.
-        const name = cleanName(linkEl.textContent || '');
-        if (!name) return;
-        const urnMatch = linkEl.href.match(/\/sales\/lead\/([^,?\/]+)/);
-        const parts = name.split(' ');
-        const lead_id = urnMatch ? urnMatch[1] : (parts[0] + (parts[1] || '')).replace(/\s/g, '');
+        const dsv = node.getAttribute('data-scroll-into-view') || '';
+        const um = dsv.match(/fs_salesProfile:\(([^,]+),/);
+        if (!um) return;
+        const lead_id = um[1];
         if (byUrn.has(lead_id)) return;  // already captured this person
-
-        let card = linkEl;
-        for (let i = 0; i < 6 && card && card.parentElement; i++) {
-          card = card.parentElement;
-          if (card.querySelector('a[href*="/sales/company/"]')) break;
-        }
-        if (!card) return;
+        const li = node.closest('li') || node.parentElement || node;
+        const a11y = li.querySelector('span.a11y-text') || li.querySelector('.a11y-text');
+        const name = a11y ? cleanName((a11y.textContent || '').replace(/^\s*Add\s+/i, '').replace(/\s+to selection\s*$/i, '')) : '';
+        if (!name) return;
+        const parts = name.split(' ');
+        const card = li;
         const compEl   = card.querySelector('a[href*="/sales/company/"]');
         const company  = compEl ? compEl.textContent.replace(/\s+/g, ' ').trim() : '';
 
@@ -963,9 +1251,9 @@ async function extractLeadsFromPage(radarPerson, category, source) {
     });
   };
 
-  // 1) Wait for the first lead link to appear (poll up to ~15s, scrolling to bottom each pass).
+  // 1) Wait for the first result card to appear (poll up to ~15s, scrolling each pass).
   for (let _p = 0; _p < 15; _p++) {
-    if (document.querySelectorAll('a[href*="/sales/lead/"]').length > 0) break;
+    if (document.querySelectorAll('[data-scroll-into-view^="urn:li:fs_salesProfile"]').length > 0) break;
     try { window.scrollTo(0, document.body.scrollHeight); } catch (e) {}
     await new Promise(r => setTimeout(r, 1000));
   }
@@ -987,8 +1275,11 @@ async function extractLeadsFromPage(radarPerson, category, source) {
   return Array.from(byUrn.values()).slice(0, CAP);
 }
 
-async function resolvePublicUrls(leads) {
-  for (const lead of leads.filter(l => !l.linkedin_url && l.lead_id).slice(0, MAX_RESOLVE_PER_RUN)) {
+async function resolvePublicUrls(leads, budget) {
+  const state = budget || { left: MAX_RESOLVE_PER_RUN };
+  for (const lead of leads.filter(l => !l.linkedin_url && l.lead_id)) {
+    if (state.left <= 0) break;
+    state.left--;
     try { const url = await resolveUrn(lead.lead_id); if (url) lead.linkedin_url = url; }
     catch(e) { await log('warn', 'resolve:urn-failed', { lead_id: lead.lead_id, error: String(e) }); }
     await sleep(600);
@@ -1011,7 +1302,38 @@ async function resolveUrn(urn) {
 
 async function postToHub(leads) {
   const resp = await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret: INGEST_SECRET, leads }) });
-  return resp.json();
+  let body = null;
+  try { body = await resp.json(); } catch (e) { body = null; }
+  // Treat an HTTP error OR an {ok:false} body as a real failure so the caller buffers + retries
+  // and shows an error — instead of reading a missing save-count as "0 saved" (the bug that hid
+  // a broken backend for weeks).
+  if (!resp.ok || (body && body.ok === false)) {
+    throw new Error('hub ' + resp.status + ': ' + ((body && body.error) || 'save failed'));
+  }
+  return body || {};
+}
+
+const BUFFER_KEY = 'radar_unsaved_leads';
+async function bufferLeads(leads) {
+  try {
+    const s = await chrome.storage.local.get(BUFFER_KEY);
+    const cur = s[BUFFER_KEY] || [];
+    const seen = new Set(cur.map(l => l && l.lead_id));
+    for (const l of leads) { if (l && l.lead_id && !seen.has(l.lead_id)) { cur.push(l); seen.add(l.lead_id); } }
+    await chrome.storage.local.set({ [BUFFER_KEY]: cur.slice(-3000) });
+  } catch (e) {}
+}
+async function flushBuffer() {
+  try {
+    const s = await chrome.storage.local.get(BUFFER_KEY);
+    const cur = s[BUFFER_KEY] || [];
+    if (!cur.length) return 0;
+    const res = await postToHub(cur);
+    const n = (res && (res.upserted != null ? res.upserted : res.written)) || 0;
+    await log('info', 'buffer:flushed', { held: cur.length, saved: n });
+    await chrome.storage.local.set({ [BUFFER_KEY]: [] });
+    return n;
+  } catch (e) { await log('warn', 'buffer:flush-failed', { error: String(e) }); return 0; }
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -1032,14 +1354,28 @@ function shuffle(arr) {
 function _normName(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
 
 // Desktop notification from Radar. Fails silently if the permission isn't granted.
-function notify(title, message) {
+const NOTIF_KEY = 'radarNotifLog';
+const MAX_NOTIF_ENTRIES = 500;
+// level: only 'error'/'alert' produce an on-screen desktop popup. Everything else is recorded
+// silently to the in-app notification log (radarNotifLog) — visible in the popup / web app,
+// but it never interrupts the user while they work.
+function notify(title, message, level) {
   try {
-    chrome.notifications.create('radar_' + Date.now(), {
-      type: 'basic',
-      iconUrl: chrome.runtime.getURL('icons/icon128.png'),
-      title: 'Radar — ' + title,
-      message: String(message || ''),
-      priority: 1
+    if (level === 'error' || level === 'alert') {
+      chrome.notifications.create('radar_' + Date.now(), {
+        type: 'basic',
+        iconUrl: chrome.runtime.getURL('icons/icon128.png'),
+        title: 'Radar — ' + title,
+        message: String(message || ''),
+        priority: 1
+      });
+    }
+  } catch (e) {}
+  try {
+    chrome.storage.local.get(NOTIF_KEY, d => {
+      const arr = d[NOTIF_KEY] || [];
+      arr.unshift({ ts: new Date().toISOString(), title: String(title || ''), message: String(message || ''), level: level || 'info' });
+      chrome.storage.local.set({ [NOTIF_KEY]: arr.slice(0, MAX_NOTIF_ENTRIES) });
     });
   } catch (e) {}
 }
