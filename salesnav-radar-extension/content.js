@@ -19,6 +19,22 @@
     queryAndAnnounce();
     // let the page trigger a recheck
     window.addEventListener('radar-ext-ping', queryAndAnnounce);
+    window.addEventListener('radar-ext-get-log', function () {
+      try {
+        chrome.runtime.sendMessage({ action: 'getLog' }, function (resp) {
+          var detail = (!chrome.runtime.lastError && resp && resp.ok) ? { ok: true, log: resp.log || [] } : { ok: false };
+          window.dispatchEvent(new CustomEvent('radar-ext-log', { detail: detail }));
+        });
+      } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-log', { detail: { ok: false } })); }
+    });
+    window.addEventListener('radar-ext-get-notif', function () {
+      try {
+        chrome.runtime.sendMessage({ action: 'getNotifLog' }, function (resp) {
+          var detail = (!chrome.runtime.lastError && resp && resp.ok) ? { ok: true, notifs: resp.notifs || [], buffered: resp.buffered || 0 } : { ok: false };
+          window.dispatchEvent(new CustomEvent('radar-ext-notif', { detail: detail }));
+        });
+      } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-notif', { detail: { ok: false } })); }
+    });
     // let the Radar web app read the current schedule (to populate Settings).
     window.addEventListener('radar-ext-get-schedule', function () {
       try {
@@ -45,6 +61,13 @@
         chrome.runtime.sendMessage({ action: 'setBotdogConfig', key: d.key, campaign: d.campaign }, function () {});
       } catch (e) {}
     });
+    // Relay the signed-in user's owner_key so the extension's collection stays per-user.
+    window.addEventListener('radar-ext-set-owner', function (ev) {
+      try {
+        var d = (ev && ev.detail) || {};
+        chrome.runtime.sendMessage({ action: 'setOwner', owner: d.owner || '' }, function () {});
+      } catch (e) {}
+    });
     // let the Radar web app say WHICH non-1st-degree bridges should get a connection invite.
     window.addEventListener('radar-ext-set-bridge-invites', function (ev) {
       try {
@@ -62,6 +85,17 @@
           window.dispatchEvent(new CustomEvent('radar-ext-push-bridges-result', { detail: detail }));
         });
       } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-push-bridges-result', { detail: { ok: false, error: String(e) } })); }
+    });
+    // let the Radar web app file pending prospects into the Sales Navigator lead list on demand.
+    window.addEventListener('radar-ext-salesnav-list', function () {
+      try {
+        chrome.runtime.sendMessage({ action: 'salesnavListNow' }, function (resp) {
+          var detail = (!chrome.runtime.lastError && resp && resp.ok)
+            ? { ok: true, result: resp.result }
+            : { ok: false, error: (resp && resp.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message) };
+          window.dispatchEvent(new CustomEvent('radar-ext-salesnav-list-result', { detail: detail }));
+        });
+      } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-salesnav-list-result', { detail: { ok: false, error: String(e) } })); }
     });
     // let the Radar web app trigger a collection run without opening the popup.
     window.addEventListener('radar-ext-sync', function () {

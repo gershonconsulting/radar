@@ -230,6 +230,18 @@ async function runSync() {
   await log('info', 'login-check', { loggedIn });
   if (!loggedIn) { await log('warn', 'No Sales Nav tab detected - proceeding anyway (opened tabs use your logged-in session)'); }
 
+  // PRIORITY PHASE — file everything still pending into the dedicated Sales Navigator lead
+  // list BEFORE anything else. Getting prospects into that list is the product; scraping is
+  // only how the list gets fed. Running it up front means a slow, broken or killed scrape can
+  // never starve it (the MV3 worker dying mid-run used to take the list phase down with it).
+  // It no-ops cheaply when nothing is pending, and runs again at the end of the run to file
+  // whatever this run just collected.
+  let listedTotal = 0;
+  try {
+    const pre = await saveTargetsToSalesNavList();
+    listedTotal += (pre && pre.added) || 0;
+  } catch (e) { await log('warn', 'salesnav-list:error', { error: String(e) }); }
+
   // Step 1: discover candidate bridges from Sources — ONCE PER SOURCE, then never again
   // automatically. Prospect collection is the priority. We only look for bridges when:
   //   (a) the user asks — popup "Find Bridges Now" (discoverNow) or a source flagged
@@ -362,13 +374,13 @@ async function runSync() {
     // File every new prospect into the dedicated Sales Navigator lead list. Runs on EVERY sync,
     // including runs that found nothing new, so any backlog keeps draining. Best-effort: a
     // failure here must never lose the leads we just saved.
-    let listedTotal = 0;
     try {
       const listRes = await saveTargetsToSalesNavList();
-      listedTotal = (listRes && listRes.added) || 0;
+      listedTotal += (listRes && listRes.added) || 0;
     } catch (e) { await log('warn', 'salesnav-list:error', { error: String(e) }); }
 
-    // Invite non-1st-degree bridges into the dedicated Botdog campaign (best-effort; never blocks the run).
+    // OPTIONAL phase. Botdog is an add-on, not a requirement: Radar is complete without it, and
+    // a missing key is an info-level skip, never an error (best-effort; never blocks the run).
     try { await pushBridgesToBotdog(); } catch (e) { await log('warn', 'bridge-push:error', { error: String(e) }); }
 
     await log('info', 'run:done', { version: EXT_VERSION, found: foundTotal, saved: savedTotal, listed: listedTotal, status: 'ok' });
@@ -505,9 +517,24 @@ async function saveTargetsToSalesNavList() {
 
   // Open the list itself in the off-screen scrape window: it is a normal Sales Nav page, so the
   // request carries exactly the cookies, origin and referer Sales Navigator's own UI would send.
-  const tab = await openScrapeTab('https://www.linkedin.com/sales/lists/people/' + listId);
+  const listUrl = 'https://www.linkedin.com/sales/lists/people/' + listId;
+  let tab = await openScrapeTab(listUrl);
   if (!tab) {
-    await log('warn', 'salesnav-list:no-tab');
+    // This phase does NOT need a rendered page — it only needs a logged-in linkedin.com origin
+    // to fetch from. So when the dedicated background window is unavailable, fall back to a
+    // plain BACKGROUND tab in the window the user already has open: no focus steal, and it
+    // cannot be blocked by window-bounds validation. Filing prospects into the list is the
+    // whole point of Radar — it must never be the thing that gets skipped.
+    try {
+      tab = await chrome.tabs.create({ url: listUrl, active: false });
+      await log('warn', 'salesnav-list:bg-tab-fallback', { reason: 'scrape window unavailable' });
+    } catch (e) {
+      tab = null;
+    }
+  }
+  if (!tab) {
+    await log('error', 'salesnav-list:no-tab');
+    notify('Sales Nav list blocked', 'Radar could not open a LinkedIn tab to file ' + ids.length + ' prospect(s). Keep Chrome open and logged in.', 'error');
     return { ok: false, added: 0, reason: 'no-tab' };
   }
   await sleep(7000);  // let the SPA boot so the session is warm before the first call
@@ -702,7 +729,7 @@ async function pushBridgesToBotdog() {
   const cfg = await chrome.storage.local.get(['radar_botdog_key', 'radar_bridges_campaign', 'radar_bridges_pushed', 'radar_bridge_invite_skips']);
   const key = cfg.radar_botdog_key;
   const campaign = cfg.radar_bridges_campaign || BRIDGES_CAMPAIGN_ID_DEFAULT;
-  if (!key) { await log('info', 'bridge-push:skip', { reason: 'no Botdog key — set it in Settings' }); return { ok: false, reason: 'no-key' }; }
+  if (!key) { await log('info', 'bridge-push:skip', { reason: 'Botdog not configured — optional, Radar works without it' }); return { ok: true, skipped: true, reason: 'no-key' }; }
   const pushed = new Set(cfg.radar_bridges_pushed || []);
   // Invite EVERY not-yet-connected bridge into the dedicated bridges campaign,
   // except the ones explicitly unticked in the dashboard.
@@ -874,18 +901,33 @@ async function getScrapeWindow() {
       scrapeWindowId = null;  // was closed by the user; recreate below
     }
   }
-  try {
-    // Position the window OFF-SCREEN (large negative coords) rather than at 40,40. Keeping it
-    // 'normal' (not minimized) means the page still renders — Sales Nav's virtualized list needs
-    // a live viewport to populate — but the window sits outside the visible desktop, so it never
-    // covers what the user is doing. Size is kept full so the virtualized list loads rows.
-    const win = await chrome.windows.create({ focused: false, state: 'normal', width: 1280, height: 900, top: -2000, left: -2000 });
-    scrapeWindowId = win.id;
-    // Re-assert off-screen + unfocused (some platforms nudge a new window on-screen/focused).
-    try { await chrome.windows.update(scrapeWindowId, { focused: false, top: -2000, left: -2000 }); } catch (e) {}
-  } catch (e) {
-    scrapeWindowId = null;
+  // Chrome REJECTS windows.create() bounds that place a window entirely outside the visible
+  // desktop ("Invalid value for bounds. Bounds must be at least 50% within visible screen
+  // space."). That validation started biting on 2026-08-16 and silently killed EVERY page-open
+  // in the extension — scraping AND the Sales Nav list phase (every run since logged
+  // `salesnav-list:no-tab` and filed nobody). So: try off-screen first (nicest when allowed),
+  // then fall back to on-screen-but-unfocused rather than giving up.
+  const attempts = [
+    { focused: false, state: 'normal', width: 1280, height: 900, top: -2000, left: -2000 },
+    { focused: false, state: 'normal', width: 1280, height: 900, top: 0, left: 0 },
+    { focused: false, state: 'normal' }
+  ];
+  let lastErr = null;
+  for (let i = 0; i < attempts.length; i++) {
+    try {
+      const win = await chrome.windows.create(attempts[i]);
+      scrapeWindowId = win.id;
+      if (i > 0) await log('warn', 'scrape-window:fallback', { attempt: i, error: String(lastErr) });
+      // Best-effort nudge off-screen + unfocused; a rejection here is harmless (the window just
+      // stays visible), and must NOT undo the successful create.
+      try { await chrome.windows.update(scrapeWindowId, { focused: false, top: -2000, left: -2000 }); } catch (e) {}
+      return scrapeWindowId;
+    } catch (e) {
+      lastErr = e;
+    }
   }
+  scrapeWindowId = null;
+  await log('error', 'scrape-window:create-failed', { error: String(lastErr) });
   return scrapeWindowId;
 }
 

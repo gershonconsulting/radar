@@ -1,3 +1,20 @@
+## 1.8.1 - 2026-08-24
+- **FIX: nothing had been filed into the Sales Navigator lead list since 2026-08-15.** Every run
+  logged `salesnav-list:start` and then `salesnav-list:no-tab` — 1853 prospects sat pending.
+  Root cause: Chrome now rejects `windows.create()` bounds that put a window fully outside the
+  visible desktop, so the dedicated off-screen scrape window failed to open and EVERY page-open
+  in the extension failed with it (bridge scraping too — `scrape window/tab unavailable`).
+  `getScrapeWindow()` now tries off-screen, then on-screen-unfocused, and logs the real error
+  instead of swallowing it (`scrape-window:create-failed` / `scrape-window:fallback`).
+- **The list phase no longer depends on that window at all.** Filing needs a logged-in
+  linkedin.com origin to fetch from, not a rendered page, so it falls back to a plain background
+  tab in the user's own window (`salesnav-list:bg-tab-fallback`). It cannot be silently skipped.
+- **The list phase now runs FIRST, before scraping, and again at the end.** Getting prospects
+  into the dedicated lead list is the product; scraping is only how the list gets fed. A slow or
+  killed scrape can no longer starve it. It still no-ops when nothing is pending.
+- **Botdog is explicitly optional.** No key = an info-level skip that reports success, never an
+  error. Radar is complete without Botdog.
+
 ## 1.8.0 - 2026-08-22
 - **Dropped-filter guard.** Sales Navigator silently ignores a `CONNECTION_OF` filter it
   rejects (bridge not 1st-degree, or not a real member urn) and returns a GENERIC result set
