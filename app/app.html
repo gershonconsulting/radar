@@ -250,9 +250,6 @@ tr.row-excluded td:first-child{ text-decoration:none; }
 .ob-body{ flex:1; min-width:0; }
 .ob-body .ob-title{ font-size:0.92rem; font-weight:600; color:#1e293b; }
 .ob-body .ob-title.done{ color:#64748b; }
-.ob-tag{ display:inline-block; margin-left:8px; padding:1px 8px; border-radius:10px; background:#f1f5f9; color:#64748b; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; vertical-align:middle; }
-.ob-step.optional{ background:#fbfcfe; }
-.ob-dot.skip{ background:#f8fafc; color:#cbd5e1; border:1px dashed var(--line); }
 .ob-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px; }
 .ob-link{ display:inline-flex; align-items:center; gap:4px; font-size:0.82rem; font-weight:600; color:var(--brand-ink); text-decoration:none; }
 .ob-link:hover{ text-decoration:underline; }
@@ -427,7 +424,6 @@ td a:hover{ text-decoration:underline; }
 /* ---------- Settings ---------- */
 /* ===== Extension page ===== */
 .ext-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:18px; align-items:start; max-width:1100px; }
-.ext-card.wide{ grid-column:1/-1; }
 .ext-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:22px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
 .ext-card h3{ font-size:1.02rem; font-weight:700; color:#0f172a; margin-bottom:3px; }
 .ext-card .sub{ color:var(--muted); font-size:0.84rem; margin-bottom:14px; }
@@ -450,8 +446,7 @@ td a:hover{ text-decoration:underline; }
 .diag-txt span{ color:var(--muted); font-size:0.82rem; }
 .ext-steps{ margin:0; padding-left:20px; color:#334155; font-size:0.86rem; line-height:1.75; }
 .ext-steps code{ background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:0.82rem; }
-.ext-logtail{ background:#0f1e3d; border-radius:9px; padding:16px 18px; height:clamp(380px,58vh,760px); overflow-y:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:0.88rem; line-height:1.75; color:#cbd5e1; }
-.ext-logtail div{ padding:1px 0; white-space:pre-wrap; word-break:break-word; }
+.ext-logtail{ background:#0f1e3d; border-radius:9px; padding:12px 14px; max-height:240px; overflow-y:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:0.76rem; line-height:1.6; color:#cbd5e1; }
 .ext-logtail .l-error{ color:#fca5a5; } .ext-logtail .l-warn{ color:#fcd34d; } .ext-logtail .l-ts{ color:#64748b; }
 .settings-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:18px; max-width:560px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
 .settings-card h2{ font-size:1.05rem; font-weight:600; margin-bottom:4px; }
@@ -529,7 +524,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.9.9</div>
+      <div class="ver" id="sideVer">v1.9.8</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -609,7 +604,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
       <div id="extUpdateBanner" class="banner" style="display:none;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension-v1.8.0.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
+        <a id="extUpdateDl" href="/radar-extension-v1.8.1.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
         <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#2563eb;text-decoration:none">How to update</a>
         <a href="#" onclick="dismissExtUpdate();return false" style="margin-left:12px;color:#64748b;text-decoration:none">Dismiss</a>
         <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#334155;font-weight:400">To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.)</div>
@@ -673,7 +668,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 
     <!-- ===== Setup ===== -->
     <section id="view-setup" class="view">
-      <div class="page-head"><h2>Setup</h2><p>Connect Radar to LinkedIn Sales Navigator to start collecting targets. Botdog is optional &mdash; add it whenever you want Radar to run the outreach too.</p></div>
+      <div class="page-head"><h2>Setup</h2><p>Connect Radar to LinkedIn Sales Navigator and point it at your dedicated lead list — that is where every new prospect lands. Botdog is optional.</p></div>
       <div id="onboardingWrap"></div>
       <div class="settings-card" style="max-width:620px">
         <h2>Radar extension version</h2>
@@ -698,7 +693,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <div id="extStatePill" class="ext-pill idle">Checking&hellip;</div>
           <div id="extStateNote" style="margin-top:10px;font-size:0.85rem;color:#334155"></div>
           <div class="ext-actions">
-            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.8.0.zip" download>&#11015; Download latest</a>
+            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.8.1.zip" download>&#11015; Download latest</a>
             <button class="ext-btn ghost" onclick="extRunDiag()">Test installation</button>
           </div>
         </div>
@@ -731,7 +726,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         </div>
 
         <!-- Activity -->
-        <div class="ext-card wide">
+        <div class="ext-card">
           <h3>Extension activity</h3>
           <div class="sub" id="extSchedLine">Its own log — newest first.</div>
           <div class="ext-logtail" id="extLogTail">Waiting for the extension&hellip;</div>
@@ -871,7 +866,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.8.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.8.1.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -903,10 +898,10 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div id="schedStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
-        <h2>API Keys</h2>
-        <p>Saved to the backend, and remembered here in your browser so you can see them.</p>
+        <h2>API Keys <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(all optional)</span></h2>
+        <p>Saved to the backend, and remembered here in your browser so you can see them. Radar collects prospects and files them into your Sales Navigator list without any of these.</p>
         <div class="field">
-          <label>Botdog API Key</label>
+          <label>Botdog API Key <span style="color:#94a3b8;font-weight:400">(optional — outreach only)</span></label>
           <input type="password" id="inputBotdog" placeholder="paste key…">
         </div>
         <div class="field">
@@ -922,7 +917,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div id="saveStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
-        <h2>Outreach Campaigns (Botdog)</h2>
+        <h2>Outreach Campaigns (Botdog) <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">optional</span></h2>
         <p>Two separate campaigns: one to invite &amp; follow up with <strong>bridges</strong> you're not connected to, one for <strong>targets</strong> (prospects). Pick from your campaigns or paste an ID.</p>
         <div class="field">
           <label>Targets campaign <span style="color:#94a3b8;font-weight:400">(prospects)</span></label>
@@ -952,8 +947,8 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div id="icpTemplateStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
-        <h2>Sales Navigator list</h2>
-        <p>New prospects are added to this LinkedIn Sales Navigator list, so you can work them all in one place. Paste your dedicated list URL.</p>
+        <h2>Sales Navigator list <span style="color:#b45309;font-weight:600;font-size:0.8rem">required</span></h2>
+        <p>This is the heart of Radar: every new prospect is filed into this LinkedIn Sales Navigator list, so you can work them all in one place. Paste your dedicated list URL.</p>
         <div class="field">
           <label>Sales Nav list URL</label>
           <input type="text" id="inputSalesNavList" placeholder="https://www.linkedin.com/sales/lists/people/…">
@@ -1492,7 +1487,7 @@ const TOUR = [
       chain(2) +
       '<p>For every active bridge, Radar walks their network and keeps only the people who match <strong>your ICP search</strong> &mdash; the Sales Navigator filters you define once in Settings.</p>' +
       '<p>Each target is graded <strong>A+ down to D</strong> on title fit, deduplicated against everything you have ever collected, and checked against your own connections so you never chase someone you already know. Unselect anyone you don&rsquo;t want and they never come back.</p>' +
-      '<p>Every target is filed into your <strong>Sales Navigator list</strong>, so the whole crop sits in one place inside LinkedIn. If you connect <strong>Botdog</strong> (optional), the best ones are also pushed there and it runs the connection requests and follow-ups for you.</p>' },
+      '<p>The best ones get pushed to <strong>Botdog</strong>, which runs the connection requests and follow-ups for you.</p>' },
   { eyebrow:'How it runs',
     title:'Set it up once, then it works on its own',
     html:
@@ -1501,10 +1496,10 @@ const TOUR = [
         '<li><span class="num">1</span><span><b>Sales Navigator</b> &mdash; Radar searches through your subscription.</span></li>' +
         '<li><span class="num">2</span><span><b>The Chrome extension</b> &mdash; the collector and the scheduler.</span></li>' +
         '<li><span class="num">3</span><span><b>Your ICP search</b> &mdash; the Sales Nav filters that define a good prospect.</span></li>' +
-        '<li><span class="num">4</span><span><b>Your Sales Navigator list</b> &mdash; where every prospect Radar finds gets filed.</span></li>' +
+        '<li><span class="num">4</span><span><b>Botdog</b> &mdash; optional, but it turns the list into conversations.</span></li>' +
         '<li><span class="num">5</span><span><b>Your first Source</b> &mdash; one organization to start. You can add more any time.</span></li>' +
       '</ul>' +
-      '<p>The checklist on your dashboard tracks those five and ticks them off as it detects them. <strong>Botdog is optional</strong> &mdash; add it whenever you want Radar to run the outreach too.</p>' }
+      '<p>The checklist on your dashboard tracks all five and ticks them off as it detects them.</p>' }
 ];
 let TOUR_I = 0;
 function tourSeen(){ try { return localStorage.getItem(TOUR_KEY) === '1'; } catch(e){ return false; } }
@@ -1584,7 +1579,7 @@ function detectExtension(){
 }
 
 // ===== Extension version offer (installed vs latest, like the Linalysis check) =====
-const LATEST_EXT_VERSION = '1.8.0';   // latest packaged extension offered on the platform
+const LATEST_EXT_VERSION = '1.8.1';   // latest packaged extension offered on the platform
 const EXT_ZIP_URL = '/radar-extension-v' + LATEST_EXT_VERSION + '.zip';
 function cmpVer(a, b){
   const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
@@ -1603,9 +1598,9 @@ function checkExtUpdate(){
   const row = document.getElementById('extVersionRow');
   if (row) {
     row.innerHTML = !installed
-      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.8.0.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
+      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.8.1.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
       : (behind
-        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.8.0.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
+        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.8.1.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
         : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
   }
   const badge = document.getElementById('extNavBadge');
@@ -1761,7 +1756,7 @@ async function extLoadLog(){
   box.textContent = 'Loading…';
   const d = await extAsk('radar-ext-get-log', 'radar-ext-log', 6000);
   if (!d || !d.ok) { box.textContent = 'The extension didn\'t return its log. Try reloading it in chrome://extensions.'; return; }
-  const rows = (d.log || []).slice(0, 250);
+  const rows = (d.log || []).slice(0, 60);
   if (!rows.length) { box.textContent = 'No activity logged yet — launch a sync to get started.'; return; }
   box.innerHTML = rows.map(r => {
     const ts = String(r.ts || '').replace('T', ' ').slice(0, 19);
@@ -1907,39 +1902,24 @@ function obPaint(html, quiet){
 function renderOnboarding(){
   const wrap = document.getElementById('onboardingWrap') || document.getElementById('onboardingWrapHome');
   if (!wrap) return;
-  // Source count is read LIVE (not from a snapshot taken at boot) so the tick appears as soon
-  // as the first source lands, whatever order loadSources()/loadIcpTemplate() finished in.
-  const srcCount = (typeof STORED_SOURCES !== 'undefined' && STORED_SOURCES) ? STORED_SOURCES.length : (window.__srcCount || 0);
-  const done = {
-    signin  : true,
-    salesnav: obFlag(OB_KEYS.salesnav),
-    ext     : obFlag(OB_KEYS.ext),
-    icp     : !!window.__hasIcp,
-    list    : !!window.__hasList,
-    source  : srcCount > 0,
-    botdog  : obFlag(OB_KEYS.botdog)   // OPTIONAL — never counted toward completion
-  };
-  // Botdog is deliberately NOT in REQUIRED: Radar collects and files prospects on its own;
-  // Botdog only adds the outreach layer. Setup is "complete" without it.
-  const REQUIRED = ['signin','salesnav','ext','icp','list','source'];
-  const total = REQUIRED.length;
-  const count = REQUIRED.filter(k => done[k]).length;
-  const all = count === total;
+  // Botdog is deliberately NOT counted: it is an optional outreach add-on. What Radar must have
+  // is somewhere to put the prospects — the dedicated Sales Navigator lead list.
+  const done = { signin:true, salesnav:obFlag(OB_KEYS.salesnav), ext:obFlag(OB_KEYS.ext), list: !!window.__hasList, botdog:obFlag(OB_KEYS.botdog), icp: !!window.__hasIcp, source: (window.__srcCount||0) > 0 };
+  const count = (done.signin?1:0) + (done.salesnav?1:0) + (done.ext?1:0) + (done.list?1:0) + (done.icp?1:0) + (done.source?1:0);
+  const all = count === 6;
   const onboarded = obFlag('radar_onboarded');
 
   // Fully set up and dismissed → just a small "Setup" reopen link.
   if (all && onboarded) {
-    obPaint('<div class="onboard-reopen"><a onclick="obReopen()">&#9881; Setup</a> &nbsp;&middot;&nbsp; <a onclick="openTour(0)">How Radar works</a></div>', '');
+    obPaint('<div class="onboard-reopen"><a onclick="obReopen()">⚙ Setup</a> &nbsp;·&nbsp; <a onclick="openTour(0)">How Radar works</a></div>', '');
     return;
   }
-  // Everything required is done but not yet dismissed → collapsed "all set" line.
+  // All four done but not yet dismissed → collapsed "all set" line.
   if (all) {
     obPaint(
       '<div class="onboard-done">' +
         '<div class="ob-dot done">&#10003;</div>' +
-        '<span class="ok-txt">You\'re all set &mdash; Radar is fully configured.' +
-          (done.botdog ? '' : ' <span style="font-weight:500;color:#64748b">Botdog is optional &mdash; <a onclick="obReopen()" style="cursor:pointer;color:#64748b;text-decoration:underline">add it</a> when you want Radar to run the outreach too.</span>') +
-        '</span>' +
+        '<span class="ok-txt">You\'re all set — Radar is fully configured.</span>' +
         '<button class="dismiss" onclick="obDismiss()">dismiss</button>' +
       '</div>');
     return;
@@ -1958,7 +1938,7 @@ function renderOnboarding(){
         (done.salesnav ?
         '<div class="ob-note">Sales Navigator detected</div>' :
         '<div class="ob-actions">' +
-          '<a class="ob-link" href="https://www.linkedin.com/sales/" target="_blank" rel="noopener">Open Sales Navigator &#8599;</a>' +
+          '<a class="ob-link" href="https://www.linkedin.com/sales/" target="_blank" rel="noopener">Open Sales Navigator ↗</a>' +
           '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
         '</div>' +
         '<div class="ob-note">Detection is best-effort. <a onclick="obMark(\'' + OB_KEYS.salesnav + '\')">I\'ve connected it</a></div>') +
@@ -1973,60 +1953,61 @@ function renderOnboarding(){
         (done.ext ? 'Extension installed' + (extVer ? ' (v' + extVer + ')' : '') : 'Install the Chrome extension') + '</div>' +
         (done.ext ?
         '<div class="ob-note">detected automatically</div>' :
-        '<div class="ob-note" style="margin-bottom:6px">Download it, then in <code>chrome://extensions</code> enable <strong>Developer mode</strong> &rarr; <strong>Load unpacked</strong> &rarr; pick the unzipped folder.</div>' +
+        '<div class="ob-note" style="margin-bottom:6px">Download it, then in <code>chrome://extensions</code> enable <strong>Developer mode</strong> → <strong>Load unpacked</strong> → pick the unzipped folder.</div>' +
         '<div class="ob-actions">' +
-          '<a class="ob-link" href="' + EXT_ZIP_URL + '" download>Download the extension &#8595;</a>' +
+          '<a class="ob-link" href="/radar-extension-v1.8.1.zip" download>Download the extension ↓</a>' +
           '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
         '</div>') +
       '</div>' +
     '</div>');
-  // 4) Your ICP search link — defines who counts as a prospect for this user.
+  // 4) The dedicated Sales Navigator lead list — where every prospect Radar finds is filed.
+  steps.push(
+    '<div class="ob-step">' + obDot(done.list) +
+      '<div class="ob-body"><div class="ob-title' + (done.list?' done':'') + '">Choose your Sales Navigator lead list</div>' +
+        (done.list ?
+        '<div class="ob-note">New prospects are filed into your list automatically.</div>' :
+        '<div class="ob-note">This is where Radar puts every prospect it finds. Create a dedicated list in Sales Navigator, then paste its URL in <a href="#" onclick="showView(\'settings\');return false">Settings → Sales Navigator list</a>.</div>') +
+      '</div>' +
+    '</div>');
+  // 5) Connect Botdog — OPTIONAL. Radar is complete without it; it only automates outreach.
+  steps.push(
+    '<div class="ob-step">' + obDot(done.botdog) +
+      '<div class="ob-body"><div class="ob-title' + (done.botdog?' done':'') + '">Connect Botdog <span style="color:#94a3b8;font-weight:400;font-size:0.85em">optional</span></div>' +
+        '<div class="ob-note" style="margin-bottom:6px">Only if you want Radar to run the invitations and follow-ups for you. Collecting prospects and filing them into your Sales Nav list works without it.</div>' +
+        (done.botdog ? '' :
+        '<div class="ob-field">' +
+          '<input type="password" id="obBotdogKey" placeholder="paste your Botdog API key…">' +
+          '<button class="ob-btn" id="obBotdogBtn" onclick="obSaveBotdog()">Test &amp; Save</button>' +
+        '</div>' +
+        '<div class="ob-status" id="obBotdogStatus"></div>') +
+        '<div class="ob-note">Don\'t have Botdog? <a href="https://tolt.link/gershonAI" target="_blank" rel="noopener">Create your Botdog account →</a></div>' +
+      '</div>' +
+    '</div>');
+  // 6) Your ICP search link — defines who counts as a prospect for this user.
   steps.push(
     '<div class="ob-step">' + obDot(done.icp) +
       '<div class="ob-body"><div class="ob-title' + (done.icp?' done':'') + '">Set your ICP search</div>' +
-        (done.icp ? '<div class="ob-note">Your Sales Navigator search is saved. <a href="#" onclick="showView(\'settings\');return false">Change it</a></div>' :
-        '<div class="ob-note">Build your ideal prospect search in Sales Navigator (all your filters, <strong>no &ldquo;Connection of&rdquo;</strong>) and paste the URL in <a href="#" onclick="showView(\'settings\');return false">Settings &rarr; Your ICP search</a>.</div>') +
+        (done.icp ? '<div class="ob-note">Your Sales Navigator search is saved.</div>' :
+        '<div class="ob-note">Build your ideal prospect search in Sales Navigator (all your filters, <strong>no “Connection of”</strong>) and paste the URL in <a href="#" onclick="showView(\'settings\');return false">Settings → Your ICP search</a>.</div>') +
       '</div>' +
     '</div>');
-  // 5) Sales Navigator list — where every new prospect gets filed.
-  steps.push(
-    '<div class="ob-step">' + obDot(done.list) +
-      '<div class="ob-body"><div class="ob-title' + (done.list?' done':'') + '">Choose your Sales Navigator list</div>' +
-        (done.list ? '<div class="ob-note">New prospects are filed into your list. <a href="#" onclick="showView(\'settings\');return false">Change it</a></div>' :
-        '<div class="ob-note">Create a dedicated list in Sales Navigator and paste its URL in <a href="#" onclick="showView(\'settings\');return false">Settings &rarr; Sales Navigator list</a> &mdash; every prospect Radar finds is added to it.</div>') +
-      '</div>' +
-    '</div>');
-  // 6) First Source — an organization whose network holds this user's prospects.
+  // 7) First Source — an organization whose network holds this user's prospects.
   steps.push(
     '<div class="ob-step">' + obDot(done.source) +
       '<div class="ob-body"><div class="ob-title' + (done.source?' done':'') + '">Add your first Source</div>' +
-        (done.source ? '<div class="ob-note">You have ' + srcCount + ' source(s).</div>' :
-        '<div class="ob-note">Add an organization whose network holds your prospects &mdash; paste its LinkedIn company URL in <a href="#" onclick="showView(\'sources\');return false">Sources</a>.</div>') +
-      '</div>' +
-    '</div>');
-  // Optional) Connect Botdog — outreach only. Not required, not counted.
-  steps.push(
-    '<div class="ob-step optional">' + (done.botdog ? obDot(true) : '<div class="ob-dot skip">&#9675;</div>') +
-      '<div class="ob-body"><div class="ob-title' + (done.botdog?' done':'') + '">Connect Botdog<span class="ob-tag">optional</span></div>' +
-        (done.botdog ? '' :
-        '<div class="ob-note" style="margin-top:2px">Radar collects and files your prospects without it. Add Botdog only if you want Radar to send the connection requests and follow-ups too.</div>' +
-        '<div class="ob-field">' +
-          '<input type="password" id="obBotdogKey" placeholder="paste your Botdog API key&hellip;">' +
-          '<button class="ob-btn ghost" id="obBotdogBtn" onclick="obSaveBotdog()">Test &amp; Save</button>' +
-        '</div>' +
-        '<div class="ob-status" id="obBotdogStatus"></div>') +
-        '<div class="ob-note">Don\'t have Botdog? <a href="https://tolt.link/gershonAI" target="_blank" rel="noopener">Create your Botdog account &rarr;</a></div>' +
+        (done.source ? '<div class="ob-note">You have ' + (window.__srcCount||0) + ' source(s).</div>' :
+        '<div class="ob-note">Add an organization whose network holds your prospects — paste its LinkedIn company URL in <a href="#" onclick="showView(\'sources\');return false">Sources</a>.</div>') +
       '</div>' +
     '</div>');
 
-  const pct = Math.round((count/total)*100);
+  const pct = Math.round((count/6)*100);
   obPaint(
     '<div class="onboard">' +
       '<div class="ob-head">' +
         '<h3>Get set up</h3>' +
         '<div class="ob-progress">' +
           '<a class="ob-link" onclick="openTour(0)" style="cursor:pointer">How Radar works</a>' +
-          '<span class="ob-count">' + count + ' of ' + total + ' done</span>' +
+          '<span class="ob-count">' + count + ' of 6 done</span>' +
           '<span class="ob-bar"><i style="width:' + pct + '%"></i></span>' +
         '</div>' +
       '</div>' +
@@ -3337,22 +3318,24 @@ async function saveIcpTemplate() {
     const data = await resp.json();
     status.textContent = data.saved ? 'Saved! Radar will use this as your prospect definition.' : 'Error: ' + JSON.stringify(data);
     if (data.saved) {
-      window.__hasIcp = !!url;   // tick the checklist step immediately (was only set at boot)
       try { window.dispatchEvent(new CustomEvent('radar-ext-set-search-template', { detail:{ template: url } })); } catch(e) {}
       try { renderOnboarding(); } catch(e) {}
     }
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
 async function loadIcpTemplate() {
+  // Reads the shared config even when the Settings fields aren't in the DOM — the onboarding
+  // checklist depends on these flags, and it renders on the Dashboard.
   const el = document.getElementById('inputIcpTemplate');
-  if (!el) return;
   try {
     const cfg = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r=>r.text());
     const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
-    if (j && j.salesnav_search_template && !el.value) el.value = j.salesnav_search_template;
+    if (el && j && j.salesnav_search_template && !el.value) el.value = j.salesnav_search_template;
     window.__hasIcp = !!(j && j.salesnav_search_template);
+    window.__hasList = !!(j && j.salesnav_list_url);
+    window.__srcCount = (typeof STORED_SOURCES !== 'undefined' && STORED_SOURCES) ? STORED_SOURCES.length : 0;
+    try { renderOnboarding(); } catch(e) {}
   } catch(e) {}
-  try { renderOnboarding(); } catch(e) {}
 }
 
 // ===== Sales Navigator list (where new prospects get placed) =====
@@ -3369,11 +3352,11 @@ async function saveSalesNavList() {
     const data = await resp.json();
     status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
     if (data.saved) {
-      window.__hasList = !!url;   // tick the "Choose your Sales Navigator list" checklist step
       try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); cur.salesnav_list_url = url; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
+      window.__hasList = !!url;
+      try { renderOnboarding(); } catch(e) {}
       // Hand the list URL to the Chrome extension so it can add new prospects to it.
       try { window.dispatchEvent(new CustomEvent('radar-ext-set-salesnav-list', { detail:{ url: url } })); } catch(e) {}
-      try { renderOnboarding(); } catch(e) {}
     }
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
@@ -3386,10 +3369,10 @@ async function loadSalesNavList() {
     const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
     if (j && j.salesnav_list_url && !el.value) el.value = j.salesnav_list_url;
     window.__hasList = !!(j && j.salesnav_list_url);
+    try { renderOnboarding(); } catch(e) {}
   } catch(e) {
-    try { const k = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if (k.salesnav_list_url) { if (!el.value) el.value = k.salesnav_list_url; window.__hasList = true; } } catch(_){}
+    try { const k = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if (k.salesnav_list_url && !el.value) el.value = k.salesnav_list_url; } catch(_){}
   }
-  try { renderOnboarding(); } catch(e) {}
 }
 
 // ===== Daily lead target (how many new prospects/day to collect) =====
