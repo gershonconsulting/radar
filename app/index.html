@@ -359,7 +359,7 @@
 // One place to bump the packaged extension: LATEST_EXT_VERSION. Every download link
 // ([data-ext-dl]) and version label ([data-ext-ver]) on this page is filled from it.
 (function(){
-  var LATEST_EXT_VERSION = '1.7.4';
+  var LATEST_EXT_VERSION = '1.8.0';
   var url = '/radar-extension-v' + LATEST_EXT_VERSION + '.zip';
   document.querySelectorAll('[data-ext-dl]').forEach(function(a){ a.setAttribute('href', url); });
   document.querySelectorAll('[data-ext-ver]').forEach(function(el){ el.textContent = LATEST_EXT_VERSION; });

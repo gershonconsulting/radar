@@ -391,6 +391,20 @@ td a:hover{ text-decoration:underline; }
 .icp-grade.g-B{ background:#eff6ff; color:var(--primary); border-color:#bfdbfe; }
 .icp-grade.g-C{ background:#fef3c7; color:#b45309; border-color:#fcd34d; }
 .icp-grade.g-D{ background:#f1f5f9; color:#94a3b8; border-color:var(--line); }
+/* Bridge health: is this bridge actually earning its place in the account? */
+.hbadge{ display:inline-flex; align-items:center; gap:4px; font-size:0.68rem; font-weight:600;
+  padding:1px 7px; border-radius:999px; border:1px solid transparent; white-space:nowrap; letter-spacing:0.01em; }
+.hbadge.h-productive{ background:rgba(22,163,74,0.10); color:#15803d; border-color:rgba(22,163,74,0.30); }
+.hbadge.h-never_run{ background:#f8fafc; color:#64748b; border-color:var(--line); }
+.hbadge.h-no_yield{ background:#fef3c7; color:#b45309; border-color:#fcd34d; }
+.hbadge.h-filter_ignored,.hbadge.h-invalid_urn,.hbadge.h-not_first_degree{
+  background:#fee2e2; color:#b91c1c; border-color:#fecaca; }
+.health-bar{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 14px;
+  padding:11px 14px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+.health-bar .hb-t{ font-weight:700; font-size:0.85rem; margin-right:4px; }
+.health-bar .hb-note{ flex:1 1 100%; font-size:0.8rem; color:#64748b; margin-top:2px; }
+.bridge-row.dead{ opacity:0.62; }
+.bridge-row .hwhy{ font-size:0.72rem; color:#b91c1c; margin-top:2px; }
 /* Remove (✕) button */
 .bridge-row .remove{ flex:0 0 auto; border:none; background:none; color:#cbd5e1; font-size:0.95rem; line-height:1;
   cursor:pointer; padding:4px 6px; border-radius:6px; transition:color .12s,background .12s; }
@@ -590,7 +604,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
       <div id="extUpdateBanner" class="banner" style="display:none;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension-v1.7.4.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
+        <a id="extUpdateDl" href="/radar-extension-v1.8.0.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
         <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#2563eb;text-decoration:none">How to update</a>
         <a href="#" onclick="dismissExtUpdate();return false" style="margin-left:12px;color:#64748b;text-decoration:none">Dismiss</a>
         <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#334155;font-weight:400">To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.)</div>
@@ -679,7 +693,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <div id="extStatePill" class="ext-pill idle">Checking&hellip;</div>
           <div id="extStateNote" style="margin-top:10px;font-size:0.85rem;color:#334155"></div>
           <div class="ext-actions">
-            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.7.4.zip" download>&#11015; Download latest</a>
+            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.8.0.zip" download>&#11015; Download latest</a>
             <button class="ext-btn ghost" onclick="extRunDiag()">Test installation</button>
           </div>
         </div>
@@ -852,7 +866,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.7.4.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.8.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -1046,6 +1060,8 @@ const CONFIG = {
   // the LinkedIn session cookie server-side and injects the verified owner + HUB_SECRET, so the
   // browser never holds the hub secret and data stays scoped per user. Same-origin → cookie sent.
   WEBAPP_URL: 'https://pkzeeqehwmtnqxdpdesl.supabase.co/functions/v1/hub',
+  // Read-only companion function: per-bridge yield + verdict (see Supabase fn `bridge-health`).
+  HEALTH_URL: 'https://pkzeeqehwmtnqxdpdesl.supabase.co/functions/v1/bridge-health',
   // bridge (person) -> the Source organization they represent.
   // Deliberately EMPTY: every account starts with a blank slate. Sources and bridges come
   // from the user's own hub data (getSources / getBridges). Never seed demo organizations
@@ -1075,6 +1091,8 @@ let CHARTS = {};
 let SORT = { key: 'date', dir: -1 };       // default: newest first
 let FLOW_FILTER = null;                      // {type:'source'|'bridge', value:''}
 let BRIDGES = [];                            // candidate bridges from getBridges
+let BRIDGE_HEALTH = {};                      // bridge name -> health row (bridge-health fn)
+let BRIDGE_HEALTH_SUMMARY = null;            // { counts, sources, total }
 let BRIDGE_FILTER = 'all';                   // 'all' | 'active'
 let STAT_FILTER = '';                        // '' | 'today' | 'week' | 'pushed' | 'nolink' — set by clicking a dashboard stat
 
@@ -1240,6 +1258,67 @@ async function loadBridges() {
     const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
     if (j.success) { BRIDGES = j.bridges || []; BRIDGES_LOADED = true; }
   } catch(e) { console.error('loadBridges', e); }
+  await loadBridgeHealth();
+}
+
+// Per-bridge verdict: has this bridge ever actually produced prospects, and if not, why not.
+// Best-effort — the Bridges page renders fine without it.
+async function loadBridgeHealth() {
+  try {
+    const url = CONFIG.HEALTH_URL + '?_=' + Date.now();
+    const r = await fetch(url);
+    const j = await r.json();
+    if (!j || !j.success) return;
+    const map = {};
+    (j.bridges || []).forEach(b => { if (b && b.name) map[String(b.name)] = b; });
+    BRIDGE_HEALTH = map;
+    BRIDGE_HEALTH_SUMMARY = { counts: j.counts || {}, sources: j.sources || [], total: j.total || 0 };
+  } catch(e) { console.error('loadBridgeHealth', e); }
+}
+
+const HEALTH_LABEL = {
+  productive:       'producing',
+  no_yield:         'no prospects yet',
+  never_run:        'not collected yet',
+  filter_ignored:   'search filter ignored',
+  invalid_urn:      'no valid URN',
+  not_first_degree: 'not a 1st-degree connection'
+};
+const HEALTH_WHY = {
+  filter_ignored:   'Sales Navigator dropped the "Connections of" filter and returned a generic search, not this person\'s network. Switched off so it can never be credited with prospects that are not theirs.',
+  invalid_urn:      'No real Sales Navigator member URN, so no search can be built for this person.',
+  not_first_degree: '"Connections of" only works on your own 1st-degree connections. Connect with them first, then switch this bridge back on.',
+  no_yield:         'Collected at least once and returned nothing new.'
+};
+function healthBadge(name){
+  const h = BRIDGE_HEALTH[String(name)];
+  if (!h || !h.verdict) return '';
+  const v = h.verdict;
+  const lbl = HEALTH_LABEL[v] || v;
+  const tip = (HEALTH_WHY[v] || '') + (h.scrape_runs ? ' (' + h.scrape_runs + ' run' + (h.scrape_runs===1?'':'s') + ')' : '');
+  return '<span class="hbadge h-' + v + '" title="' + esc(tip) + '">' + esc(lbl) + '</span>';
+}
+function healthVerdict(name){
+  const h = BRIDGE_HEALTH[String(name)];
+  return h && h.verdict ? h.verdict : '';
+}
+function isDeadBridge(name){
+  const v = healthVerdict(name);
+  return v === 'filter_ignored' || v === 'invalid_urn' || v === 'not_first_degree';
+}
+function healthSummaryBar(){
+  const S = BRIDGE_HEALTH_SUMMARY;
+  if (!S || !S.total) return '';
+  const c = S.counts || {};
+  const order = ['productive','no_yield','never_run','filter_ignored','not_first_degree','invalid_urn'];
+  const chips = order.filter(k => c[k]).map(k =>
+    '<span class="hbadge h-' + k + '">' + c[k] + ' ' + esc(HEALTH_LABEL[k] || k) + '</span>').join('');
+  const dead = (c.filter_ignored||0) + (c.invalid_urn||0) + (c.not_first_degree||0);
+  const note = dead
+    ? dead + ' bridge' + (dead===1?'':'s') + ' can never produce prospects for this account and have been switched off. Remove them, or connect with them on LinkedIn first.'
+    : 'Every bridge here can be collected from.';
+  return '<div class="health-bar"><span class="hb-t">Bridge health</span>' + chips +
+         '<span class="hb-note">' + esc(note) + '</span></div>';
 }
 async function setBridgeActive(urn, active, statusEl) {
   if (statusEl) { statusEl.textContent = 'saving…'; statusEl.classList.remove('ok'); }
@@ -1500,7 +1579,7 @@ function detectExtension(){
 }
 
 // ===== Extension version offer (installed vs latest, like the Linalysis check) =====
-const LATEST_EXT_VERSION = '1.7.4';   // latest packaged extension offered on the platform
+const LATEST_EXT_VERSION = '1.8.0';   // latest packaged extension offered on the platform
 const EXT_ZIP_URL = '/radar-extension-v' + LATEST_EXT_VERSION + '.zip';
 function cmpVer(a, b){
   const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
@@ -1519,9 +1598,9 @@ function checkExtUpdate(){
   const row = document.getElementById('extVersionRow');
   if (row) {
     row.innerHTML = !installed
-      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.7.4.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
+      ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.8.0.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
       : (behind
-        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.7.4.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
+        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.8.0.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
         : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
   }
   const badge = document.getElementById('extNavBadge');
@@ -1874,7 +1953,7 @@ function renderOnboarding(){
         '<div class="ob-note">detected automatically</div>' :
         '<div class="ob-note" style="margin-bottom:6px">Download it, then in <code>chrome://extensions</code> enable <strong>Developer mode</strong> → <strong>Load unpacked</strong> → pick the unzipped folder.</div>' +
         '<div class="ob-actions">' +
-          '<a class="ob-link" href="/radar-extension-v1.7.4.zip" download>Download the extension ↓</a>' +
+          '<a class="ob-link" href="/radar-extension-v1.8.0.zip" download>Download the extension ↓</a>' +
           '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
         '</div>') +
       '</div>' +
@@ -2647,11 +2726,14 @@ function renderBridges(){
         ? '<a class="connect" href="' + esc(b.linkedin_url) + '" target="_blank" rel="noopener">Open profile ↗</a>'
         : '';
       const ttl  = b.title ? '<div class="ttl">' + esc(b.title) + '</div>' : '';
-      return '<div class="bridge-row' + (on ? ' on' : '') + '" data-urn="' + urnAttr + '">' +
+      const hrow = BRIDGE_HEALTH[String(b.name)];
+      const why  = (hrow && hrow.health_reason && isDeadBridge(b.name))
+        ? '<div class="hwhy">' + esc(hrow.health_reason) + '</div>' : '';
+      return '<div class="bridge-row' + (on ? ' on' : '') + (isDeadBridge(b.name) ? ' dead' : '') + '" data-urn="' + urnAttr + '">' +
         '<label class="switch"><input type="checkbox"' + (on ? ' checked' : '') +
           ' onchange="onBridgeToggle(this,\'' + jsq(b.urn) + '\')"><span class="track"></span></label>' +
         gradeBadge +
-        '<div class="info"><div class="nm">' + esc(cleanName(b.name)) + ' ' + lvl + ' ' + hint + ' ' + connect + '</div>' + ttl + '</div>' +
+        '<div class="info"><div class="nm">' + esc(cleanName(b.name)) + ' ' + lvl + ' ' + healthBadge(b.name) + ' ' + hint + ' ' + connect + '</div>' + ttl + why + '</div>' +
         '<div class="tgtcount"><b>' + tgt + '</b><br><span style="font-size:0.72rem">targets</span></div>' +
         '<div class="save-status"></div>' +
         '<button class="remove" title="Remove candidate" onclick="onBridgeRemove(this,\'' + jsq(b.urn) + '\')">✕</button>' +
@@ -2665,7 +2747,7 @@ function renderBridges(){
       '<div class="bridge-list">' + rows + '</div></div>';
   }).join('');
 
-  body.innerHTML = html || '<div class="empty">No active bridges yet — toggle a candidate on above.</div>';
+  body.innerHTML = healthSummaryBar() + (html || '<div class="empty">No active bridges yet — toggle a candidate on above.</div>');
   if (countEl) countEl.textContent = totalActive + ' of ' + BRIDGES.length + ' active';
 }
 
@@ -3302,16 +3384,12 @@ async function loadLeadTarget() {
   } catch(e) {}
 }
 // ===== Plans / free-tier limits =====
-// OPEN BETA (2026-08-21, Olivier): the site is deliberately wide open — anyone can register and
-// every account runs with NO limits while the first users are friends & family. To re-enable the
-// free tier later, return false here; nothing else needs changing.
-function isOpenBeta(){ return true; }
 const PLAN_LIMITS = {
   free: { sources: 1, bridgesPerSource: 5, prospectsPerBridge: 10 },
   pro:  { sources: Infinity, bridgesPerSource: Infinity, prospectsPerBridge: Infinity }
 };
 function currentPlan(){ return window.__PLAN || 'free'; }
-function isFreePlan(){ return !isOpenBeta() && currentPlan() === 'free'; }
+function isFreePlan(){ return currentPlan() === 'free'; }
 function planLimits(){ return PLAN_LIMITS[currentPlan()] || PLAN_LIMITS.free; }
 function fmtLimit(n){ return n === Infinity ? 'Unlimited' : n; }
 // Count current sources / bridges-in-a-source from the loaded state.
@@ -3347,16 +3425,6 @@ function renderPlanPanel(){
   const lim = planLimits();
   const planEl = document.getElementById('billingPlan');
   const featEl = document.getElementById('planFeatures');
-  const upgradeEl = document.getElementById('billingLink');
-  const noteEl = document.getElementById('billingNote');
-  if (isOpenBeta()) {
-    if (planEl) planEl.innerHTML = '<strong>Open beta</strong> — everything unlocked. No limits, no card, nothing to upgrade.';
-    if (featEl) featEl.innerHTML = '<p style="margin-top:6px;font-size:0.9rem;color:#16a34a">\u2713 Unlimited sources, bridges and prospects while Radar is in open beta.</p>';
-    if (upgradeEl) upgradeEl.style.display = 'none';
-    if (noteEl) noteEl.textContent = 'Paid plans arrive later — you will be told well before anything changes.';
-    return;
-  }
-  if (upgradeEl) upgradeEl.style.display = '';
   if (planEl) planEl.innerHTML = plan === 'pro'
     ? '<strong>Pro</strong> — unlimited sources, bridges and prospects.'
     : '<strong>Free</strong> — a taste of Radar. Upgrade to Pro to remove the limits.';
@@ -3633,7 +3701,7 @@ async function initAuth(){
   // Hand the owner_key to the Chrome extension so its collection writes to THIS user's data.
   try { window.dispatchEvent(new CustomEvent('radar-ext-set-owner', { detail: { owner: window.__OWNER } })); } catch(e) {}
   // Plan: admins and anyone flagged pro are unlimited; everyone else is on the free tier.
-  window.__PLAN = (isOpenBeta() || me.isAdmin || user.isAdmin || user.plan === 'pro' || me.plan === 'pro') ? 'pro' : 'free';
+  window.__PLAN = (me.isAdmin || user.isAdmin || user.plan === 'pro' || me.plan === 'pro') ? 'pro' : 'free';
   setLiStatus('connected', (user.name || '').split(' ')[0] || '');
   // Only admins see the Admin link (server enforces this too).
   if (me.isAdmin || user.isAdmin) { const a = document.getElementById('nav-admin'); if (a) a.style.display = 'flex'; }
