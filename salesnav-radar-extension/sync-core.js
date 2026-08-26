@@ -22,6 +22,10 @@ const LIST_EVERY_N_BRIDGES = 4;   // file into the lead list this often during a
 // After LinkedIn refuses the session (401/403), stop asking for a while instead of hammering.
 const SALESNAV_COOLDOWN_KEY = 'radar_salesnav_cooldown_until';
 const SALESNAV_COOLDOWN_MS  = 6 * 60 * 60 * 1000;
+// Bridges we are NOT connected to are exactly what the invite campaign exists for — but Botdog
+// needs a public /in/ URL and 0 of 75 bridges had one, so it could never run. Resolve a few per
+// run. Deliberately small: each one opens a lead page, and this is new behaviour worth watching.
+const BRIDGE_URL_RESOLVE_PER_RUN = 10;
 
 // ===== Per-user isolation =====
 // The signed-in user's owner_key is relayed from the web app (radar-ext-set-owner) and cached
@@ -315,14 +319,38 @@ async function runSync() {
     // Step 2: resolve the list of bridges to collect from. Prefer ACTIVE bridges from the hub;
     // fall back to the hardcoded seed if the hub returns none (and seed them into the hub).
     const allBridges = shuffle(await resolveActiveBridges());
+    // PRE-FLIGHT. CONNECTION_OF only works for 1st-degree connections; for anyone else Sales
+    // Nav drops the filter and hands back a generic pool. Up to 1.9.0 the only defence was the
+    // fingerprint guard, which costs a real scrape per bridge to trigger — 30 bridges burned
+    // 116 scrape runs before they were switched off, and that wasted load is what got the
+    // account 401'd. Now: skip when we POSITIVELY KNOW the degree is not 1st. A blank degree
+    // stays eligible (it means unknown, not "not connected") and falls through to the cheap
+    // page-1 fingerprint guard.
+    const notFirstDegree = b => {
+      const c = String(b.connection || '').toLowerCase().trim();
+      return !!c && !/^1st\b|^1\b/.test(c);
+    };
+    const notConnected = allBridges.filter(notFirstDegree);
+    const eligible     = allBridges.filter(b => !notFirstDegree(b));
+    if (notConnected.length) {
+      await log('warn', 'scrape:skip-not-connected', {
+        count: notConnected.length,
+        pagesSaved: notConnected.length * MAX_PAGES,
+        bridges: notConnected.map(b => b.bridge + ' (' + b.connection + ')').slice(0, 20),
+        reason: 'Not a 1st-degree connection — Sales Nav would drop the CONNECTION_OF filter and return a generic search. Queued for an invite instead of being scraped.'
+      });
+    }
     // Bound the run. The order is randomized every run, so capping here rotates through the
     // full pool over a few days instead of doing one marathon pass that gets the account
     // throttled. (2026-08-25: one uncapped run ran 7h and ended in a 401.)
-    const bridges = allBridges.slice(0, MAX_BRIDGES_PER_RUN);
+    // Cap AFTER filtering, so the per-run budget is never spent on bridges we skip anyway.
+    const bridges = eligible.slice(0, MAX_BRIDGES_PER_RUN);
     await log('info', 'scrape:bridges', {
       count: bridges.length,
+      eligible: eligible.length,
       of: allBridges.length,
-      deferred: Math.max(0, allBridges.length - bridges.length),
+      skippedNotConnected: notConnected.length,
+      deferred: Math.max(0, eligible.length - bridges.length),
       cap: MAX_BRIDGES_PER_RUN,
       order: 'randomized'
     });
@@ -425,9 +453,15 @@ async function runSync() {
       listedTotal += (listRes && listRes.added) || 0;
     } catch (e) { await log('warn', 'salesnav-list:error', { error: String(e) }); }
 
+    // Give the invite campaign something to work with: resolve a few missing bridge URLs.
+    let bridgeUrls = { attempted: 0, resolved: 0, remaining: 0 };
+    try { bridgeUrls = await resolveBridgeUrls(BRIDGE_URL_RESOLVE_PER_RUN); }
+    catch (e) { await log('warn', 'bridge-url:error', { error: String(e) }); }
+
     // OPTIONAL phase. Botdog is an add-on, not a requirement: Radar is complete without it, and
     // a missing key is an info-level skip, never an error (best-effort; never blocks the run).
-    try { await pushBridgesToBotdog(); } catch (e) { await log('warn', 'bridge-push:error', { error: String(e) }); }
+    let bridgePush = null;
+    try { bridgePush = await pushBridgesToBotdog(); } catch (e) { await log('warn', 'bridge-push:error', { error: String(e) }); }
 
     // Honest status. Up to 1.8.1 this was hardcoded 'ok' - a run with 49 scrape errors, or one
     // that ended in a Sales Nav 401 having filed nobody, still reported "ok", which is exactly
@@ -441,6 +475,9 @@ async function runSync() {
       version: EXT_VERSION,
       found: foundTotal, saved: savedTotal, listed: listedTotal,
       bridges: bridgesDone, pagesLeft: pageBudget.left,
+      skippedNotConnected: notConnected.length,
+      bridgeUrlsResolved: bridgeUrls.resolved, bridgeUrlsMissing: bridgeUrls.remaining,
+      bridgesInvited: (bridgePush && (bridgePush.sent || 0)) || 0,
       errors: RUN_ERRORS, listCooling: listCooling,
       status: status
     });
@@ -850,6 +887,49 @@ async function enricherResolve(firstName, lastName, company, title) {
   return '';
 }
 
+// Patch ONE bridge's public URL on the hub. Uses setBridgeMeta, NOT addBridges: addBridges is
+// an upsert that rewrites `active` from its payload, so reusing it here would silently switch
+// bridges off as a side effect of saving a URL.
+async function saveBridgeUrl(urn, url) {
+  const body = { secret: INGEST_SECRET, action: 'setBridgeMeta', urn: urn, linkedin_url: url };
+  if (CURRENT_OWNER) body.owner = CURRENT_OWNER;
+  const resp = await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const out = await resp.json().catch(() => null);
+  if (!resp.ok || (out && out.ok === false)) throw new Error('hub ' + resp.status + ': ' + ((out && out.error) || 'save failed'));
+  return true;
+}
+
+// Resolve public /in/ URLs for bridges that have none, so the invite campaign has something to
+// work with. IMPORTANT: public-URL resolution degrades with network distance — for people well
+// out of network the lead page often exposes no /in/ link at all. Failures here are EXPECTED and
+// reported as counts, never as errors.
+async function resolveBridgeUrls(cap) {
+  let all = [];
+  try { all = await getBridges(); } catch (e) { return { attempted: 0, resolved: 0, failed: 0, remaining: 0 }; }
+  const missing = (all || []).filter(b => b && b.urn && !/linkedin\.com\/in\//i.test(String(b.linkedin_url || '')));
+  const todo = missing.slice(0, cap || BRIDGE_URL_RESOLVE_PER_RUN);
+  if (!todo.length) return { attempted: 0, resolved: 0, failed: 0, remaining: 0 };
+  await log('info', 'bridge-url:start', { attempting: todo.length, missingTotal: missing.length });
+  let resolved = 0, failed = 0;
+  for (const b of todo) {
+    let url = null;
+    try { url = await resolveUrn(b.urn); } catch (e) {}
+    if (url && /linkedin\.com\/in\//i.test(url)) {
+      try { await saveBridgeUrl(b.urn, url); resolved++; }
+      catch (e) { failed++; await log('warn', 'bridge-url:save-failed', { bridge: b.name, error: String(e) }); }
+    } else {
+      failed++;
+    }
+    await sleep(1200);
+  }
+  await log('info', 'bridge-url:done', {
+    attempted: todo.length, resolved: resolved, unresolvable: failed,
+    stillMissing: Math.max(0, missing.length - resolved),
+    note: 'Unresolvable usually means the person is too far out of network for LinkedIn to expose a public profile URL.'
+  });
+  return { attempted: todo.length, resolved: resolved, failed: failed, remaining: Math.max(0, missing.length - resolved) };
+}
+
 async function pushBridgesToBotdog() {
   const cfg = await chrome.storage.local.get(['radar_botdog_key', 'radar_bridges_campaign', 'radar_bridges_pushed', 'radar_bridge_invite_skips']);
   const key = cfg.radar_botdog_key;
@@ -955,10 +1035,12 @@ async function resolveActiveBridges() {
   if (active.length > 0) {
     await log('info', 'bridges:active', { count: active.length });
     return active.map(b => ({
-      bridge:   b.name || '',
-      source:   b.source || '',
-      category: b.connection || 'partner',
-      urn:      b.urn,
+      bridge:     b.name || '',
+      source:     b.source || '',
+      category:   b.connection || 'partner',
+      urn:        b.urn,
+      connection: b.connection || '',   // '' = unknown, never assume "not connected"
+      linkedin_url: b.linkedin_url || ''
     }));
   }
 
@@ -1171,7 +1253,25 @@ async function extractCandidatesFromPage() {
         const a11y = li.querySelector('span.a11y-text') || li.querySelector('.a11y-text');
         const name = a11y ? cleanName((a11y.textContent || '').replace(/^\s*Add\s+/i, '').replace(/\s+to selection\s*$/i, '')) : '';
         if (!name) return;
-        byUrn.set(urn, { name, title: '', urn, linkedin_url: '', connection: '' });
+        // Capture the connection DEGREE here. Sales Nav's CONNECTION_OF filter only works for
+        // your 1st-degree connections; for anyone else it is silently DROPPED and the search
+        // returns a generic pool. Until now discovery hardcoded '' and threw the badge away, so
+        // 69 of 75 bridges had no degree and every one had to be scraped to find out. The lead
+        // scraper already reads this from the same card — do the same here. Best-effort: blank
+        // when the badge is not rendered, which callers treat as "unknown", never as "not 1st".
+        let degree = '';
+        try {
+          const card = li;
+          let deg = (card.textContent || '').match(/(?:^|[·•\s])(1st|2nd|3rd)\b/i)
+                 || (card.textContent || '').match(/\b(1st|2nd|3rd)\s+degree/i);
+          if (!deg) {
+            const al = Array.from(card.querySelectorAll('[aria-label]'))
+              .map(e => e.getAttribute('aria-label') || '').join(' ');
+            deg = al.match(/\b(1st|2nd|3rd)\b/i);
+          }
+          if (deg) degree = deg[1].toLowerCase();
+        } catch (e) {}
+        byUrn.set(urn, { name, title: '', urn, linkedin_url: '', connection: degree });
       } catch (e) {}
     });
   };

@@ -1,3 +1,30 @@
+## 1.9.1 - 2026-08-26
+Stop scraping bridges we are not connected to, instead of discovering it by scraping them.
+
+- **Discovery now records the connection DEGREE.** `extractCandidatesFromPage()` hardcoded
+  `connection: ''`, so 69 of 75 bridges had no degree and every one had to be scraped to find out
+  whether Sales Nav would honour its `CONNECTION_OF` filter. It now reads the degree badge from
+  the same card the lead scraper already reads it from. Blank still means UNKNOWN, never "not connected".
+- **Pre-flight skip.** A bridge whose degree is positively known to be non-1st is never scraped:
+  `CONNECTION_OF` only works for your 1st-degree connections, and for anyone else Sales Nav
+  silently drops the filter and returns a generic pool. Logs `scrape:skip-not-connected` with the
+  count and the page loads saved. Unknown degree stays eligible and falls through to the cheap
+  page-1 fingerprint guard. The per-run cap is applied AFTER this filter, so the budget is never
+  spent on bridges we skip anyway.
+- **Bridge URLs + invites (the loop that never closed).** 0 of 75 bridges had a public `/in/` URL,
+  and the hub's `pushBridges` requires one — so the bridges campaign could never invite anyone and
+  `botdog_pushed` was null for all 75. `resolveBridgeUrls()` now resolves up to
+  `BRIDGE_URL_RESOLVE_PER_RUN` (10) per run and saves them via the new hub `setBridgeMeta` action.
+  Deliberately NOT `addBridges`: that is an upsert which rewrites `active` from its payload, so
+  reusing it to save a URL would silently switch bridges off.
+  Public-URL resolution degrades with network distance, so some bridges are simply unresolvable —
+  reported as `unresolvable` counts, never as errors.
+- **Reporting.** `run:done` now also carries `skippedNotConnected`, `bridgeUrlsResolved`,
+  `bridgeUrlsMissing` and `bridgesInvited`.
+- Hub v15: `readBridges` returns `linkedin_url`, `health` and `botdog_pushed`; `setBridgeMeta`
+  patches url/degree without touching `active`, marks a known non-1st bridge `not_connected`, and
+  RE-ENABLES a bridge that has become 1st-degree.
+
 ## 1.9.0 - 2026-08-26
 Audit of the 2026-08-25 run found collection working (3446 found / 3444 saved on 1.8.1) while
 everything downstream of it was broken. Five fixes, all traced to that one run's logs.
