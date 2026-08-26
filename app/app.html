@@ -598,6 +598,12 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     <!-- ===== Dashboard (command center) ===== -->
     <section id="view-home" class="view active">
       <div class="page-head"><h2>Dashboard</h2><p>Your engine at a glance — capture health, pipeline totals, and what needs attention today.</p></div>
+      <div id="extUpdateBannerHome" class="banner banner-danger" style="display:none">
+        <span id="extUpdateMsgHome"></span>
+        <a href="/radar-extension-v1.9.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
+        <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
+        <div id="extUpdateHelpHome" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400">Open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. Reloading is what actually updates the browser — downloading the zip on its own does nothing.</div>
+      </div>
       <div id="onboardingWrapHome"></div>
       <div id="homeBody"><div class="empty">Loading…</div></div>
     </section>
@@ -1379,6 +1385,7 @@ async function load() {
       // Merge hub-stored exclusions (cross-device) with local ones, if the backend provides them.
       if (json.excluded_leads) { try { loadExclusions(JSON.parse(json.excluded_leads)); } catch(e) {} }
       renderAll();
+      try { refreshBotdogOk(); } catch(e) {}
     }
   } catch(e) { console.error('load', e); }
   await loadKeyStatus();
@@ -1601,7 +1608,11 @@ function cmpVer(a, b){
 // is how a stale extension ran unnoticed from 2026-08-19 to 08-25. Kept as a no-op returning
 // false so any stored dismissal from the old build is ignored from now on.
 function extUpdateDismissed(){ return false; }
-function toggleExtUpdateHelp(){ const h = document.getElementById('extUpdateHelp'); if (h) h.style.display = (h.style.display==='none' ? 'block' : 'none'); }
+function toggleExtUpdateHelp(){
+  ['extUpdateHelp','extUpdateHelpHome'].forEach(function(id){
+    const h = document.getElementById(id); if (h) h.style.display = (h.style.display==='none' ? 'block' : 'none');
+  });
+}
 function checkExtUpdate(){
   // Live-only: trust ONLY what the extension announces this page load (never stale localStorage),
   // so we never falsely claim "installed" after the extension has been removed.
@@ -1622,13 +1633,15 @@ function checkExtUpdate(){
     else { badge.style.display = 'none'; }
   }
   try { if (document.getElementById('view-extension') && document.getElementById('view-extension').classList.contains('active')) extRenderState(); } catch(e) {}
-  const banner = document.getElementById('extUpdateBanner'), msg = document.getElementById('extUpdateMsg');
-  if (banner) {
-    if (behind && !extUpdateDismissed()) {
-      if (msg) msg.innerHTML = '⚠ Radar is collecting with an <strong>outdated extension (v'+installed+')</strong> — the fixes in v'+LATEST_EXT_VERSION+' are NOT running. Reload the extension in Chrome to activate them.';
-      banner.style.display = 'block';
-    } else { banner.style.display = 'none'; }
-  }
+  // Paint BOTH hosts: the legacy view-dashboard copy and the one on view-home (the view
+  // users actually land on). Missing the second is what made this warning invisible.
+  const copy = '⚠ Radar is collecting with an <strong>outdated extension (v'+installed+')</strong> — the fixes in v'+LATEST_EXT_VERSION+' are NOT running. Reload the extension in Chrome to activate them.';
+  [['extUpdateBanner','extUpdateMsg'], ['extUpdateBannerHome','extUpdateMsgHome']].forEach(function(ids){
+    const banner = document.getElementById(ids[0]), msg = document.getElementById(ids[1]);
+    if (!banner) return;
+    if (behind) { if (msg) msg.innerHTML = copy; banner.style.display = 'block'; }
+    else { banner.style.display = 'none'; }
+  });
 }
 
 // ===== Extension page (download / health check / launch a sync) =====
@@ -1924,7 +1937,9 @@ function renderOnboarding(){
     icp     : !!window.__hasIcp,
     list    : !!window.__hasList,
     source  : srcCount > 0,
-    botdog  : obFlag(OB_KEYS.botdog)   // OPTIONAL — never counted toward completion
+    // Hub truth first (window.__botdogOk, from keyStatus); the local flag is only a fallback
+    // for the moment before that request lands. OPTIONAL — never counted toward completion.
+    botdog  : (window.__botdogOk === true) || obFlag(OB_KEYS.botdog)
   };
   // Botdog is deliberately NOT in REQUIRED: Radar collects and files prospects on its own;
   // Botdog only adds the outreach layer. Setup is "complete" without it.
@@ -3575,6 +3590,20 @@ function loadSavedKeys(){
   try { toggleKeyVisibility(); } catch(e) {}
 }
 
+// Ask the HUB whether this account has a working Botdog key, and cache it on window so the
+// dashboard checklist stops asking people to add a key they already have. Cheap, runs once on
+// boot, and keeps the local flag in sync so both sources agree.
+async function refreshBotdogOk(){
+  try {
+    const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=keyStatus&_=' + Date.now();
+    const text = await fetch(url).then(r => r.text());
+    const j = JSON.parse(text.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    window.__botdogOk = !!(j.botdog_set && j.botdog_valid);
+    obSet(OB_KEYS.botdog, window.__botdogOk);
+    try { renderOnboarding(); } catch(e) {}
+  } catch(e) {}
+}
+
 async function loadKeyStatus() {
   try {
     const url = CONFIG.WEBAPP_URL + '?callback=_cb&action=keyStatus&_=' + Date.now();
@@ -3586,6 +3615,9 @@ async function loadKeyStatus() {
       return valid ? '<span style="color:#16a34a;font-weight:600">Set &amp; Valid ✓</span>'
                    : '<span style="color:#dc2626;font-weight:600">Set but Invalid ✗</span>';
     };
+    window.__botdogOk = !!(json.botdog_set && json.botdog_valid);
+    obSet(OB_KEYS.botdog, window.__botdogOk);
+    try { renderOnboarding(); } catch(e) {}
     const when = json.tested_at ? 'Last tested: ' + new Date(json.tested_at).toLocaleString() : 'Not tested yet — click “Test keys now”.';
     document.getElementById('keyStatus').innerHTML =
       'Botdog: ' + fmt(json.botdog_set, json.botdog_valid) + '<br>' +
