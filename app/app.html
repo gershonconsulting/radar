@@ -320,6 +320,11 @@ td a:hover{ text-decoration:underline; }
 
 /* ---------- Banner ---------- */
 .banner{ background:#fef3c7; border:1px solid #f59e0b; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:0.875rem; color:#92400e; }
+/* An outdated extension is an ACTIVE FAULT: collection keeps reporting success while the
+   fixes are not running. On 2026-08-19..25 Radar ran a stale build for six days behind a
+   soft blue notice that had been dismissed. This one is red and cannot be dismissed. */
+.banner-danger{ background:#fef2f2; border:1px solid #dc2626; color:#b91c1c; font-weight:600;
+  box-shadow:0 1px 2px rgba(185,28,28,.10); }
 
 /* ---------- Views ---------- */
 .view{ display:none; }
@@ -607,12 +612,11 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div id="warningBanner" class="banner" style="display:none">
         WEBAPP_URL not configured — set CONFIG.WEBAPP_URL in app/index.html.
       </div>
-      <div id="extUpdateBanner" class="banner" style="display:none;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
+      <div id="extUpdateBanner" class="banner banner-danger" style="display:none">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension-v1.9.0.zip" download style="margin-left:10px;font-weight:600;color:#2563eb;text-decoration:none">Download latest ↓</a>
-        <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#2563eb;text-decoration:none">How to update</a>
-        <a href="#" onclick="dismissExtUpdate();return false" style="margin-left:12px;color:#64748b;text-decoration:none">Dismiss</a>
-        <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#334155;font-weight:400">To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.)</div>
+        <a id="extUpdateDl" href="/radar-extension-v1.9.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
+        <a href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
+        <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400">To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.) Reloading is what actually updates the browser — downloading the zip on its own does nothing.</div>
       </div>
       <!-- ========= 1. SOURCES ========= -->
       <div class="dash-sec stage-sources">
@@ -1592,8 +1596,11 @@ function cmpVer(a, b){
   for (let i=0; i<Math.max(pa.length, pb.length); i++){ const d = (pa[i]||0)-(pb[i]||0); if (d) return d<0?-1:1; }
   return 0;
 }
-function extUpdateDismissed(){ try { return localStorage.getItem('radar_ext_update_dismissed') === LATEST_EXT_VERSION; } catch(e){ return false; } }
-function dismissExtUpdate(){ try { localStorage.setItem('radar_ext_update_dismissed', LATEST_EXT_VERSION); } catch(e){} const b = document.getElementById('extUpdateBanner'); if (b) b.style.display='none'; }
+// Deliberately NOT dismissible. The previous build persisted a dismissal per-version in
+// localStorage, so one click silenced the warning for the whole life of that version — which
+// is how a stale extension ran unnoticed from 2026-08-19 to 08-25. Kept as a no-op returning
+// false so any stored dismissal from the old build is ignored from now on.
+function extUpdateDismissed(){ return false; }
 function toggleExtUpdateHelp(){ const h = document.getElementById('extUpdateHelp'); if (h) h.style.display = (h.style.display==='none' ? 'block' : 'none'); }
 function checkExtUpdate(){
   // Live-only: trust ONLY what the extension announces this page load (never stale localStorage),
@@ -1605,20 +1612,20 @@ function checkExtUpdate(){
     row.innerHTML = !installed
       ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="/radar-extension-v1.9.0.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
       : (behind
-        ? 'Installed <strong>v'+installed+'</strong> · <span style="color:#b45309;font-weight:600">update available (v'+LATEST_EXT_VERSION+')</span> — <a href="/radar-extension-v1.9.0.zip" download style="color:#2563eb">download latest</a>, then Reload the extension.'
+        ? '<div style="background:#fef2f2;border:1px solid #dc2626;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Radar is running an outdated extension (v'+installed+').</strong> <span style="color:#7f1d1d">Collection keeps reporting success, but nothing fixed since v'+installed+' is actually running. Latest is v'+LATEST_EXT_VERSION+'.</span><div style="margin-top:8px"><a href="/radar-extension-v1.9.0.zip" download class="btn-save" style="display:inline-block;text-decoration:none">Download v'+LATEST_EXT_VERSION+' ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then open <code>chrome://extensions</code> and click <strong>Reload</strong> on “Radar — Sales Nav Collector”. <strong>Downloading alone changes nothing</strong> — the browser keeps running the old build until it is reloaded.</div></div>'
         : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
   }
   const badge = document.getElementById('extNavBadge');
   if (badge) {
     if (!installed) { badge.style.display = ''; badge.textContent = '!'; badge.title = 'Extension not installed'; }
-    else if (behind) { badge.style.display = ''; badge.textContent = '\u2191'; badge.title = 'Update available'; }
+    else if (behind) { badge.style.display = ''; badge.textContent = '!'; badge.title = 'Outdated extension v' + installed + ' — reload to v' + LATEST_EXT_VERSION; }
     else { badge.style.display = 'none'; }
   }
   try { if (document.getElementById('view-extension') && document.getElementById('view-extension').classList.contains('active')) extRenderState(); } catch(e) {}
   const banner = document.getElementById('extUpdateBanner'), msg = document.getElementById('extUpdateMsg');
   if (banner) {
     if (behind && !extUpdateDismissed()) {
-      if (msg) msg.innerHTML = 'A new version of Radar is available — <strong>v'+LATEST_EXT_VERSION+'</strong> (you have v'+installed+').';
+      if (msg) msg.innerHTML = '⚠ Radar is collecting with an <strong>outdated extension (v'+installed+')</strong> — the fixes in v'+LATEST_EXT_VERSION+' are NOT running. Reload the extension in Chrome to activate them.';
       banner.style.display = 'block';
     } else { banner.style.display = 'none'; }
   }
