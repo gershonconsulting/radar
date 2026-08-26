@@ -1,3 +1,39 @@
+## 1.9.0 - 2026-08-26
+Audit of the 2026-08-25 run found collection working (3446 found / 3444 saved on 1.8.1) while
+everything downstream of it was broken. Five fixes, all traced to that one run's logs.
+
+- **FIX: the Sales Navigator 401.** That run filed 200 prospects perfectly at 08:16, then scraped
+  for SEVEN HOURS and was refused with a 401 at 14:53. The list phase was never broken — the
+  scrape burned the session it depends on. Runs are now bounded (`MAX_BRIDGES_PER_RUN` 15,
+  `MAX_PAGES_PER_RUN` 150, order still randomized so the pool rotates across runs), the list
+  phase runs every 4 bridges instead of only at the ends, chunk pacing is 4–9s, and a 401/403
+  sets a 6h cooldown (`salesnav-list:cooldown`) instead of re-asking every run.
+- **The list phase now proves the session before spending the backlog.** It polls for a genuinely
+  authenticated Sales Nav page (`ajax:` csrf shape, not on a login/checkpoint/authwall path)
+  rather than firing blind after a fixed 7s. A cold browser needs far longer than 7s, and firing
+  early is what turns a healthy backlog into a 401. Logs `salesnav-list:not-authenticated`.
+- **FIX: `title` was the screen-reader label.** 1562 of the 1722 targets collected on 2026-08-25
+  have `title = "Add <Name> to selection"`. The title picker took the longest text leaf in the
+  card, and on the 2026 Sales Nav DOM that leaf is the `.a11y-text` selection label. Every
+  `.a11y-text` leaf is now excluded, as is Sales Nav marketing copy (one row's title was
+  "InMails get 5x more responses than emails"). Same exclusion applied to the location picker.
+- **FIX: `linkedin_url` was empty on all 1722 rows.** `resolveUrn()` read the `/in/` anchor once,
+  2500ms after opening a Sales Nav lead page — an SPA that has essentially never rendered it by
+  then, so it returned null every time. It now polls inside the page (~13s).
+- **FIX: Botdog had never run.** The extension reads the key from `chrome.storage.local`, but the
+  key lives on the hub and `getConfig` redacts every `*_api_key`, so it could never arrive —
+  `bridge-push:skip "not configured"` on every run since 2026-07-27 while a valid key sat on the
+  hub and `bridges.botdog_pushed` stayed null for all 80 rows. With no local key the extension
+  now delegates to the hub's server-side `pushBridges`, where the key actually is.
+- **The dropped-filter guard now fires after page 1, not after 25.** "Nicolas MILONAS" cost 25
+  page loads to return the same 625 people as another bridge. Those wasted loads are precisely
+  what exhausts the session. Page-1 fingerprints use their own scope (`p1:`).
+- **`run:done.status` is derived, not hardcoded.** A run with 49 scrape errors, or one that ended
+  in a 401 having filed nobody, used to report `status:"ok"` — which is what let a dead system
+  look alive for days. Status is now `error` on any error-level log or found>0/saved==0, and
+  `degraded` while the Sales Nav cooldown is active. `run:done` also carries `errors`,
+  `bridges`, `pagesLeft` and `listCooling`.
+
 ## 1.8.1 - 2026-08-24
 - **FIX: nothing had been filed into the Sales Navigator lead list since 2026-08-15.** Every run
   logged `salesnav-list:start` and then `salesnav-list:no-tab` — 1853 prospects sat pending.

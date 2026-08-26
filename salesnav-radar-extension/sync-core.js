@@ -11,6 +11,17 @@ const WEBAPP_URL    = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/functions/v1/hub
 const INGEST_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 const MAX_PAGES     = 25;
 const MAX_RESOLVE_PER_RUN = 100;
+// ---- Run discipline (1.9.0) ---------------------------------------------------
+// A single run on 2026-08-25 scraped for SEVEN HOURS (3446 leads, hundreds of Sales Nav page
+// loads). It filed 200 prospects into the lead list at 08:16 and was refused with a 401 by
+// 14:53 - the scrape burned the very session the list phase depends on. Runs are now bounded,
+// and the list phase runs BETWEEN bridges so prospects land while the session is still healthy.
+const MAX_BRIDGES_PER_RUN = 15;   // bridges scraped per run (rest rotate in next run)
+const MAX_PAGES_PER_RUN   = 150;  // hard ceiling on Sales Nav page loads per run
+const LIST_EVERY_N_BRIDGES = 4;   // file into the lead list this often during a run
+// After LinkedIn refuses the session (401/403), stop asking for a while instead of hammering.
+const SALESNAV_COOLDOWN_KEY = 'radar_salesnav_cooldown_until';
+const SALESNAV_COOLDOWN_MS  = 6 * 60 * 60 * 1000;
 
 // ===== Per-user isolation =====
 // The signed-in user's owner_key is relayed from the web app (radar-ext-set-owner) and cached
@@ -69,7 +80,9 @@ try { EXT_VERSION = chrome.runtime.getManifest().version; } catch (e) {}
 
 // --- Logging ---
 const MAX_LOG_ENTRIES = 200;
+let RUN_ERRORS = 0;
 async function log(level, msg, data) {
+  if (level === 'error') RUN_ERRORS++;
   const entry = { ts: new Date().toISOString(), level, msg, data: data !== undefined ? data : null };
   console[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log']('[Radar]', msg, data !== undefined ? data : '');
   try {
@@ -79,7 +92,7 @@ async function log(level, msg, data) {
     await chrome.storage.local.set({ radarLog: arr.slice(0, MAX_LOG_ENTRIES) });
   } catch(e) {}
 }
-async function clearLog() { await chrome.storage.local.set({ radarLog: [] }); }
+async function clearLog() { RUN_ERRORS = 0; await chrome.storage.local.set({ radarLog: [] }); }
 
 // --- Alarms / schedule ---
 // The extension is the ONLY scheduler — Radar runs fully standalone, with no dependence on
@@ -301,8 +314,18 @@ async function runSync() {
   try {
     // Step 2: resolve the list of bridges to collect from. Prefer ACTIVE bridges from the hub;
     // fall back to the hardcoded seed if the hub returns none (and seed them into the hub).
-    const bridges = shuffle(await resolveActiveBridges());
-    await log('info', 'scrape:bridges', { count: bridges.length, order: 'randomized' });
+    const allBridges = shuffle(await resolveActiveBridges());
+    // Bound the run. The order is randomized every run, so capping here rotates through the
+    // full pool over a few days instead of doing one marathon pass that gets the account
+    // throttled. (2026-08-25: one uncapped run ran 7h and ended in a 401.)
+    const bridges = allBridges.slice(0, MAX_BRIDGES_PER_RUN);
+    await log('info', 'scrape:bridges', {
+      count: bridges.length,
+      of: allBridges.length,
+      deferred: Math.max(0, allBridges.length - bridges.length),
+      cap: MAX_BRIDGES_PER_RUN,
+      order: 'randomized'
+    });
 
     if (!WEBAPP_URL || WEBAPP_URL === '__WEBAPP_URL__') { await log('warn', 'WEBAPP_URL not set'); return { status: 'no-webapp-url' }; }
 
@@ -312,6 +335,9 @@ async function runSync() {
 
     // Shared URL-resolution budget for the whole run (resolving opens a tab per lead).
     const resolveState = { left: MAX_RESOLVE_PER_RUN };
+    // Shared page-load budget: the hard ceiling on how much Sales Navigator this run touches.
+    const pageBudget = { left: MAX_PAGES_PER_RUN };
+    let bridgesDone = 0;
 
     // CRITICAL: write EACH bridge's leads to the hub as soon as they're scraped. Previously the
     // run hoarded all ~80 bridges' leads in memory and wrote once at the very end - with dozens of
@@ -319,6 +345,15 @@ async function runSync() {
     // saved even though every bridge popped "found N". Per-bridge writes = data lands immediately
     // and an interrupted run keeps everything up to the point it stopped.
     for (const bridge of bridges) {
+      if (pageBudget.left <= 0) {
+        await log('warn', 'scrape:budget-reached', {
+          cap: MAX_PAGES_PER_RUN,
+          scraped: bridgesDone,
+          skipped: bridges.length - bridgesDone,
+          reason: 'page budget spent - remaining bridges roll over to the next run'
+        });
+        break;
+      }
       let leads = [];
       // A bridge without a real Sales Navigator member urn can never be searched: the
       // CONNECTION_OF filter is invalid, so LinkedIn quietly returns a generic result set.
@@ -328,7 +363,7 @@ async function runSync() {
       }
       try {
         await log('info', 'scrape:start', { bridge: bridge.bridge });
-        leads = await scrapeBridge(bridge);
+        leads = await scrapeBridge(bridge, pageBudget);
         await log('info', 'scrape:done', { bridge: bridge.bridge, leadCount: leads.length });
       } catch (err) { await log('error', 'scrape:error', { bridge: bridge.bridge, error: String(err) }); leads = []; }
 
@@ -368,6 +403,17 @@ async function runSync() {
         }
         try { await pushLog(); } catch (e) {}
       }
+      bridgesDone++;
+      // Keep filing DURING the run, not only at the ends. The 2026-08-25 failure was a run whose
+      // list phase succeeded at 08:16 and was refused at 14:53 - everything collected in between
+      // waited seven hours for a session that no longer existed. Filing every few bridges means
+      // prospects land while the session is still good, and a later refusal costs far less.
+      if (bridgesDone % LIST_EVERY_N_BRIDGES === 0 && bridgesDone < bridges.length) {
+        try {
+          const mid = await saveTargetsToSalesNavList();
+          listedTotal += (mid && mid.added) || 0;
+        } catch (e) { await log('warn', 'salesnav-list:error', { error: String(e) }); }
+      }
       await humanDelay(12000, 28000);
     }
 
@@ -383,10 +429,23 @@ async function runSync() {
     // a missing key is an info-level skip, never an error (best-effort; never blocks the run).
     try { await pushBridgesToBotdog(); } catch (e) { await log('warn', 'bridge-push:error', { error: String(e) }); }
 
-    await log('info', 'run:done', { version: EXT_VERSION, found: foundTotal, saved: savedTotal, listed: listedTotal, status: 'ok' });
-    // Silent summary (info) unless nothing saved despite finding people — then flag it.
-    notify('Sync complete', savedTotal + ' new targets saved (' + foundTotal + ' found), ' + listedTotal + ' added to your Sales Nav list.', (foundTotal > 0 && savedTotal === 0) ? 'error' : undefined);
-    return { status: 'ok', found: foundTotal, saved: savedTotal, listed: listedTotal, written: savedTotal, upserted: savedTotal };
+    // Honest status. Up to 1.8.1 this was hardcoded 'ok' - a run with 49 scrape errors, or one
+    // that ended in a Sales Nav 401 having filed nobody, still reported "ok", which is exactly
+    // what let a dead system look alive for days. Derive it from what actually happened.
+    const listCooling = (await salesNavCooldownLeft()) > 0;
+    let status = 'ok';
+    if (RUN_ERRORS > 0) status = 'error';
+    else if (foundTotal > 0 && savedTotal === 0) status = 'error';
+    else if (listCooling) status = 'degraded';
+    await log('info', 'run:done', {
+      version: EXT_VERSION,
+      found: foundTotal, saved: savedTotal, listed: listedTotal,
+      bridges: bridgesDone, pagesLeft: pageBudget.left,
+      errors: RUN_ERRORS, listCooling: listCooling,
+      status: status
+    });
+    notify('Sync complete', savedTotal + ' new targets saved (' + foundTotal + ' found), ' + listedTotal + ' added to your Sales Nav list.', status === 'error' ? 'error' : undefined);
+    return { status: status, found: foundTotal, saved: savedTotal, listed: listedTotal, errors: RUN_ERRORS, written: savedTotal, upserted: savedTotal };
   } finally {
     // Always clean up the dedicated background scrape window at the end of the run.
     await closeScrapeWindow();
@@ -456,6 +515,37 @@ const SALESNAV_LIST_CHUNK       = 25;   // = Sales Nav's own page size for "sele
 // Injected into a logged-in Sales Navigator tab. Adds ONE chunk of member urns to the list.
 // Kept deliberately small and self-contained: the service worker drives the loop so that each
 // chunk is a fresh extension API call, which keeps the MV3 worker alive across a long backlog.
+async function salesNavCooldownLeft() {
+  try {
+    const r = await chrome.storage.local.get(SALESNAV_COOLDOWN_KEY);
+    const t = r[SALESNAV_COOLDOWN_KEY] ? new Date(r[SALESNAV_COOLDOWN_KEY]).getTime() : 0;
+    return Math.max(0, t - Date.now());
+  } catch (e) { return 0; }
+}
+async function setSalesNavCooldown(ms) {
+  try { const o = {}; o[SALESNAV_COOLDOWN_KEY] = new Date(Date.now() + ms).toISOString(); await chrome.storage.local.set(o); } catch (e) {}
+}
+async function clearSalesNavCooldown() {
+  try { await chrome.storage.local.remove(SALESNAV_COOLDOWN_KEY); } catch (e) {}
+}
+
+// Injected. Confirms the tab really is an authenticated Sales Navigator page before we spend
+// the backlog on it. A JSESSIONID cookie alone proves nothing - LinkedIn sets one for logged-out
+// visitors too - so we also require an `ajax:` csrf shape and that we are not sitting on a
+// login / checkpoint / authwall page.
+function salesNavSessionProbeInPage() {
+  const csrf = (document.cookie.match(/JSESSIONID="?([^";]+)"?/) || [])[1] || '';
+  const path = location.pathname || '';
+  const blocked = /\/(login|checkpoint|authwall|uas|signup)(\/|$)/i.test(path);
+  return {
+    ok: !!csrf && /^ajax:/.test(csrf) && !blocked,
+    csrf: !!csrf,
+    csrfShape: csrf ? csrf.slice(0, 5) : '',
+    blocked: blocked,
+    path: path
+  };
+}
+
 function salesNavAddChunkInPage(listId, urns) {
   const csrf = (document.cookie.match(/JSESSIONID="?([^";]+)"?/) || [])[1];
   if (!csrf) return Promise.resolve({ ok: false, error: 'no JSESSIONID cookie (not logged in to LinkedIn)' });
@@ -491,6 +581,12 @@ async function markSalesNavListed(leadIds) {
 
 // Main phase. Safe to call on every run: if nothing is pending it does nothing and opens no tab.
 async function saveTargetsToSalesNavList() {
+  // Respect a cooldown set by an earlier 401/403 - retrying immediately just deepens the block.
+  const cool = await salesNavCooldownLeft();
+  if (cool > 0) {
+    await log('info', 'salesnav-list:cooldown', { minutes_left: Math.ceil(cool / 60000) });
+    return { ok: true, added: 0, reason: 'cooldown' };
+  }
   let pending = null;
   try {
     pending = await fetchHubJsonp('salesnavPending', { cap: SALESNAV_LIST_MAX_PER_RUN });
@@ -537,7 +633,26 @@ async function saveTargetsToSalesNavList() {
     notify('Sales Nav list blocked', 'Radar could not open a LinkedIn tab to file ' + ids.length + ' prospect(s). Keep Chrome open and logged in.', 'error');
     return { ok: false, added: 0, reason: 'no-tab' };
   }
-  await sleep(7000);  // let the SPA boot so the session is warm before the first call
+  // Poll for a genuinely authenticated Sales Nav page rather than firing blind after a fixed
+  // wait. A cold browser needs far longer than 7s, and firing early is what turns a healthy
+  // backlog into a 401.
+  let probe = null;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    await sleep(2000);
+    try {
+      const out = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: salesNavSessionProbeInPage });
+      probe = (out && out[0]) ? out[0].result : null;
+    } catch (e) { probe = null; }
+    if (probe && probe.ok) break;
+  }
+  if (!probe || !probe.ok) {
+    try { chrome.tabs.remove(tab.id); } catch (e) {}
+    await log('error', 'salesnav-list:not-authenticated', { probe: probe || null,
+      hint: 'Log in to Sales Navigator in Chrome, then run again.' });
+    notify('Sales Nav not logged in', 'Radar could not confirm a logged-in Sales Navigator session - ' + ids.length + ' prospect(s) still queued.', 'error');
+    await setSalesNavCooldown(30 * 60 * 1000);
+    return { ok: false, added: 0, reason: 'not-authenticated' };
+  }
 
   let added = 0;
   const errors = [];
@@ -560,6 +675,7 @@ async function saveTargetsToSalesNavList() {
         // Stamp each chunk immediately, so an interrupted run never re-adds what already landed.
         try { await markSalesNavListed(batch); } catch (err) { await log('warn', 'salesnav-list:mark-failed', { error: String(err), n: batch.length }); }
         added += batch.length;
+        if (added === batch.length) { try { await clearSalesNavCooldown(); } catch (e) {} }
         await log('info', 'salesnav-list:chunk', { added: batch.length, runningTotal: added });
       } else {
         const msg = (res && (res.error || (res.status + ' ' + res.body))) || 'unknown error';
@@ -567,11 +683,20 @@ async function saveTargetsToSalesNavList() {
         await log('error', 'salesnav-list:chunk-failed', { n: batch.length, error: msg });
         // A 401/403 means the Sales Nav session is gone — stop rather than hammer it.
         if (res && (res.status === 401 || res.status === 403 || /not logged in/i.test(String(res.error || '')))) {
-          await log('error', 'salesnav-list:abort', { reason: 'session invalid' });
+          // LinkedIn refused the session. Almost always this means the account has been asked to
+          // slow down (a long scrape in the same session will do it). Back off for hours rather
+          // than re-asking every run - and say so, instead of reporting a healthy run.
+          await setSalesNavCooldown(SALESNAV_COOLDOWN_MS);
+          await log('error', 'salesnav-list:abort', {
+            reason: 'session refused (' + (res.status || '?') + ') - backing off',
+            cooldown_hours: SALESNAV_COOLDOWN_MS / 3600000,
+            filed_before_abort: added
+          });
+          notify('Sales Nav paused', 'LinkedIn refused the session after ' + added + ' filed. Radar will retry in ' + (SALESNAV_COOLDOWN_MS / 3600000) + 'h.', 'error');
           break;
         }
       }
-      await humanDelay(2500, 6000);
+      await humanDelay(4000, 9000);
     }
   } finally {
     try { chrome.tabs.remove(tab.id); } catch (e) {}
@@ -729,7 +854,29 @@ async function pushBridgesToBotdog() {
   const cfg = await chrome.storage.local.get(['radar_botdog_key', 'radar_bridges_campaign', 'radar_bridges_pushed', 'radar_bridge_invite_skips']);
   const key = cfg.radar_botdog_key;
   const campaign = cfg.radar_bridges_campaign || BRIDGES_CAMPAIGN_ID_DEFAULT;
-  if (!key) { await log('info', 'bridge-push:skip', { reason: 'Botdog not configured — optional, Radar works without it' }); return { ok: true, skipped: true, reason: 'no-key' }; }
+  // No key in local storage does NOT mean Botdog is unconfigured. The key lives on the hub
+  // (config.botdog_api_key) and getConfig REDACTS every *_api_key, so the extension can never
+  // receive it — which is why bridge-push logged "not configured" on every run since 2026-07-27
+  // while a valid key sat on the hub and bridges.botdog_pushed stayed null for all 80 rows.
+  // The hub already implements the push server-side, where the key actually is. Delegate.
+  if (!key) {
+    try {
+      const body = { secret: INGEST_SECRET, action: 'pushBridges', cap: MAX_BRIDGE_PUSH_PER_RUN };
+      if (CURRENT_OWNER) body.owner = CURRENT_OWNER;
+      const resp = await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const out = await resp.json().catch(() => null);
+      if (out && out.ok && (out.pushed || out.attempted)) {
+        await log('info', 'bridge-push:via-hub', { pushed: out.pushed || 0, attempted: out.attempted || 0, campaign: out.campaign || null, errors: (out.errors || []).slice(0, 3) });
+        if (out.pushed) notify('Bridges invited', out.pushed + ' bridge(s) added to your Botdog invite campaign.');
+        return { ok: true, sent: out.pushed || 0, viaHub: true };
+      }
+      await log('info', 'bridge-push:skip', { reason: (out && out.error) || 'Botdog not configured on the hub — optional, Radar works without it', viaHub: true });
+      return { ok: true, skipped: true, reason: 'no-key' };
+    } catch (e) {
+      await log('info', 'bridge-push:skip', { reason: 'hub push unavailable: ' + String(e) });
+      return { ok: true, skipped: true, reason: 'hub-error' };
+    }
+  }
   const pushed = new Set(cfg.radar_bridges_pushed || []);
   // Invite EVERY not-yet-connected bridge into the dedicated bridges campaign,
   // except the ones explicitly unticked in the dashboard.
@@ -1089,9 +1236,10 @@ function leadSetFingerprint(leads) {
 }
 
 // Returns { fp, owner } when this exact result set already belongs to another bridge, else false.
-async function filterWasIgnored(bridge, leads) {
-  const fp = leadSetFingerprint(leads);
-  if (!fp) return false;
+async function filterWasIgnored(bridge, leads, scope) {
+  const fp0 = leadSetFingerprint(leads);
+  if (!fp0) return false;
+  const fp = (scope || '') + fp0;
   let store = {};
   try { const r = await chrome.storage.local.get(FP_STORE); store = (r && r[FP_STORE]) || {}; } catch (e) {}
   const owner = store[fp];
@@ -1105,19 +1253,43 @@ async function filterWasIgnored(bridge, leads) {
   return false;
 }
 
-async function scrapeBridge(bridge) {
+async function scrapeBridge(bridge, pageBudget) {
+  const budget = pageBudget || { left: MAX_PAGES };
   const leads = [];
   const urn  = bridge.urn;
   const name = bridge.bridge.replace(/ /g, '%20');
   const query = '(filters:List((type:SENIORITY_LEVEL,values:List((id:320,text:Owner%20%2F%20Partner,selectionType:INCLUDED),(id:310,text:CXO,selectionType:INCLUDED))),(type:COMPANY_HEADCOUNT,values:List((id:C,text:11-50,selectionType:INCLUDED))),(type:CONNECTION_OF,values:List((id:' + urn + ',text:' + name + ',selectionType:INCLUDED))),(type:REGION,values:List((id:100506914,text:Europe,selectionType:INCLUDED))),(type:LEAD_INTERACTIONS,values:List((id:LIMP,text:Messaged,selectionType:EXCLUDED)))))';
   const baseUrl = 'https://www.linkedin.com/sales/search/people?query=' + encodeURIComponent(query);
   for (let page = 1; page <= MAX_PAGES; page++) {
+    if (budget.left <= 0) { await log('info', 'scrape:page-budget', { bridge: bridge.bridge, stoppedAtPage: page }); break; }
+    budget.left--;
     const url = baseUrl + (page > 1 ? '&page=' + page : '');
     await log('info', 'scrape:page', { bridge: bridge.bridge, page });
     const pageLeads = await scrapePageInTab(url, bridge);
     if (!pageLeads || pageLeads.length === 0) { await log('info', 'scrape:page-empty', { bridge: bridge.bridge, page }); break; }
     leads.push(...pageLeads);
     await log('info', 'scrape:page-done', { bridge: bridge.bridge, page, count: pageLeads.length });
+    // EARLY dropped-filter guard. Up to 1.8.1 this check only ran after the WHOLE bridge was
+    // scraped, so a bridge whose CONNECTION_OF filter Sales Nav silently dropped still cost 25
+    // page loads before its results were thrown away (2026-08-25: "Nicolas MILONAS" burned 25
+    // pages to return the same 625 people as another bridge). Those wasted loads are what
+    // exhausts the session the lead-list phase depends on. Check after page 1 instead.
+    if (page === 1) {
+      try {
+        const dupEarly = await filterWasIgnored(bridge, pageLeads, 'p1:');
+        if (dupEarly) {
+          await log('warn', 'scrape:filter-ignored', {
+            bridge: bridge.bridge,
+            matched: dupEarly.owner,
+            count: pageLeads.length,
+            detectedOn: 'page-1',
+            reason: 'Page 1 is identical to "' + dupEarly.owner + '" - Sales Nav dropped the CONNECTION_OF filter (this bridge is probably not a 1st-degree connection). Stopped after 1 page instead of ' + MAX_PAGES + '.'
+          });
+          notify('Bridge switched off', bridge.bridge + ' returns a generic search, not their network - switched off.', 'error');
+          return [];
+        }
+      } catch (e) { await log('warn', 'filter-guard:error', { bridge: bridge.bridge, error: String(e) }); }
+    }
     if (pageLeads.length < 25) break;
     await humanDelay(6000, 14000);
   }
@@ -1192,6 +1364,21 @@ async function extractLeadsFromPage(radarPerson, category, source) {
         if (!name) return;
         const parts = name.split(' ');
         const card = li;
+        // Every .a11y-text leaf in this card is screen-reader chrome ("Add <Name> to selection",
+        // "Select <Name>", ...). It is NEVER a job title. Up to 1.8.1 the title picker simply
+        // took the LONGEST text leaf, and on the 2026 Sales Nav DOM that leaf is the selection
+        // label - which is why 1562 of 1722 targets collected on 2026-08-25 have
+        // title = "Add <Name> to selection". Collect them so both pickers can exclude them.
+        const a11yTexts = new Set();
+        try {
+          Array.from(card.querySelectorAll('.a11y-text')).forEach(e => {
+            const v = (e.textContent || '').replace(/\s+/g, ' ').trim();
+            if (v) a11yTexts.add(v);
+          });
+        } catch (e) {}
+        // Sales Nav marketing / upsell copy that renders inside result cards and is likewise
+        // never a title (e.g. "InMails get 5x more responses than emails").
+        const PROMO_RE = /inmail|\bget \d+x more\b|responses than emails|upgrade|try sales navigator|learn more|start your free|premium/i;
         const compEl   = card.querySelector('a[href*="/sales/company/"]');
         const company  = compEl ? compEl.textContent.replace(/\s+/g, ' ').trim() : '';
 
@@ -1230,6 +1417,7 @@ async function extractLeadsFromPage(radarPerson, category, source) {
           if (/\b(is|was)\s+(reachable|last active|open to work|a group member|hiring|online|out of office)\b/i.test(t)) continue;
           if (/mutual connection|connections?$|^shared|degree connection/i.test(t)) continue;
           if (/^message$|view .* profile|^view profile|^connect$|^save$|^more$/i.test(t)) continue;
+          if (a11yTexts.has(t) || /\bto selection$/i.test(t) || PROMO_RE.test(tl)) continue;
           const looksPlace = t.indexOf(',') !== -1 || /(?:Region|Area)$/i.test(t);
           if (!looksPlace) continue;
           location = t;
@@ -1260,6 +1448,10 @@ async function extractLeadsFromPage(radarPerson, category, source) {
           // out-of-network cards (e.g. "Save this lead to your list and get alerts when they
           // change jobs, post to LinkedIn, and more.").
           if (/save this lead|get alerts|save to list|add to list|change jobs, post/i.test(tl)) continue;
+          // The two fixes that matter (1.9.0): screen-reader labels and marketing copy are not titles.
+          if (a11yTexts.has(t)) continue;
+          if (/^add\s+.+\s+to selection$/i.test(t) || /\bto selection$/i.test(t) || /^select\s+/i.test(t)) continue;
+          if (PROMO_RE.test(tl)) continue;
           if (t.length > title.length) title = t;  // keep the longest qualifying leaf
         }
         if (title.length > 200) title = title.slice(0, 200);
@@ -1332,14 +1524,27 @@ async function resolvePublicUrls(leads, budget) {
 async function resolveUrn(urn) {
   const tab = await openScrapeTab('https://www.linkedin.com/sales/lead/' + urn + ',NAME_SEARCH,undefined');
   if (!tab) return null;
-  return new Promise(resolve => {
-    setTimeout(() => {
-      chrome.scripting.executeScript({ target: { tabId: tab.id }, func: () => { const l = document.querySelector('a[href*="linkedin.com/in/"]'); return l ? l.href.split('?')[0] : null; } }, results => {
-        try { chrome.tabs.remove(tab.id); } catch (e) {}
-        resolve(results && results[0] ? results[0].result : null);
-      });
-    }, 2500);
-  });
+  // A Sales Nav lead page is a SPA: at 2500ms the /in/ anchor is essentially never in the DOM
+  // yet, so the old one-shot read returned null every time - which is why 0 of 1722 targets
+  // collected on 2026-08-25 had a linkedin_url. Poll inside the page instead.
+  try {
+    const out = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: async () => {
+        for (let i = 0; i < 14; i++) {
+          const l = document.querySelector('a[href*="linkedin.com/in/"]');
+          if (l && l.href) return l.href.split('?')[0];
+          await new Promise(r => setTimeout(r, 900));
+        }
+        return null;
+      }
+    });
+    return (out && out[0]) ? (out[0].result || null) : null;
+  } catch (e) {
+    return null;
+  } finally {
+    try { chrome.tabs.remove(tab.id); } catch (e) {}
+  }
 }
 
 async function postToHub(leads) {

@@ -60,7 +60,8 @@ document.getElementById("sync-now").addEventListener("click", function (e) {
   const btn = e.currentTarget;
   btn.disabled = true;
   show("Sync running in background…", "info");
-  chrome.runtime.sendMessage({ action: "syncNow" }, function (response) {
+  // force=true bypasses the once/day gate — a manual click always runs immediately.
+  chrome.runtime.sendMessage({ action: "syncNow", force: true }, function (response) {
     btn.disabled = false;
     if (chrome.runtime.lastError) { show("Sync failed: " + chrome.runtime.lastError.message, "err"); renderLog(); return; }
     if (!response || !response.ok) { show("Sync error: " + ((response && response.error) || "unknown"), "err"); renderLog(); return; }
