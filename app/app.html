@@ -536,7 +536,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.11.0</div>
+      <div class="ver" id="sideVer">v1.11.1</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -792,6 +792,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
         <div><h2>Bridges</h2><p>Well-connected people who introduce you to targets.</p></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="sync-btn" id="listBridgesBtn" onclick="triggerBridgeList()" title="Add every bridge you are not connected to into your Sales Navigator Bridges list">📋 Send to Sales Nav list</button>
           <button class="sync-btn" onclick="downloadBridgesCsv()" title="Export bridges as CSV">⬇ Download CSV</button>
           <button class="sync-btn" id="inviteBridgesBtn" onclick="triggerBridgePush()" title="Invite the bridges you're not connected to into your Botdog bridges campaign">📨 Invite to Botdog</button>
         </div>
@@ -977,7 +978,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <div class="field-note">The bridges found in your Sources that you are <strong>not connected to</strong>. Sales Navigator refuses to search someone’s network unless they are a 1st-degree connection, so these are dead ends until you connect — Radar files them here so you can invite them, by hand or with Botdog.</div>
         </div>
         <button class="btn-save" onclick="saveSalesNavList()">Save lists</button>
-        <button class="btn-save btn-secondary" onclick="fileBridgesNow()">File bridges now</button>
+        <button class="btn-save btn-secondary" onclick="fileBridgesNow()">Send bridges to the list now</button>
         <div id="salesNavListStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
@@ -2707,6 +2708,38 @@ function setBridgeFilter(f){
 
 // Trigger the extension to invite non-1st-degree bridges into the Botdog bridges campaign now.
 let BRIDGE_PUSH_RUNNING = false;
+// Push the bridges we are NOT connected to into the Sales Navigator Bridges list. This is the
+// list-side twin of triggerBridgePush(): same button row, same status line, but it needs no
+// public /in/ URL and no Botdog key — it files off the Sales Nav member urn, so it works for
+// every bridge, including the ones Botdog can never reach.
+let BRIDGE_LIST_RUNNING = false;
+function triggerBridgeList(){
+  const st  = document.getElementById('bridgePushStatus');
+  const btn = document.getElementById('listBridgesBtn');
+  const show = (t, k) => { if (st) { st.style.display='block'; st.className='sync-status '+(k||'info'); st.textContent=t; } };
+  if (!document.documentElement.getAttribute('data-radar-ext')) { show('Chrome extension not detected — install/reload the Radar extension (v1.10.0 or later), then try again.', 'err'); return; }
+  if (BRIDGE_LIST_RUNNING) return;
+  BRIDGE_LIST_RUNNING = true;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Filing…'; }
+  const reset = () => { BRIDGE_LIST_RUNNING = false; if (btn) { btn.disabled = false; btn.textContent = '📋 Send to Sales Nav list'; } };
+  show('Filing your not-connected bridges into the Sales Navigator Bridges list… it opens a LinkedIn tab and paces itself, so give it a minute or two.', 'info');
+  let done = false;
+  const onResult = (e) => {
+    if (done) return; done = true;
+    window.removeEventListener('radar-ext-salesnav-bridges-result', onResult);
+    reset();
+    const d = (e && e.detail) || {}, r = d.result || {};
+    if (!d.ok) { show('Couldn’t run: ' + (d.error || 'unknown') + '.', 'err'); return; }
+    if (r.reason === 'no-list')     { show('No Bridges list set yet — create a second list in Sales Navigator and paste its URL in Settings → Sales Navigator lists.', 'err'); return; }
+    if (r.reason === 'cooldown')    { show('LinkedIn asked Radar to slow down earlier, so filing is paused for a few hours. It resumes on its own.', 'info'); return; }
+    if (r.reason === 'no-tab' || r.reason === 'not-authenticated') { show('Radar couldn’t reach a logged-in Sales Navigator tab. Open Sales Navigator in this browser, then try again.', 'err'); return; }
+    if (!r.added) { show('Nothing to file — every bridge you are not connected to is already in the list.', 'ok'); return; }
+    show('✓ Filed ' + r.added + ' bridge' + (r.added === 1 ? '' : 's') + ' into your Sales Navigator Bridges list' + (r.remaining ? ' — ' + r.remaining + ' still queued for the next run.' : '.'), 'ok');
+  };
+  window.addEventListener('radar-ext-salesnav-bridges-result', onResult);
+  window.dispatchEvent(new CustomEvent('radar-ext-salesnav-bridges'));
+  setTimeout(() => { if (done) return; done = true; window.removeEventListener('radar-ext-salesnav-bridges-result', onResult); reset(); show('Still running in the background — check the extension log (salesnav-bridges:done) in a few minutes.', 'info'); }, 240000);
+}
 function triggerBridgePush(){
   const st = document.getElementById('bridgePushStatus');
   const btn = document.getElementById('inviteBridgesBtn');
