@@ -325,6 +325,8 @@ td a:hover{ text-decoration:underline; }
    soft blue notice that had been dismissed. This one is red and cannot be dismissed. */
 .banner-danger{ background:#fef2f2; border:1px solid #dc2626; color:#b91c1c; font-weight:600;
   box-shadow:0 1px 2px rgba(185,28,28,.10); }
+.field-note{ font-size:0.8rem; color:#64748b; margin-top:5px; line-height:1.45; }
+.btn-save.btn-secondary{ margin-left:8px; background:#fff; color:#2563eb; border:1px solid #bfdbfe; }
 
 /* ---------- Views ---------- */
 .view{ display:none; }
@@ -534,7 +536,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.10.0</div>
+      <div class="ver" id="sideVer">v1.11.0</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -600,7 +602,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="page-head"><h2>Dashboard</h2><p>Your engine at a glance — capture health, pipeline totals, and what needs attention today.</p></div>
       <div id="extUpdateBannerHome" class="banner banner-danger" style="display:none">
         <span id="extUpdateMsgHome"></span>
-        <a id="extUpdateDlHome" href="/radar-extension-v1.9.1.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
+        <a id="extUpdateDlHome" href="/radar-extension-v1.10.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
         <a id="extUpdateHelpTogHome" href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
         <div id="extUpdateHelpHome" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400"></div>
       </div>
@@ -620,7 +622,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
       <div id="extUpdateBanner" class="banner banner-danger" style="display:none">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension-v1.9.1.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
+        <a id="extUpdateDl" href="/radar-extension-v1.10.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
         <a id="extUpdateHelpTog" href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
         <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400"></div>
       </div>
@@ -708,7 +710,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <div id="extStatePill" class="ext-pill idle">Checking&hellip;</div>
           <div id="extStateNote" style="margin-top:10px;font-size:0.85rem;color:#334155"></div>
           <div class="ext-actions">
-            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.9.1.zip" download>&#11015; Download latest</a>
+            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.10.0.zip" download>&#11015; Download latest</a>
             <button class="ext-btn ghost" onclick="extRunDiag()">Test installation</button>
           </div>
         </div>
@@ -881,7 +883,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.9.1.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.10.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -962,13 +964,20 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div id="icpTemplateStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
-        <h2>Sales Navigator list <span style="color:#b45309;font-weight:600;font-size:0.8rem">required</span></h2>
-        <p>New prospects are added to this LinkedIn Sales Navigator list, so you can work them all in one place. Paste your dedicated list URL.</p>
+        <h2>Sales Navigator lists <span style="color:#b45309;font-weight:600;font-size:0.8rem">required</span></h2>
+        <p>Radar files what it finds into two of your own Sales Navigator lead lists, so all of it sits in one place inside LinkedIn. <strong>These two lists are what Radar guarantees</strong> — Botdog, above, only automates the outreach on top of them.</p>
         <div class="field">
-          <label>Sales Nav list URL</label>
+          <label>Prospects list URL</label>
           <input type="text" id="inputSalesNavList" placeholder="https://www.linkedin.com/sales/lists/people/…">
+          <div class="field-note">Every new prospect found through a bridge’s network is filed here.</div>
         </div>
-        <button class="btn-save" onclick="saveSalesNavList()">Save List</button>
+        <div class="field">
+          <label>Bridges list URL <span style="color:#94a3b8;font-weight:400">— your connection campaign</span></label>
+          <input type="text" id="inputSalesNavBridgesList" placeholder="https://www.linkedin.com/sales/lists/people/…">
+          <div class="field-note">The bridges found in your Sources that you are <strong>not connected to</strong>. Sales Navigator refuses to search someone’s network unless they are a 1st-degree connection, so these are dead ends until you connect — Radar files them here so you can invite them, by hand or with Botdog.</div>
+        </div>
+        <button class="btn-save" onclick="saveSalesNavList()">Save lists</button>
+        <button class="btn-save btn-secondary" onclick="fileBridgesNow()">File bridges now</button>
         <div id="salesNavListStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
@@ -1596,7 +1605,7 @@ function detectExtension(){
 }
 
 // ===== Extension version offer (installed vs latest, like the Linalysis check) =====
-const LATEST_EXT_VERSION = '1.9.1';   // latest packaged extension offered on the platform
+const LATEST_EXT_VERSION = '1.10.0';   // latest packaged extension offered on the platform
 const EXT_ZIP_URL = '/radar-extension-v' + LATEST_EXT_VERSION + '.zip';
 function cmpVer(a, b){
   const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
@@ -2055,8 +2064,8 @@ function renderOnboarding(){
   steps.push(
     '<div class="ob-step">' + obDot(done.list) +
       '<div class="ob-body"><div class="ob-title' + (done.list?' done':'') + '">Choose your Sales Navigator list</div>' +
-        (done.list ? '<div class="ob-note">New prospects are filed into your list. <a href="#" onclick="showView(\'settings\');return false">Change it</a></div>' :
-        '<div class="ob-note">Create a dedicated list in Sales Navigator and paste its URL in <a href="#" onclick="showView(\'settings\');return false">Settings &rarr; Sales Navigator list</a> &mdash; every prospect Radar finds is added to it.</div>') +
+        (done.list ? '<div class="ob-note">New prospects are filed into your list.' + (window.__hasBridgesList ? ' Bridges you are not connected to go to your bridges list.' : ' Add a <strong>Bridges</strong> list too, for the bridges you are not connected to yet.') + ' <a href="#" onclick="showView(\'settings\');return false">Change it</a></div>' :
+        '<div class="ob-note">Create two dedicated lists in Sales Navigator &mdash; one for <strong>prospects</strong>, one for <strong>bridges</strong> &mdash; and paste their URLs in <a href="#" onclick="showView(\'settings\');return false">Settings &rarr; Sales Navigator lists</a>.</div>') +
       '</div>' +
     '</div>');
   // 6) First Source — an organization whose network holds this user's prospects.
@@ -3418,41 +3427,90 @@ async function loadIcpTemplate() {
   try { renderOnboarding(); } catch(e) {}
 }
 
-// ===== Sales Navigator list (where new prospects get placed) =====
+// ===== Sales Navigator lists (where everything Radar finds gets placed) =====
+// TWO lists, and both are guaranteed outputs whether or not Botdog is connected:
+//   * PROSPECTS — the people found through a bridge's network. This is the product.
+//   * BRIDGES   — the bridges discovered in a Source that we are NOT connected to. Sales Nav
+//                 silently drops the "Connection of" filter for anyone but a 1st-degree
+//                 connection, so those networks cannot be searched at all until we connect.
+//                 Filed into their own list they become a workable connection campaign.
+function salesNavListLooksWrong(u) { return !!u && !/linkedin\.com\/sales\/lists\//i.test(u); }
 async function saveSalesNavList() {
-  const el = document.getElementById('inputSalesNavList');
-  const url = (el ? el.value : '').trim();
+  const el  = document.getElementById('inputSalesNavList');
+  const elB = document.getElementById('inputSalesNavBridgesList');
+  const url  = (el  ? el.value  : '').trim();
+  const bUrl = (elB ? elB.value : '').trim();
   const status = document.getElementById('salesNavListStatus');
-  if (url && !/linkedin\.com\/sales\/lists\//i.test(url)) {
-    status.textContent = 'That doesn’t look like a Sales Navigator list URL (…/sales/lists/…).'; return;
-  }
+  if (salesNavListLooksWrong(url))  { status.textContent = 'The prospects URL doesn’t look like a Sales Navigator list (…/sales/lists/…).'; return; }
+  if (salesNavListLooksWrong(bUrl)) { status.textContent = 'The bridges URL doesn’t look like a Sales Navigator list (…/sales/lists/…).'; return; }
+  if (url && bUrl && url === bUrl)  { status.textContent = 'Use two different lists — prospects and bridges are worked in completely different ways.'; return; }
   status.textContent = 'Saving…';
   try {
-    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', salesnav_list_url: url }) });
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'setConfig', salesnav_list_url: url, salesnav_bridges_list_url: bUrl }) });
     const data = await resp.json();
     status.textContent = data.saved ? 'Saved!' : 'Error: ' + JSON.stringify(data);
     if (data.saved) {
       window.__hasList = !!url;   // tick the "Choose your Sales Navigator list" checklist step
-      try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); cur.salesnav_list_url = url; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
-      // Hand the list URL to the Chrome extension so it can add new prospects to it.
-      try { window.dispatchEvent(new CustomEvent('radar-ext-set-salesnav-list', { detail:{ url: url } })); } catch(e) {}
+      window.__hasBridgesList = !!bUrl;
+      try { const cur = JSON.parse(localStorage.getItem('radar_keys')||'{}'); cur.salesnav_list_url = url; cur.salesnav_bridges_list_url = bUrl; localStorage.setItem('radar_keys', JSON.stringify(cur)); } catch(e) {}
+      // Hand the list URLs to the Chrome extension. (Filing does not depend on this relay — the
+      // extension reads both URLs from the hub — but it keeps a live tab in step immediately.)
+      try { window.dispatchEvent(new CustomEvent('radar-ext-set-salesnav-list', { detail:{ url: url, bridgesUrl: bUrl } })); } catch(e) {}
       try { renderOnboarding(); } catch(e) {}
     }
   } catch(e) { status.textContent = 'Error: ' + e.message; }
 }
-// Load the saved Sales Nav list URL from the backend (cross-device) into the field.
+// Load both saved Sales Nav list URLs from the backend (cross-device) into the fields.
 async function loadSalesNavList() {
-  const el = document.getElementById('inputSalesNavList');
-  if (!el) return;
+  const el  = document.getElementById('inputSalesNavList');
+  const elB = document.getElementById('inputSalesNavBridgesList');
+  if (!el && !elB) return;
   try {
     const cfg = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r=>r.text());
     const j = JSON.parse(cfg.replace(/^_cb\(/, '').replace(/\)$/, ''));
-    if (j && j.salesnav_list_url && !el.value) el.value = j.salesnav_list_url;
+    if (el  && j && j.salesnav_list_url && !el.value)          el.value  = j.salesnav_list_url;
+    if (elB && j && j.salesnav_bridges_list_url && !elB.value) elB.value = j.salesnav_bridges_list_url;
     window.__hasList = !!(j && j.salesnav_list_url);
+    window.__hasBridgesList = !!(j && j.salesnav_bridges_list_url);
   } catch(e) {
-    try { const k = JSON.parse(localStorage.getItem('radar_keys')||'{}'); if (k.salesnav_list_url) { if (!el.value) el.value = k.salesnav_list_url; window.__hasList = true; } } catch(_){}
+    try {
+      const k = JSON.parse(localStorage.getItem('radar_keys')||'{}');
+      if (k.salesnav_list_url)         { if (el  && !el.value)  el.value  = k.salesnav_list_url;         window.__hasList = true; }
+      if (k.salesnav_bridges_list_url) { if (elB && !elB.value) elB.value = k.salesnav_bridges_list_url; window.__hasBridgesList = true; }
+    } catch(_){}
   }
   try { renderOnboarding(); } catch(e) {}
+}
+// Ask the extension to file pending bridges into the bridges list right now, rather than
+// waiting for the next scheduled run. Filing opens a LinkedIn tab and paces itself, so this
+// can legitimately take a couple of minutes.
+function fileBridgesNow() {
+  const status = document.getElementById('salesNavListStatus');
+  const bUrl = (document.getElementById('inputSalesNavBridgesList') || {}).value || '';
+  if (!bUrl.trim()) { if (status) status.textContent = 'Add a Bridges list URL above and save it first.'; return; }
+  if (status) status.textContent = 'Asking the extension to file pending bridges… this can take a minute.';
+  let answered = false;
+  function onResult(e) {
+    answered = true;
+    window.removeEventListener('radar-ext-salesnav-bridges-result', onResult);
+    const d = (e && e.detail) || {};
+    if (!status) return;
+    if (d.ok && d.result) {
+      const r = d.result;
+      status.textContent = r.added
+        ? 'Filed ' + r.added + ' bridge' + (r.added === 1 ? '' : 's') + (r.remaining ? ' — ' + r.remaining + ' still queued.' : '.')
+        : 'Nothing filed' + (r.reason ? ' (' + r.reason + ').' : '.');
+    } else {
+      status.textContent = 'Error: ' + (d.error || 'the extension did not answer');
+    }
+  }
+  window.addEventListener('radar-ext-salesnav-bridges-result', onResult);
+  try { window.dispatchEvent(new CustomEvent('radar-ext-salesnav-bridges')); } catch(e) {}
+  setTimeout(function () {
+    if (answered) return;
+    window.removeEventListener('radar-ext-salesnav-bridges-result', onResult);
+    if (status) status.textContent = 'No answer from the extension — check it is installed and running v1.10.0 or later.';
+  }, 240000);
 }
 
 // ===== Daily lead target (how many new prospects/day to collect) =====
