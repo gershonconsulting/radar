@@ -10,7 +10,7 @@
 const WEBAPP_URL    = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/functions/v1/hub';
 const INGEST_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 const MAX_PAGES     = 25;
-const MAX_RESOLVE_PER_RUN = 100;
+const MAX_RESOLVE_PER_RUN = 400;  // API lookups now, not page loads - so this can be far higher
 // ---- Run discipline (1.9.0) ---------------------------------------------------
 // A single run on 2026-08-25 scraped for SEVEN HOURS (3446 leads, hundreds of Sales Nav page
 // loads). It filed 200 prospects into the lead list at 08:16 and was refused with a 401 by
@@ -204,6 +204,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'salesnavListNow') {
     // Triggered from the dashboard / popup — file pending prospects into the Sales Nav list now.
     saveTargetsToSalesNavList()
+      .then(async r => { await closeScrapeWindow(); await pushLog(); sendResponse({ ok: true, result: r }); })
+      .catch(async e => { await closeScrapeWindow(); await pushLog(); sendResponse({ ok: false, error: String(e) }); });
+    return true;
+  }
+  if (msg.action === 'salesnavBridgesListNow') {
+    // Triggered from the dashboard - file pending bridges into the Sales Nav bridges list now.
+    saveBridgesToSalesNavList()
       .then(async r => { await closeScrapeWindow(); await pushLog(); sendResponse({ ok: true, result: r }); })
       .catch(async e => { await closeScrapeWindow(); await pushLog(); sendResponse({ ok: false, error: String(e) }); });
     return true;
@@ -453,6 +460,16 @@ async function runSync() {
       listedTotal += (listRes && listRes.added) || 0;
     } catch (e) { await log('warn', 'salesnav-list:error', { error: String(e) }); }
 
+    // The BRIDGES list. Every bridge discovered from a Source that we are NOT connected to gets
+    // filed into its own Sales Navigator list, so it can be worked as a connection campaign -
+    // those networks stay invisible until we connect. This runs whether or not Botdog is set up:
+    // the two lists are what Radar guarantees, Botdog only automates the outreach on top.
+    let bridgesListed = 0;
+    try {
+      const bl = await saveBridgesToSalesNavList();
+      bridgesListed = (bl && bl.added) || 0;
+    } catch (e) { await log('warn', 'salesnav-bridges:error', { error: String(e) }); }
+
     // Give the invite campaign something to work with: resolve a few missing bridge URLs.
     let bridgeUrls = { attempted: 0, resolved: 0, remaining: 0 };
     try { bridgeUrls = await resolveBridgeUrls(BRIDGE_URL_RESOLVE_PER_RUN); }
@@ -477,6 +494,7 @@ async function runSync() {
       bridges: bridgesDone, pagesLeft: pageBudget.left,
       skippedNotConnected: notConnected.length,
       bridgeUrlsResolved: bridgeUrls.resolved, bridgeUrlsMissing: bridgeUrls.remaining,
+      bridgesListed: bridgesListed,
       bridgesInvited: (bridgePush && (bridgePush.sent || 0)) || 0,
       errors: RUN_ERRORS, listCooling: listCooling,
       status: status
@@ -549,9 +567,66 @@ async function getBridges() {
 const SALESNAV_LIST_MAX_PER_RUN = 200;  // prospects filed per run (no profile views, so generous)
 const SALESNAV_LIST_CHUNK       = 25;   // = Sales Nav's own page size for "select all → Add to list"
 
+// Radar files into TWO Sales Navigator lists, and BOTH are guaranteed outputs. Botdog is an
+// optional add-on layered on top, never a prerequisite (Olivier, 2026-08-28):
+//   * PROSPECTS - the people found through a bridge's network. This is the product.
+//   * BRIDGES   - the bridges discovered from Sources that we are NOT connected to. Sales Nav
+//                 silently drops CONNECTION_OF for anyone but a 1st-degree connection, so those
+//                 networks stay unreachable until we connect. Filing them into their own list
+//                 turns them into a workable connection campaign, with or without Botdog.
+// Both lists use the exact same bulkSaveByMembers call - a bridge has a Sales Nav member urn
+// just like a prospect has a lead_id - so the whole phase below is shared between them.
+const SALESNAV_BRIDGES_MAX_PER_RUN = 100;
+const SALESNAV_KINDS = {
+  prospects: {
+    pendingAction: 'salesnavPending',
+    markAction:    'markSalesnavListed',
+    idsKey:        'lead_ids',
+    logTag:        'salesnav-list',
+    noun:          'prospect',
+    listLabel:     'prospects',
+    requiredList:  true,
+    settingHint:   'Set Settings -> Sales Navigator -> Prospects list URL in the Radar dashboard',
+    cap:           SALESNAV_LIST_MAX_PER_RUN
+  },
+  bridges: {
+    pendingAction: 'salesnavBridgesPending',
+    markAction:    'markSalesnavBridgesListed',
+    idsKey:        'urns',
+    logTag:        'salesnav-bridges',
+    noun:          'bridge',
+    listLabel:     'bridges',
+    requiredList:  false,
+    settingHint:   'Set Settings -> Sales Navigator -> Bridges list URL in the Radar dashboard',
+    cap:           SALESNAV_BRIDGES_MAX_PER_RUN
+  }
+};
+
 // Injected into a logged-in Sales Navigator tab. Adds ONE chunk of member urns to the list.
 // Kept deliberately small and self-contained: the service worker drives the loop so that each
 // chunk is a fresh extension API call, which keeps the MV3 worker alive across a long backlog.
+// Resolves once Chrome reports the tab has finished loading (or the timeout elapses). The list
+// phase used to sleep a flat 2s and then trust a probe that could not tell a blank tab from a
+// loaded one; a background-tab fallback is throttled by Chrome and routinely needs much longer.
+function waitForTabComplete(tabId, timeoutMs) {
+  return new Promise(function (resolve) {
+    let done = false;
+    const finish = function (v) {
+      if (done) return;
+      done = true;
+      try { chrome.tabs.onUpdated.removeListener(onUpd); } catch (e) {}
+      resolve(v);
+    };
+    function onUpd(id, info) { if (id === tabId && info.status === 'complete') finish(true); }
+    try { chrome.tabs.onUpdated.addListener(onUpd); } catch (e) { return finish(false); }
+    chrome.tabs.get(tabId, function (t) {
+      if (chrome.runtime.lastError) return finish(false);
+      if (t && t.status === 'complete') finish(true);
+    });
+    setTimeout(function () { finish(false); }, timeoutMs || 45000);
+  });
+}
+
 async function salesNavCooldownLeft() {
   try {
     const r = await chrome.storage.local.get(SALESNAV_COOLDOWN_KEY);
@@ -570,17 +645,52 @@ async function clearSalesNavCooldown() {
 // the backlog on it. A JSESSIONID cookie alone proves nothing - LinkedIn sets one for logged-out
 // visitors too - so we also require an `ajax:` csrf shape and that we are not sitting on a
 // login / checkpoint / authwall page.
-function salesNavSessionProbeInPage() {
+async function salesNavSessionProbeInPage(listId) {
   const csrf = (document.cookie.match(/JSESSIONID="?([^";]+)"?/) || [])[1] || '';
   const path = location.pathname || '';
   const blocked = /\/(login|checkpoint|authwall|uas|signup)(\/|$)/i.test(path);
-  return {
-    ok: !!csrf && /^ajax:/.test(csrf) && !blocked,
+  const base = {
     csrf: !!csrf,
     csrfShape: csrf ? csrf.slice(0, 5) : '',
     blocked: blocked,
-    path: path
+    path: path,
+    readyState: document.readyState
   };
+  if (!csrf || !/^ajax:/.test(csrf) || blocked) {
+    return Object.assign({ ok: false, reason: blocked ? 'blocked-path' : 'no-session-cookie' }, base);
+  }
+  // The cookie and the URL are BOTH already true the instant the tab is created - the cookie is
+  // domain-wide and location.pathname is set before a single byte of the page has loaded. That is
+  // how, on 2026-08-28, a chunk fired 2.3s after the tab opened and came back
+  // 403 SALES_SEAT_REQUIRED on a perfectly valid seat. Requiring a loaded document is necessary
+  // but still not sufficient, so we PROVE the seat resolves from this exact page context by
+  // making the real call with an EMPTY entity list: same endpoint, same headers, adds nobody.
+  // (Verified live 2026-08-28 on a loaded list page: returns 200 {"value":[]}.)
+  if (document.readyState !== 'complete') {
+    return Object.assign({ ok: false, reason: 'page-not-loaded' }, base);
+  }
+  try {
+    const r = await fetch('/sales-api/salesApiLeads?action=bulkSaveByMembers', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'content-type': 'application/json',
+        'csrf-token': csrf,
+        'x-restli-protocol-version': '2.0.0'
+      },
+      body: JSON.stringify({ entities: [], lists: [String(listId)] })
+    });
+    const t = await r.text();
+    const ok = r.status >= 200 && r.status < 300;
+    return Object.assign({
+      ok: ok,
+      seatStatus: r.status,
+      seatBody: String(t).slice(0, 120),
+      reason: ok ? '' : 'seat-not-ready-' + r.status
+    }, base);
+  } catch (e) {
+    return Object.assign({ ok: false, reason: 'seat-probe-threw', error: String(e) }, base);
+  }
 }
 
 function salesNavAddChunkInPage(listId, urns) {
@@ -605,10 +715,14 @@ function salesNavAddChunkInPage(listId, urns) {
   }).catch(function (e) { return { ok: false, error: String(e) }; });
 }
 
-// Tell the hub which prospects made it into the list (stamps targets.salesnav_listed_at).
-async function markSalesNavListed(leadIds) {
-  if (!leadIds || !leadIds.length) return 0;
-  const body = { secret: INGEST_SECRET, action: 'markSalesnavListed', lead_ids: leadIds };
+// Tell the hub which rows made it into the list. Stamps targets.salesnav_listed_at for
+// prospects, bridges.salesnav_listed_at for bridges, so neither is ever filed twice and an
+// interrupted run resumes exactly where it stopped.
+async function markSalesNavListed(ids, kind) {
+  if (!ids || !ids.length) return 0;
+  const K = SALESNAV_KINDS[kind] || SALESNAV_KINDS.prospects;
+  const body = { secret: INGEST_SECRET, action: K.markAction };
+  body[K.idsKey] = ids;
   if (CURRENT_OWNER) body.owner = CURRENT_OWNER;
   const resp = await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   let out = null; try { out = await resp.json(); } catch (e) {}
@@ -616,37 +730,43 @@ async function markSalesNavListed(leadIds) {
   return (out && out.marked) || 0;
 }
 
-// Main phase. Safe to call on every run: if nothing is pending it does nothing and opens no tab.
-async function saveTargetsToSalesNavList() {
+// Main phase, shared by BOTH lists. Safe to call on every run: if nothing is pending it does
+// nothing and opens no tab.
+async function fileIntoSalesNavList(kind) {
+  const K   = SALESNAV_KINDS[kind] || SALESNAV_KINDS.prospects;
+  const TAG = K.logTag;
   // Respect a cooldown set by an earlier 401/403 - retrying immediately just deepens the block.
   const cool = await salesNavCooldownLeft();
   if (cool > 0) {
-    await log('info', 'salesnav-list:cooldown', { minutes_left: Math.ceil(cool / 60000) });
+    await log('info', TAG + ':cooldown', { minutes_left: Math.ceil(cool / 60000) });
     return { ok: true, added: 0, reason: 'cooldown' };
   }
   let pending = null;
   try {
-    pending = await fetchHubJsonp('salesnavPending', { cap: SALESNAV_LIST_MAX_PER_RUN });
+    pending = await fetchHubJsonp(K.pendingAction, { cap: K.cap });
   } catch (err) {
-    await log('warn', 'salesnav-list:hub-error', { error: String(err) });
+    await log('warn', TAG + ':hub-error', { error: String(err) });
     return { ok: false, added: 0, reason: 'hub-error' };
   }
 
   const listId = (pending && pending.list_id) || '';
-  const ids    = (pending && pending.lead_ids) || [];
+  const ids    = (pending && pending[K.idsKey]) || [];
   const total  = (pending && pending.pending_total) || ids.length;
 
   if (!listId) {
-    await log('warn', 'salesnav-list:not-configured', { hint: 'Set Settings -> Sales Navigator list URL in the Radar dashboard' });
-    notify('Sales Nav list not set', 'New prospects cannot be filed — add your lead-list URL in Radar Settings.', 'error');
+    // An unset list is only a failure for the PROSPECTS list, which is the product. The bridges
+    // list is an add-on some users will never set up, so it is an info-level skip - never a
+    // desktop error, and never something that makes an otherwise healthy run look broken.
+    await log(K.requiredList ? 'warn' : 'info', TAG + ':not-configured', { hint: K.settingHint });
+    if (K.requiredList) notify('Sales Nav list not set', 'New prospects cannot be filed — add your Prospects list URL in Radar Settings.', 'error');
     return { ok: false, added: 0, reason: 'no-list' };
   }
   if (!ids.length) {
-    await log('info', 'salesnav-list:nothing-pending');
+    await log('info', TAG + ':nothing-pending');
     return { ok: true, added: 0 };
   }
 
-  await log('info', 'salesnav-list:start', { listId, thisRun: ids.length, pendingTotal: total });
+  await log('info', TAG + ':start', { listId, thisRun: ids.length, pendingTotal: total });
 
   // Open the list itself in the off-screen scrape window: it is a normal Sales Nav page, so the
   // request carries exactly the cookies, origin and referer Sales Navigator's own UI would send.
@@ -660,38 +780,47 @@ async function saveTargetsToSalesNavList() {
     // whole point of Radar — it must never be the thing that gets skipped.
     try {
       tab = await chrome.tabs.create({ url: listUrl, active: false });
-      await log('warn', 'salesnav-list:bg-tab-fallback', { reason: 'scrape window unavailable' });
+      await log('warn', TAG + ':bg-tab-fallback', { reason: 'scrape window unavailable' });
     } catch (e) {
       tab = null;
     }
   }
   if (!tab) {
-    await log('error', 'salesnav-list:no-tab');
-    notify('Sales Nav list blocked', 'Radar could not open a LinkedIn tab to file ' + ids.length + ' prospect(s). Keep Chrome open and logged in.', 'error');
+    await log('error', TAG + ':no-tab');
+    notify('Sales Nav list blocked', 'Radar could not open a LinkedIn tab to file ' + ids.length + ' ' + K.noun + '(s). Keep Chrome open and logged in.', 'error');
     return { ok: false, added: 0, reason: 'no-tab' };
   }
   // Poll for a genuinely authenticated Sales Nav page rather than firing blind after a fixed
   // wait. A cold browser needs far longer than 7s, and firing early is what turns a healthy
   // backlog into a 401.
+  // Wait for Chrome to report the tab actually loaded before probing at all. The background-tab
+  // fallback below is throttled by Chrome, so it can take far longer than the old blind 2s sleep.
+  await waitForTabComplete(tab.id, 45000);
   let probe = null;
-  for (let attempt = 0; attempt < 10; attempt++) {
-    await sleep(2000);
+  for (let attempt = 0; attempt < 15; attempt++) {
+    await sleep(attempt < 5 ? 2000 : 4000);
     try {
-      const out = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: salesNavSessionProbeInPage });
+      const out = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: salesNavSessionProbeInPage,
+        args: [String(listId)]
+      });
       probe = (out && out[0]) ? out[0].result : null;
     } catch (e) { probe = null; }
     if (probe && probe.ok) break;
+    if (probe && attempt === 7) await log('info', TAG + ':still-waiting', { probe: probe });
   }
   if (!probe || !probe.ok) {
     try { chrome.tabs.remove(tab.id); } catch (e) {}
-    await log('error', 'salesnav-list:not-authenticated', { probe: probe || null,
+    await log('error', TAG + ':not-authenticated', { probe: probe || null,
       hint: 'Log in to Sales Navigator in Chrome, then run again.' });
-    notify('Sales Nav not logged in', 'Radar could not confirm a logged-in Sales Navigator session - ' + ids.length + ' prospect(s) still queued.', 'error');
+    notify('Sales Nav not logged in', 'Radar could not confirm a logged-in Sales Navigator session - ' + ids.length + ' ' + K.noun + '(s) still queued.', 'error');
     await setSalesNavCooldown(30 * 60 * 1000);
     return { ok: false, added: 0, reason: 'not-authenticated' };
   }
 
   let added = 0;
+  let seatRetried = false;
   const errors = [];
   try {
     for (let i = 0; i < ids.length; i += SALESNAV_LIST_CHUNK) {
@@ -710,22 +839,40 @@ async function saveTargetsToSalesNavList() {
 
       if (res && res.ok) {
         // Stamp each chunk immediately, so an interrupted run never re-adds what already landed.
-        try { await markSalesNavListed(batch); } catch (err) { await log('warn', 'salesnav-list:mark-failed', { error: String(err), n: batch.length }); }
+        try { await markSalesNavListed(batch, kind); } catch (err) { await log('warn', TAG + ':mark-failed', { error: String(err), n: batch.length }); }
         added += batch.length;
         if (added === batch.length) { try { await clearSalesNavCooldown(); } catch (e) {} }
-        await log('info', 'salesnav-list:chunk', { added: batch.length, runningTotal: added });
+        await log('info', TAG + ':chunk', { added: batch.length, runningTotal: added });
       } else {
         const msg = (res && (res.error || (res.status + ' ' + res.body))) || 'unknown error';
         errors.push(msg);
-        await log('error', 'salesnav-list:chunk-failed', { n: batch.length, error: msg });
+        await log('error', TAG + ':chunk-failed', { n: batch.length, error: msg });
         // A 401/403 means the Sales Nav session is gone — stop rather than hammer it.
+        // A 403 SALES_SEAT_REQUIRED that arrives having filed NOBODY is the page-not-ready
+        // signature, not a refused session: the seat is fine (the probe just proved it) and a
+        // 6h cooldown would throw away the whole day over a slow tab. Retry it once, slowly,
+        // in this same run. Only a repeat failure earns the long back-off.
+        const seatErr = /SALES_SEAT_REQUIRED/i.test(msg);
+        if (seatErr && added === 0 && !seatRetried) {
+          seatRetried = true;
+          await log('warn', TAG + ':seat-retry', {
+            reason: 'SALES_SEAT_REQUIRED with nothing filed - page most likely not ready yet',
+            waiting_seconds: 20
+          });
+          await sleep(20000);
+          i -= SALESNAV_LIST_CHUNK;   // redo this same chunk
+          continue;
+        }
         if (res && (res.status === 401 || res.status === 403 || /not logged in/i.test(String(res.error || '')))) {
           // LinkedIn refused the session. Almost always this means the account has been asked to
           // slow down (a long scrape in the same session will do it). Back off for hours rather
           // than re-asking every run - and say so, instead of reporting a healthy run.
           await setSalesNavCooldown(SALESNAV_COOLDOWN_MS);
-          await log('error', 'salesnav-list:abort', {
-            reason: 'session refused (' + (res.status || '?') + ') - backing off',
+          await log('error', TAG + ':abort', {
+            reason: (seatErr
+              ? 'Sales Navigator refused the seat (403 SALES_SEAT_REQUIRED) even after a retry - backing off'
+              : 'session refused (' + (res.status || '?') + ') - backing off'),
+            seat_required: seatErr,
             cooldown_hours: SALESNAV_COOLDOWN_MS / 3600000,
             filed_before_abort: added
           });
@@ -740,14 +887,18 @@ async function saveTargetsToSalesNavList() {
   }
 
   const left = Math.max(0, total - added);
-  await log('info', 'salesnav-list:done', { added, remaining: left, errors: errors.slice(0, 5) });
+  await log('info', TAG + ':done', { added, remaining: left, errors: errors.slice(0, 5) });
   if (added) {
-    notify('Added to Sales Navigator', added + ' new prospect' + (added === 1 ? '' : 's') + ' filed into your lead list' + (left ? ' (' + left + ' still queued).' : '.'));
+    notify('Added to Sales Navigator', added + ' new ' + K.noun + (added === 1 ? '' : 's') + ' filed into your ' + K.listLabel + ' list' + (left ? ' (' + left + ' still queued).' : '.'));
   } else if (errors.length) {
     notify('Sales Nav list failed', errors[0], 'error');
   }
   return { ok: !errors.length, added, remaining: left, errors: errors.slice(0, 5) };
 }
+
+// Thin wrappers so every call site reads plainly.
+async function saveTargetsToSalesNavList() { return fileIntoSalesNavList('prospects'); }
+async function saveBridgesToSalesNavList() { return fileIntoSalesNavList('bridges'); }
 
 // ─── Bridge invites → dedicated Botdog campaign ─────────────────────────────
 // Every sync, invite the bridges you are NOT connected to (not 1st-degree) into the
@@ -1609,42 +1760,138 @@ async function extractLeadsFromPage(radarPerson, category, source) {
   return Array.from(byUrn.values()).slice(0, CAP);
 }
 
-async function resolvePublicUrls(leads, budget) {
-  const state = budget || { left: MAX_RESOLVE_PER_RUN };
-  for (const lead of leads.filter(l => !l.linkedin_url && l.lead_id)) {
-    if (state.left <= 0) break;
-    state.left--;
-    try { const url = await resolveUrn(lead.lead_id); if (url) lead.linkedin_url = url; }
-    catch(e) { await log('warn', 'resolve:urn-failed', { lead_id: lead.lead_id, error: String(e) }); }
-    await sleep(600);
+// ─── Public /in/ URL resolution ─────────────────────────────────────────────────────────────
+// Rewritten 2026-08-28. The old resolver opened a Sales Navigator LEAD PAGE per person and polled
+// the DOM for an `a[href*="linkedin.com/in/"]`. Verified live on 2026-08-28 against three real
+// leads: that anchor NO LONGER EXISTS. A fully rendered 2026 lead page has 107 anchors and not
+// one of them contains `/in/`; `publicIdentifier` appears nowhere in the page source either. So
+// the poll was never going to succeed - it burned a full page load (and a profile view) per
+// person to return null, which is why only 90 of 2368 targets had a URL.
+//
+// Captured Sales Navigator's OWN request for a lead page and replayed it: the public URL is
+// served by the API, in the `flagshipProfileUrl` field.
+//
+//   GET /sales-api/salesApiProfiles/(profileId:<URN>,authType:NAME_SEARCH,authToken:undefined)
+//       ?decoration=(entityUrn,fullName,degree,flagshipProfileUrl)
+//   headers: csrf-token, x-restli-protocol-version: 2.0.0
+//
+// Verified 2026-08-28 - all three test leads returned 200 with a real URL:
+//   "https://www.linkedin.com/in/lafarge", ".../in/laurent-sayada", ".../in/jean-pierre-chess%C3%A9-62b7a521"
+// This is one cheap GET, needs NO page render and costs NO profile view, so hundreds can be
+// resolved per run where the old way managed a hundred page loads for nothing. The response also
+// carries `degree`, which fills targets.connection and feeds the 1st-degree rules for free.
+//
+// NOTE: the decoration must be sent with parens/commas percent-encoded and nothing else; adding
+// `defaultPosition` without a sub-projection makes LinkedIn answer 400 (observed while testing).
+const RESOLVE_DECORATION = '%28entityUrn%2CfullName%2Cdegree%2CflagshipProfileUrl%29';
+const RESOLVE_PACE_MS    = 400;
+
+// Injected. Resolves MANY urns from one already-authenticated Sales Nav tab.
+async function resolveUrnsInPage(urns, decoration, paceMs) {
+  const csrf = (document.cookie.match(/JSESSIONID="?([^";]+)"?/) || [])[1];
+  if (!csrf) return { error: 'no JSESSIONID cookie', out: [] };
+  const out = [];
+  for (let i = 0; i < urns.length; i++) {
+    const urn = urns[i];
+    try {
+      const u = '/sales-api/salesApiProfiles/(profileId:' + urn +
+                ',authType:NAME_SEARCH,authToken:undefined)?decoration=' + decoration;
+      const r = await fetch(u, {
+        credentials: 'include',
+        headers: {
+          'csrf-token': csrf,
+          'x-restli-protocol-version': '2.0.0',
+          'accept': 'application/json'
+        }
+      });
+      if (r.status === 401 || r.status === 403 || r.status === 429) {
+        out.push({ urn: urn, status: r.status, stop: true });
+        break;
+      }
+      let j = null;
+      try { j = JSON.parse(await r.text()); } catch (e) {}
+      out.push({
+        urn: urn,
+        status: r.status,
+        url: (j && j.flagshipProfileUrl) || null,
+        degree: (j && typeof j.degree !== 'undefined') ? j.degree : null
+      });
+    } catch (e) {
+      out.push({ urn: urn, error: String(e).slice(0, 80) });
+    }
+    await new Promise(function (r) { setTimeout(r, paceMs + Math.floor(Math.random() * paceMs)); });
   }
-  return leads;
+  return { out: out };
 }
 
-async function resolveUrn(urn) {
-  const tab = await openScrapeTab('https://www.linkedin.com/sales/lead/' + urn + ',NAME_SEARCH,undefined');
-  if (!tab) return null;
-  // A Sales Nav lead page is a SPA: at 2500ms the /in/ anchor is essentially never in the DOM
-  // yet, so the old one-shot read returned null every time - which is why 0 of 1722 targets
-  // collected on 2026-08-25 had a linkedin_url. Poll inside the page instead.
+// Opens ONE Sales Nav tab and resolves every urn through it. Returns a Map urn -> {url, degree}.
+async function resolveUrnsViaApi(urns) {
+  const result = new Map();
+  if (!urns || !urns.length) return result;
+  const tab = await openScrapeTab('https://www.linkedin.com/sales/homepage');
+  if (!tab) {
+    await log('warn', 'resolve:no-tab', { wanted: urns.length });
+    return result;
+  }
   try {
-    const out = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: async () => {
-        for (let i = 0; i < 14; i++) {
-          const l = document.querySelector('a[href*="linkedin.com/in/"]');
-          if (l && l.href) return l.href.split('?')[0];
-          await new Promise(r => setTimeout(r, 900));
+    await waitForTabComplete(tab.id, 45000);
+    // Same lesson as the list phase: a cookie is not a loaded page. Give the SPA a moment.
+    await sleep(3000);
+    let stopped = false;
+    for (let i = 0; i < urns.length && !stopped; i += 50) {
+      const batch = urns.slice(i, i + 50);
+      const res = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: resolveUrnsInPage,
+        args: [batch, RESOLVE_DECORATION, RESOLVE_PACE_MS]
+      });
+      const payload = (res && res[0]) ? res[0].result : null;
+      const rows = (payload && payload.out) || [];
+      for (const row of rows) {
+        if (row.stop) {
+          stopped = true;
+          await log('warn', 'resolve:refused', { status: row.status, resolved_so_far: result.size });
+          break;
         }
-        return null;
+        if (row.url) result.set(row.urn, { url: row.url, degree: row.degree });
       }
-    });
-    return (out && out[0]) ? (out[0].result || null) : null;
+    }
   } catch (e) {
-    return null;
+    await log('warn', 'resolve:error', { error: String(e) });
   } finally {
     try { chrome.tabs.remove(tab.id); } catch (e) {}
   }
+  return result;
+}
+
+async function resolvePublicUrls(leads, budget) {
+  const state = budget || { left: MAX_RESOLVE_PER_RUN };
+  const need = leads.filter(l => !l.linkedin_url && l.lead_id).slice(0, Math.max(0, state.left));
+  if (!need.length) return leads;
+  state.left -= need.length;
+  const map = await resolveUrnsViaApi(need.map(l => l.lead_id));
+  let hit = 0;
+  for (const lead of need) {
+    const got = map.get(lead.lead_id);
+    if (got && got.url) {
+      lead.linkedin_url = got.url;
+      hit++;
+      // The same call tells us the network distance - keep it, the 1st-degree rules need it.
+      if (got.degree !== null && typeof got.degree !== 'undefined' && !lead.connection) {
+        lead.connection = String(got.degree);
+      }
+    }
+  }
+  await log('info', 'resolve:urls', { asked: need.length, resolved: hit, budget_left: state.left });
+  return leads;
+}
+
+// Single-urn convenience (bridges). Same API path, so it no longer opens a lead page for nothing.
+async function resolveUrn(urn) {
+  if (!urn) return null;
+  const map = await resolveUrnsViaApi([urn]);
+  const got = map.get(urn);
+  return (got && got.url) || null;
 }
 
 async function postToHub(leads) {

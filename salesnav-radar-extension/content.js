@@ -97,6 +97,17 @@
         });
       } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-salesnav-list-result', { detail: { ok: false, error: String(e) } })); }
     });
+    // let the Radar web app file pending bridges into the Sales Navigator bridges list on demand.
+    window.addEventListener('radar-ext-salesnav-bridges', function () {
+      try {
+        chrome.runtime.sendMessage({ action: 'salesnavBridgesListNow' }, function (resp) {
+          var detail = (!chrome.runtime.lastError && resp && resp.ok)
+            ? { ok: true, result: resp.result }
+            : { ok: false, error: (resp && resp.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message) };
+          window.dispatchEvent(new CustomEvent('radar-ext-salesnav-bridges-result', { detail: detail }));
+        });
+      } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-salesnav-bridges-result', { detail: { ok: false, error: String(e) } })); }
+    });
     // let the Radar web app trigger a collection run without opening the popup.
     window.addEventListener('radar-ext-sync', function () {
       try {

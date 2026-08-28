@@ -1,3 +1,72 @@
+## 1.10.0 - 2026-08-28
+Two Sales Navigator lists. Botdog is an add-on, not a prerequisite.
+
+- **NEW: a dedicated Sales Navigator BRIDGES list.** Radar now files into two lists, and both are
+  guaranteed outputs whether or not Botdog is connected: **Prospects** (`salesnav_list_url`, the
+  people found through a bridge's network) and **Bridges** (`salesnav_bridges_list_url`). The
+  bridges list carries the bridges discovered from Sources that we are **not connected to** -
+  Sales Nav silently drops `CONNECTION_OF` for anyone but a 1st-degree connection, so those
+  networks are unreachable until we connect. Filed into their own list, they become a workable
+  connection campaign instead of a dead end.
+- **Same call, no new risk.** A bridge has a Sales Nav member urn exactly like a prospect has a
+  `lead_id`, so the bridges list reuses `bulkSaveByMembers` verbatim: one bulk call per 25, zero
+  profile views, no public `/in/` URL needed. That last point matters - `pushBridges` needs an
+  `/in/` URL and **0 of 75 bridges had one**, which is why the invite loop never closed. The list
+  path does not need one at all.
+- **Eligibility: every bridge whose degree is not positively 1st.** Only 6 of 80 bridges have a
+  recorded degree, so a stricter rule would file nobody. An already-connected bridge costs one
+  extra line in a list; a missed one costs a whole network.
+- **Shared phase.** `saveTargetsToSalesNavList()` and the new `saveBridgesToSalesNavList()` are
+  both thin wrappers over `fileIntoSalesNavList(kind)` - same tab handling, same seat probe, same
+  cooldown, same chunked marking. Bridges are capped at 100/run and tracked server-side on
+  `bridges.salesnav_listed_at` (hub v16), so nobody is filed twice.
+- **An unset bridges list is not an error.** It logs `salesnav-bridges:not-configured` at info
+  level and moves on. Only the prospects list, which is the product, still raises a desktop
+  error when it is missing.
+- Manual trigger: message `salesnavBridgesListNow`, or the page event
+  `radar-ext-salesnav-bridges` -> `radar-ext-salesnav-bridges-result`.
+- `run:done` now reports `bridgesListed`.
+
+## 1.9.2 - 2026-08-28
+The Sales Navigator list phase was firing before the page it fires from had loaded.
+
+- **FIX: `403 SALES_SEAT_REQUIRED` was never a seat problem.** On 2026-08-28 the list phase logged
+  `salesnav-list:start` at 06:58:59.370, `scrape-window:fallback` at 06:58:59.534 and
+  `chunk-failed 403 SALES_SEAT_REQUIRED` at 06:59:01.825 - the chunk fired **2.3 seconds** after
+  the tab was created. Verified live the same afternoon: the identical call, same headers, from a
+  loaded list page returns **200**. The seat was active the whole time.
+- **Root cause: the session probe could not tell a blank tab from a loaded one.** It checked only
+  the `JSESSIONID` cookie (domain-wide, present immediately) and `location.pathname` (set before
+  a single byte loads). Both are true at t=0, so the probe passed on the first attempt, ~2s in,
+  and the backlog was spent against a page LinkedIn had not yet established a Sales Nav session
+  for. `document.readyState` was never consulted.
+- **The probe now proves the seat, not the cookie.** It requires `readyState === 'complete'` and
+  then makes the real `bulkSaveByMembers` call with an **empty** entity list - same endpoint, same
+  headers, adds nobody - and requires a 2xx. A 403 there just means "not ready yet", so it keeps
+  polling instead of burning the backlog.
+- **Waits for the tab to actually load.** New `waitForTabComplete()` (`tabs.onUpdated` status
+  `complete`, 45s cap) replaces the blind 2s sleep. This matters most on the background-tab
+  fallback taken when the off-screen scrape window is rejected for bounds - Chrome throttles
+  background tabs, so they routinely need far longer than 2s.
+- **A 403 having filed nobody no longer costs six hours.** That is the page-not-ready signature,
+  so it retries the same chunk once after 20s (`salesnav-list:seat-retry`). Only a repeat failure
+  sets the long cooldown, and the abort now says the seat was refused rather than blaming the
+  session - the old copy told the user to log in again, which can never fix this.
+
+- **FIX: only 90 of 2368 prospects had a public LinkedIn URL.** The resolver opened a Sales Nav
+  lead page per person and polled the DOM for `a[href*="linkedin.com/in/"]`. Checked live against
+  three real leads on 2026-08-28: **that anchor no longer exists.** A fully rendered lead page has
+  107 anchors, none containing `/in/`, and no `publicIdentifier` anywhere in the source. The 1.9.0
+  "poll for ~13s" fix could never have worked - it just polled longer for something absent, at the
+  cost of a page load and a profile view each.
+- **The URL comes from the API instead.** Captured Sales Navigator's own lead-page request:
+  `GET /sales-api/salesApiProfiles/(profileId:<URN>,authType:NAME_SEARCH,authToken:undefined)`
+  with `decoration=(entityUrn,fullName,degree,flagshipProfileUrl)` returns the public URL in
+  `flagshipProfileUrl`. Verified 200 on three leads. No page render, **no profile view**, so
+  `MAX_RESOLVE_PER_RUN` goes 100 -> 400 and all lookups share ONE tab.
+  The same response carries `degree`, which now fills `connection` for free - the 1st-degree rules
+  used to need a separate scrape to learn it.
+
 ## 1.9.1 - 2026-08-26
 Stop scraping bridges we are not connected to, instead of discovering it by scraping them.
 
