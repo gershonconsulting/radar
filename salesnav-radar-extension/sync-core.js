@@ -277,6 +277,9 @@ async function runSync() {
   try {
     let sources = [];
     try { sources = await getSources(); } catch (e) { sources = []; }
+    // A Source added by pasting a company URL has no Sales Nav org id yet. Resolve it here so
+    // the user is never asked for one, and so this same run can discover its bridges.
+    try { sources = await resolveMissingOrgIds(sources); } catch (e) { await log('warn', 'orgid:phase-error', { error: String(e) }); }
     // Build the set of sources that already have at least one bridge (i.e. already discovered).
     const discoveredSources = new Set();
     try {
@@ -1201,6 +1204,138 @@ async function resolveActiveBridges() {
     hint: 'Add a Source in Radar, run Find Bridges, then switch the bridges you want to ON.'
   });
   return [];
+}
+
+// --- Sales Nav organization id resolution ---
+// A Source is added by pasting a LinkedIn COMPANY URL. Bridge discovery needs the numeric
+// organization id that Sales Nav filters by (urn:li:organization:<id>). Asking the user to go
+// find that id is asking them to do LinkedIn's job twice: the id is derivable from the very
+// page they already pasted. So we resolve it here, once per source, from an authenticated tab,
+// and save it back to the hub. Nothing in the UI should ever demand an Org ID again.
+//
+// Two ways, cheapest first:
+//   1. voyager /organization/companies?q=universalName&universalName=<slug>  -> entityUrn
+//   2. the company page HTML itself, which embeds urn:li:fsd_company:<id>
+// A URL that already carries the number (…/company/1234 or …/organization/1234) needs neither.
+function orgIdFromUrl(u) {
+  const s = String(u || '').split('?')[0].replace(/\/+$/, '');
+  const direct = s.match(/(?:organization|company)\/(\d+)(?:\/|$)/);
+  if (direct) return { id: direct[1], slug: '' };
+  const m = s.match(/linkedin\.com\/(?:company|showcase|school)\/([^\/]+)/i);
+  let slug = '';
+  if (m) { try { slug = decodeURIComponent(m[1]); } catch (e) { slug = m[1]; } }
+  return { id: '', slug: slug };
+}
+
+// Injected into an authenticated linkedin.com tab. Resolves many slugs in one page.
+async function resolveOrgIdsInPage(slugs) {
+  const csrf = (document.cookie.match(/JSESSIONID="?([^";]+)"?/) || [])[1];
+  if (!csrf) return { error: 'no JSESSIONID cookie', out: [] };
+  const headers = { 'csrf-token': csrf, 'x-restli-protocol-version': '2.0.0', 'accept': 'application/json' };
+  const dig = function (t) {
+    const m = String(t || '').match(/urn:li:(?:fs_normalized_company|fsd_company|organization|company):(\d+)/);
+    return m ? m[1] : '';
+  };
+  const out = [];
+  for (let i = 0; i < slugs.length; i++) {
+    const slug = slugs[i];
+    let id = '', how = '', status = 0;
+    try {
+      const r = await fetch('/voyager/api/organization/companies?q=universalName&universalName=' + encodeURIComponent(slug),
+                            { credentials: 'include', headers: headers });
+      status = r.status;
+      if (r.ok) { id = dig(await r.text()); if (id) how = 'voyager'; }
+    } catch (e) {}
+    if (!id) {
+      // Fall back to the public company page: the id is embedded in its bootstrapped JSON.
+      try {
+        const r2 = await fetch('https://www.linkedin.com/company/' + encodeURIComponent(slug) + '/', { credentials: 'include' });
+        if (!status) status = r2.status;
+        if (r2.ok) { id = dig(await r2.text()); if (id) how = 'page'; }
+      } catch (e) {}
+    }
+    out.push({ slug: slug, id: id, how: how, status: status });
+    await new Promise(function (r) { setTimeout(r, 500 + Math.floor(Math.random() * 500)); });
+  }
+  return { out: out };
+}
+
+// Opens ONE tab and resolves every slug through it. Returns a Map slug -> org id.
+async function resolveOrgIdsViaApi(slugs) {
+  const result = new Map();
+  if (!slugs || !slugs.length) return result;
+  const tab = await openScrapeTab('https://www.linkedin.com/sales/homepage');
+  if (!tab) {
+    await log('warn', 'orgid:no-tab', { wanted: slugs.length });
+    return result;
+  }
+  try {
+    await waitForTabComplete(tab.id, 45000);
+    // Same lesson as everywhere else here: a cookie is not a loaded page.
+    await sleep(3000);
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: resolveOrgIdsInPage,
+      args: [slugs]
+    });
+    const payload = (res && res[0]) ? res[0].result : null;
+    const rows = (payload && payload.out) || [];
+    if (payload && payload.error) await log('warn', 'orgid:page-error', { error: payload.error });
+    for (const row of rows) {
+      if (row.id) result.set(row.slug, row.id);
+      else await log('warn', 'orgid:unresolved', { slug: row.slug, status: row.status });
+    }
+  } catch (e) {
+    await log('warn', 'orgid:error', { error: String(e) });
+  } finally {
+    try { chrome.tabs.remove(tab.id); } catch (e) {}
+  }
+  return result;
+}
+
+// Save a resolved org id back to the hub WITHOUT touching the rest of the source row
+// (addSource is an upsert and would rewrite columns the caller did not send).
+async function saveSourceOrgId(name, orgId) {
+  try {
+    await fetch(WEBAPP_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ secret: INGEST_SECRET, action: 'setSourceOrg', name: name, org_id: orgId })
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+// Fill in org_id for every source that has a company URL but no id yet. Mutates and returns
+// the sources array so discovery can use the ids in the SAME run.
+async function resolveMissingOrgIds(sources) {
+  const list = sources || [];
+  const need = [];
+  for (const s of list) {
+    if (String(s.org_id || '').trim()) continue;
+    const got = orgIdFromUrl(s.linkedin_url);
+    if (got.id) {
+      // The URL already carried the number — no network call needed.
+      s.org_id = got.id;
+      await saveSourceOrgId(s.name, got.id);
+      await log('info', 'orgid:from-url', { source: s.name, org_id: got.id });
+      continue;
+    }
+    if (got.slug) need.push({ src: s, slug: got.slug });
+  }
+  if (!need.length) return list;
+  await log('info', 'orgid:resolve-start', { count: need.length, sources: need.map(n => n.src.name) });
+  const map = await resolveOrgIdsViaApi(need.map(n => n.slug));
+  let hit = 0;
+  for (const n of need) {
+    const id = map.get(n.slug);
+    if (!id) continue;
+    n.src.org_id = id;
+    await saveSourceOrgId(n.src.name, id);
+    hit++;
+  }
+  await log('info', 'orgid:resolve-done', { asked: need.length, resolved: hit });
+  if (hit) notify('Source ready', hit + ' source(s) resolved — bridge discovery can run.');
+  return list;
 }
 
 // --- Bridge discovery ---

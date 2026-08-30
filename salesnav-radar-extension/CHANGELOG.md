@@ -1,3 +1,22 @@
+## 1.11.0 - 2026-08-28
+The Org ID stops being the user's problem.
+
+- **NEW: Radar resolves a Source's Sales Navigator organization id itself.** A Source is added by
+  pasting a LinkedIn **company URL**; bridge discovery needs the numeric
+  `urn:li:organization:<id>` that Sales Nav filters by. Until now the app said "add a Sales Nav
+  Org ID to enable bridge discovery" and simply stopped - asking the user to go and look up a
+  number that is derivable from the page they had already pasted. Businesseurope sat that way:
+  URL saved, `org_id` null, zero bridges, `discovered=false`, forever.
+- **How.** Each run, every source with a URL and no id is resolved once, in one authenticated tab:
+  voyager `organization/companies?q=universalName&universalName=<slug>` first, and if that answers
+  nothing, the company page HTML itself (it embeds `urn:li:fsd_company:<id>`). A URL that already
+  carries the number (`/company/1234`, `/organization/1234`) needs no call at all.
+- **Same run, not the next one.** Resolution happens immediately before the discovery decisions,
+  so a source added minutes ago is discovered in the very same run rather than waiting a cycle.
+- **Saved without collateral damage.** The id goes back through a new hub action `setSourceOrg`
+  (a PATCH of `org_id` alone). `addSource` is an upsert that rewrites every column in its payload,
+  which is how `linkedin_url` got nulled on 17 of 21 sources - never reuse it to patch one field.
+
 ## 1.10.0 - 2026-08-28
 Two Sales Navigator lists. Botdog is an add-on, not a prerequisite.
 
