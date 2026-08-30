@@ -536,7 +536,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.11.1</div>
+      <div class="ver" id="sideVer">v1.12.0</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -602,7 +602,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="page-head"><h2>Dashboard</h2><p>Your engine at a glance — capture health, pipeline totals, and what needs attention today.</p></div>
       <div id="extUpdateBannerHome" class="banner banner-danger" style="display:none">
         <span id="extUpdateMsgHome"></span>
-        <a id="extUpdateDlHome" href="/radar-extension-v1.10.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
+        <a id="extUpdateDlHome" href="/radar-extension-v1.11.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
         <a id="extUpdateHelpTogHome" href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
         <div id="extUpdateHelpHome" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400"></div>
       </div>
@@ -622,7 +622,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
       <div id="extUpdateBanner" class="banner banner-danger" style="display:none">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension-v1.10.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
+        <a id="extUpdateDl" href="/radar-extension-v1.11.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
         <a id="extUpdateHelpTog" href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
         <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400"></div>
       </div>
@@ -710,7 +710,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <div id="extStatePill" class="ext-pill idle">Checking&hellip;</div>
           <div id="extStateNote" style="margin-top:10px;font-size:0.85rem;color:#334155"></div>
           <div class="ext-actions">
-            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.10.0.zip" download>&#11015; Download latest</a>
+            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.11.0.zip" download>&#11015; Download latest</a>
             <button class="ext-btn ghost" onclick="extRunDiag()">Test installation</button>
           </div>
         </div>
@@ -835,7 +835,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div class="field"><label>LinkedIn company URL</label><input id="srcUrl" placeholder="https://www.linkedin.com/company/..."></div>
         <details style="margin:2px 0 10px"><summary style="cursor:pointer;font-size:0.85rem;color:#64748b">Optional details (leave blank to auto-fill)</summary>
           <div class="field" style="margin-top:8px"><label>Source name <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="srcName" placeholder="auto-filled from the company page"></div>
-          <div class="field"><label>Sales Nav company URL or Org ID <span style="color:#94a3b8;font-weight:400">— speeds up bridge discovery</span></label><input id="srcOrg" placeholder="…/organization/139070  or  139070"></div>
+          <div class="field"><label>Sales Nav company URL or Org ID <span style="color:#94a3b8;font-weight:400">— almost never needed; Radar reads it off the company page</span></label><input id="srcOrg" placeholder="…/organization/139070  or  139070"></div>
           <div class="field"><label>Role / function keyword <span style="color:#94a3b8;font-weight:400">— narrows discovery for large orgs</span></label><input id="srcKeyword" placeholder="e.g. Team France Export"></div>
           <div class="field"><label>Type</label>
             <select id="srcCat">
@@ -845,7 +845,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
             </select>
           </div>
           <label style="display:flex;align-items:center;gap:8px;font-size:0.88rem;color:#334155;margin:2px 0 4px;cursor:pointer">
-            <input type="checkbox" id="srcDiscoverNow" checked style="width:16px;height:16px"> Collect bridges now <span style="color:#94a3b8">(needs the Org ID; otherwise on the discovery run)</span>
+            <input type="checkbox" id="srcDiscoverNow" checked style="width:16px;height:16px"> Collect bridges now <span style="color:#94a3b8">(on the next sync, once the company is resolved)</span>
           </label>
         </details>
         <button class="btn-save" onclick="addSource()">+ Add Source</button>
@@ -884,7 +884,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.10.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.11.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -1223,15 +1223,16 @@ async function addSource() {
   if (!srcName) { st.textContent = 'Paste the LinkedIn company URL — that’s all you need.'; return; }
   const srcBlock = sourceCapBlock();
   if (srcBlock) { st.innerHTML = srcBlock + ' <a href="#" onclick="showView(\'billing\');return false;" style="color:#2563eb">Upgrade →</a>'; return; }
-  // Can't discover bridges without the org ID yet — save the source anyway; bridges come once it's resolved.
-  let effectiveDiscover = discoverNow && !!orgId;
+  // The org ID is NOT a precondition any more: the extension resolves it from the company URL
+  // (ext v1.11.0+) at the start of the run that discovers the bridges. Honor the checkbox as asked.
+  let effectiveDiscover = discoverNow;
   st.textContent = 'Adding…';
   try {
     const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: srcName, linkedin_url: url, category: cat, org_id: orgId, discover_keyword: keyword, discover_now: effectiveDiscover }) });
     const d = await resp.json();
     if (d.saved) {
       st.textContent = effectiveDiscover
-        ? '✓ Added "' + srcName + '". Bridges queued — they’ll be collected on the next sync, or open the Radar extension and click Discover to run now.'
+        ? '✓ Added "' + srcName + '". Radar resolves the company on the next sync, then collects its bridges — or open the Radar extension and click Discover to run now.'
         : '✓ Added "' + srcName + '". Radar resolves the company’s Sales Nav ID, then finds its bridges automatically.';
       document.getElementById('srcName').value = ''; document.getElementById('srcUrl').value = ''; document.getElementById('srcOrg').value = ''; document.getElementById('srcKeyword').value = '';
       await loadSources(); await load();
@@ -1606,7 +1607,7 @@ function detectExtension(){
 }
 
 // ===== Extension version offer (installed vs latest, like the Linalysis check) =====
-const LATEST_EXT_VERSION = '1.10.0';   // latest packaged extension offered on the platform
+const LATEST_EXT_VERSION = '1.11.0';   // latest packaged extension offered on the platform
 const EXT_ZIP_URL = '/radar-extension-v' + LATEST_EXT_VERSION + '.zip';
 function cmpVer(a, b){
   const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
@@ -2717,7 +2718,7 @@ function triggerBridgeList(){
   const st  = document.getElementById('bridgePushStatus');
   const btn = document.getElementById('listBridgesBtn');
   const show = (t, k) => { if (st) { st.style.display='block'; st.className='sync-status '+(k||'info'); st.textContent=t; } };
-  if (!document.documentElement.getAttribute('data-radar-ext')) { show('Chrome extension not detected — install/reload the Radar extension (v1.10.0 or later), then try again.', 'err'); return; }
+  if (!document.documentElement.getAttribute('data-radar-ext')) { show('Chrome extension not detected — install/reload the Radar extension (v1.11.0 or later), then try again.', 'err'); return; }
   if (BRIDGE_LIST_RUNNING) return;
   BRIDGE_LIST_RUNNING = true;
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Filing…'; }
@@ -2991,7 +2992,8 @@ function renderSources(){
       ? nb + ' bridge' + (nb===1?'':'s') + ': ' + esc(info.bridges.map(cleanName).join(', '))
       : (info.leads ? 'leadership collected directly'
          : (info.org_id ? 'ready — no bridges yet (use “Find Bridges Now” in the extension)'
-                        : 'add a Sales Nav Org ID to enable bridge discovery'));
+            : (info.url ? 'ready — Radar reads the company’s Sales Nav ID off its LinkedIn page on the next sync, then finds bridges'
+                        : 'add the LinkedIn company URL to enable bridge discovery')));
     const btn = '<button class="btn-secondary" onclick="requestBridges(this,\'' + jsq(s) + '\')">🧭 Find Bridges</button>';
     // Two headline counts per source: bridges (orange) and targets (blue), clickable through.
     const counts =
@@ -3034,18 +3036,23 @@ async function requestBridges(btnEl, sourceName){
   };
   const src = STORED_SOURCES.find(s => _norm(s.name) === _norm(sourceName));
   const orgId = src && src.org_id ? String(src.org_id).trim() : '';
+  const url = src && src.linkedin_url ? String(src.linkedin_url).trim() : '';
   const kw = src && src.discover_keyword ? String(src.discover_keyword).trim() : '';
-  if (!orgId) { setNote('Add a Sales Nav Org ID first', 'warn'); return; }
+  // A LinkedIn company URL is enough: the extension resolves the Sales Nav org id from it at the
+  // start of the run. Only a source with neither a URL nor an id has nothing to search with.
+  if (!orgId && !url) { setNote('Add this source’s LinkedIn company URL first', 'warn'); return; }
   btnEl.disabled = true;
   setNote('Queuing…', '');
   try {
     const resp = await fetch(CONFIG.WEBAPP_URL, {
       method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: sourceName, org_id: orgId, discover_keyword: kw, discover_now: true })
+      body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'queueDiscover', name: sourceName, discover_keyword: kw })
     });
     const d = await resp.json();
     if (d && (d.saved || d.success)) {
-      setNote('✓ Queued — bridges will be collected on the next sync (or click Find New Bridges in the extension).', 'ok');
+      setNote(orgId
+        ? '✓ Queued — bridges will be collected on the next sync (or click Find New Bridges in the extension).'
+        : '✓ Queued — Radar resolves this company’s Sales Nav ID from its LinkedIn page on the next sync, then collects its bridges.', 'ok');
     } else {
       setNote('Error: ' + JSON.stringify(d), 'err');
       btnEl.disabled = false;
@@ -3542,7 +3549,7 @@ function fileBridgesNow() {
   setTimeout(function () {
     if (answered) return;
     window.removeEventListener('radar-ext-salesnav-bridges-result', onResult);
-    if (status) status.textContent = 'No answer from the extension — check it is installed and running v1.10.0 or later.';
+    if (status) status.textContent = 'No answer from the extension — check it is installed and running v1.11.0 or later.';
   }, 240000);
 }
 
