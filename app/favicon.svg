@@ -1,6 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="32" cy="32" r="26" fill="none" stroke="#4f46e5" stroke-width="6"/>
-  <path d="M32 32 L32 6 A26 26 0 0 1 54.5 19 Z" fill="#4f46e5" opacity=".55"/>
-  <circle cx="32" cy="32" r="7" fill="#4f46e5"/>
-  <circle cx="44" cy="20" r="5" fill="#6366f1"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Radar">
+  <defs>
+    <linearGradient id="rg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF3A1E"/>
+      <stop offset="1" stop-color="#E01000"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#rg)"/>
+  <!-- sweep -->
+  <path d="M32 32 L32 6 A26 26 0 0 1 54.5 19 Z" fill="#fff" opacity=".26"/>
+  <!-- rings -->
+  <g fill="none" stroke="#fff" stroke-width="4.2" opacity=".92">
+    <circle cx="32" cy="32" r="22"/>
+    <circle cx="32" cy="32" r="11.5"/>
+  </g>
+  <circle cx="32" cy="32" r="4.4" fill="#fff"/>
+  <!-- blip -->
+  <circle cx="45.5" cy="18.5" r="8" fill="#E01000"/>
+  <circle cx="45.5" cy="18.5" r="5.4" fill="#fff"/>
 </svg>
