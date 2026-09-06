@@ -2366,7 +2366,10 @@ function renderHome(){
   let hb;
   if (days === null) hb = { c:'#991b1b', bg:'#fef2f2', bd:'#fecaca', t:'No prospects captured yet — run a collection to get started.' };
   else if (days <= 2) hb = { c:'#166534', bg:'#f0fdf4', bd:'#bbf7d0', t:'✓ Capture healthy — last new prospect ' + (days===0?'today':days+' day'+(days>1?'s':'')+' ago') + '.' };
-  else hb = { c:'#b45309', bg:'#fffbeb', bd:'#fde68a', t:'⚠ No new prospects for ' + days + ' days (last ' + last.toISOString().slice(0,10) + '). Check the Radar extension is running.' };
+  // These two lines describe the ACCOUNT (collection has stalled somewhere), so they stay on a
+  // viewing computer — that is exactly who needs to know. Only the instruction changes: telling
+  // a viewer to check "the Radar extension" points at a browser that is not supposed to have one.
+  else hb = { c:'#b45309', bg:'#fffbeb', bd:'#fde68a', t:'⚠ No new prospects for ' + days + ' days (last ' + last.toISOString().slice(0,10) + '). ' + (isCollectingComputer() ? 'Check the Radar extension is running.' : 'Check the Radar extension is running on your collecting computer.') };
 
   // ---- KPI cards ----
   const kpi = (n,l,s,go,color) =>
@@ -2417,7 +2420,7 @@ function renderHome(){
 
   // ---- next best actions ----
   const acts = [];
-  if (days!==null && days>2) acts.push(['#fef2f2','#dc2626','⚡','Collector idle <b>'+days+' days</b> — reload the extension & Sync','showView(\'setup\')']);
+  if (days!==null && days>2) acts.push(['#fef2f2','#dc2626','⚡','Collector idle <b>'+days+' days</b> — ' + (isCollectingComputer() ? 'reload the extension & Sync' : 'reload the extension on your collecting computer'),'showView(\'setup\')']);
   if (readyPush>0)     acts.push(['#ecfdf5','#059669','🚀','<b>'+readyPush+'</b> A/A+ prospect'+(readyPush>1?'s':'')+' ready to push to Botdog','showView(\'targets\')']);
   if (idleSources.length>0) acts.push(['#fffbeb','#b45309','🏢','<b>'+idleSources.length+'</b> source'+(idleSources.length>1?'s':'')+' with no bridges yet — discover bridges','showView(\'sources\')']);
   if (noUrl>0)         acts.push(['#eff6ff','#2563eb','🔗','<b>'+noUrl+'</b> prospect'+(noUrl>1?'s':'')+' missing a LinkedIn URL','statGo(\'targets\',\'nolink\')']);
