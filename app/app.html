@@ -466,6 +466,18 @@ td a:hover{ text-decoration:underline; }
 .ext-logtail{ background:#0f1e3d; border-radius:9px; padding:16px 18px; height:clamp(380px,58vh,760px); overflow-y:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:0.88rem; line-height:1.75; color:#cbd5e1; }
 .ext-logtail div{ padding:1px 0; white-space:pre-wrap; word-break:break-word; }
 .ext-logtail .l-error{ color:#fca5a5; } .ext-logtail .l-warn{ color:#fcd34d; } .ext-logtail .l-ts{ color:#64748b; }
+.rmode{ display:flex; flex-direction:column; gap:10px; }
+.rmode-opt{ display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; cursor:pointer; transition:border-color .12s, background .12s;
+  /* the global `label` rule uppercases + letterspaces everything; these are sentences, not field labels */
+  text-transform:none; letter-spacing:normal; font-size:0.9rem; font-weight:400; margin-bottom:0; }
+.rmode-opt:hover{ border-color:#94a3b8; }
+.rmode-opt input{ margin-top:3px; cursor:pointer; flex:none; }
+.rmode-opt strong{ display:block; font-size:0.9rem; font-weight:700; color:#0f172a; }
+.rmode-opt em{ display:block; font-style:normal; font-weight:400; font-size:0.8rem; color:#64748b; margin-top:3px; line-height:1.45; }
+.rmode-opt.sel{ border-color:#2563eb; background:#eff6ff; }
+.rmode-opt.sel.off{ border-color:#64748b; background:#f8fafc; }
+.viewer-pill{ display:inline-flex; align-items:center; gap:8px; background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:999px; padding:7px 14px; font-size:0.84rem; font-weight:600; margin-bottom:16px; }
+.viewer-pill a{ color:#475569; text-decoration:underline; font-weight:600; cursor:pointer; }
 .settings-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:18px; max-width:560px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
 .settings-card h2{ font-size:1.05rem; font-weight:600; margin-bottom:4px; }
 .settings-card p{ color:var(--muted); font-size:0.85rem; margin-bottom:16px; }
@@ -542,7 +554,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.12.0</div>
+      <div class="ver" id="sideVer">v1.13.0</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -612,6 +624,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <a id="extUpdateHelpTogHome" href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
         <div id="extUpdateHelpHome" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400"></div>
       </div>
+      <div id="viewerPill" class="viewer-pill" style="display:none">&#128065; Viewing only &mdash; this computer doesn&rsquo;t collect. The figures below are collected by your collecting computer. <a onclick="showView('settings')">Change in Settings</a></div>
       <div id="onboardingWrapHome"></div>
       <div id="homeBody"><div class="empty">Loading…</div></div>
     </section>
@@ -888,9 +901,25 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     <section id="view-settings" class="view">
       <div class="page-head"><h2>Settings</h2><p>Collection schedule, API keys, and campaign.</p></div>
       <div class="settings-card">
+        <h2>Collecting session <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(this computer only)</span></h2>
+        <p>The same Radar account is opened from several computers &mdash; one runs the collection, the others (you, your client) only watch. Tell Radar which one this is. This choice is saved on <strong>this browser</strong> and never changes the other computers.</p>
+        <div class="rmode">
+          <label class="rmode-opt" id="rmodeOptOn">
+            <input type="radio" name="radarCollectMode" value="on" onchange="setCollectMode('on')">
+            <span><strong>ON &mdash; this computer collects</strong><em>The Radar Chrome extension must be installed here and Chrome kept open. Radar warns you when the extension is missing or outdated.</em></span>
+          </label>
+          <label class="rmode-opt off" id="rmodeOptOff">
+            <input type="radio" name="radarCollectMode" value="off" onchange="setCollectMode('off')">
+            <span><strong>OFF &mdash; viewing only</strong><em>This computer just reads what the collecting computer gathers. No Chrome extension needed here, and no missing-extension warnings.</em></span>
+          </label>
+        </div>
+        <div id="collectModeStatus" class="field-note" style="margin-top:10px"></div>
+      </div>
+      <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
         <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.11.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedViewerNote" class="field-note" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:12px">This computer is set to <strong>viewing only</strong>, so the schedule below isn&rsquo;t used here &mdash; it lives inside the extension on your collecting computer. Set <em>Collecting session</em> to ON above if you want this computer to collect.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
           <select id="schedTargets">
@@ -1591,6 +1620,46 @@ function obDismiss(){ try{ localStorage.setItem('radar_onboarded','1'); }catch(e
 
 function obDot(done){ return '<div class="ob-dot ' + (done?'done':'todo') + '">' + (done?'&#10003;':'&#9675;') + '</div>'; }
 
+// ===== Collecting session (a fact about THIS COMPUTER, not the account) =====
+// The same Radar account is opened from several machines: one collecting machine that runs the
+// Chrome extension, plus viewers (Olivier, the client) that only read what it gathered. Whether
+// the extension is required is therefore a per-BROWSER question, so this switch is deliberately
+// localStorage-backed. That is not the bug pattern in radar-ui-truth-source-bug: the rule there
+// is that ACCOUNT state must come from the hub. Extension presence, Sales Nav session and this
+// switch are the genuine per-browser facts localStorage is the right home for. Default = ON, so
+// an existing install keeps warning exactly as before until someone opts a machine out.
+const COLLECT_MODE_KEY = 'radar_collecting';
+function isCollectingComputer(){
+  try { return localStorage.getItem(COLLECT_MODE_KEY) !== '0'; } catch(e) { return true; }
+}
+function setCollectMode(mode){
+  const on = (mode !== 'off');
+  try { localStorage.setItem(COLLECT_MODE_KEY, on ? '1' : '0'); } catch(e) {}
+  renderCollectMode();
+  // Every surface that shouts about a missing extension has to repaint immediately, in both
+  // directions: switching OFF must silence them now, switching ON must bring the warning back
+  // without a reload (otherwise a machine could be left silently not collecting).
+  try { renderOnboarding(); } catch(e) {}
+  try { checkExtUpdate(); } catch(e) {}
+  try { extRenderState(); } catch(e) {}
+  try { loadSchedule(); } catch(e) {}
+}
+function renderCollectMode(){
+  const on = isCollectingComputer();
+  try {
+    document.querySelectorAll('input[name="radarCollectMode"]').forEach(function(r){ r.checked = (r.value === (on ? 'on' : 'off')); });
+  } catch(e) {}
+  const onLbl = document.getElementById('rmodeOptOn'), offLbl = document.getElementById('rmodeOptOff');
+  if (onLbl)  onLbl.classList.toggle('sel', on);
+  if (offLbl) offLbl.classList.toggle('sel', !on);
+  const st = document.getElementById('collectModeStatus');
+  if (st) st.innerHTML = on
+    ? 'Radar treats this computer as a <strong>collector</strong> and will tell you if the extension is missing or out of date.'
+    : 'Radar treats this computer as a <strong>viewer</strong>. Extension warnings are switched off here, and the setup checklist skips the extension and Sales Navigator steps.';
+  const pill = document.getElementById('viewerPill');
+  if (pill) pill.style.display = on ? 'none' : '';
+}
+
 // ===== Extension auto-detection =====
 // The Radar content script announces itself two ways: it sets data-radar-ext (=version)
 // and data-radar-salesnav (='1'/'0') on <html>, and dispatches a window 'radar-ext-ready'
@@ -1635,13 +1704,20 @@ function checkExtUpdate(){
   // Live-only: trust ONLY what the extension announces this page load (never stale localStorage),
   // so we never falsely claim "installed" after the extension has been removed.
   let installed = document.documentElement.getAttribute('data-radar-ext') || '';
-  const behind = installed && cmpVer(installed, LATEST_EXT_VERSION) < 0;
+  // Viewer computers do not collect, so neither a missing nor an outdated extension is a fault
+  // here — an extension nobody relies on is not news. Both alarms are gated on collecting mode.
+  const viewer = !isCollectingComputer();
+  const behind = !viewer && installed && cmpVer(installed, LATEST_EXT_VERSION) < 0;
   // "Not installed" is only trustworthy once the injection probe has settled (see initExtDetect),
   // otherwise every page load would flash the banner for ~1s before the content script answers.
-  const missing = !installed && window.__extProbeDone === true;
+  const missing = !viewer && !installed && window.__extProbeDone === true;
   const row = document.getElementById('extVersionRow');
   if (row) {
-    row.innerHTML = !installed
+    row.innerHTML = viewer
+      ? (installed
+          ? 'Installed <strong>v' + installed + '</strong> &middot; <span style="color:#475569">this computer is set to <strong>viewing only</strong>, so Radar doesn\u2019t require it here.</span>'
+          : '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;color:#334155"><strong>Viewing only \u2014 no extension needed on this computer.</strong><div style="margin-top:6px;font-size:0.85rem">Radar shows you what your collecting computer gathers. To collect from this computer too, set <em>Collecting session</em> to ON in <a href="#" onclick="showView(\'settings\');return false" style="color:#2563eb">Settings</a> and install the extension.</div></div>')
+      : !installed
       ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="' + EXT_ZIP_URL + '" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
       : (behind
         ? '<div style="background:#fef2f2;border:1px solid #dc2626;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Radar is running an outdated extension (v'+installed+').</strong> <span style="color:#7f1d1d">Collection keeps reporting success, but nothing fixed since v'+installed+' is actually running. Latest is v'+LATEST_EXT_VERSION+'.</span><div style="margin-top:8px"><a href="' + EXT_ZIP_URL + '" download class="btn-save" style="display:inline-block;text-decoration:none">Download v'+LATEST_EXT_VERSION+' ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then open <code>chrome://extensions</code> and click <strong>Reload</strong> on “Radar — Sales Nav Collector”. <strong>Downloading alone changes nothing</strong> — the browser keeps running the old build until it is reloaded.</div></div>'
@@ -1649,7 +1725,8 @@ function checkExtUpdate(){
   }
   const badge = document.getElementById('extNavBadge');
   if (badge) {
-    if (!installed) { badge.style.display = ''; badge.textContent = '!'; badge.title = 'Extension not installed'; }
+    if (viewer) { badge.style.display = 'none'; }
+    else if (!installed) { badge.style.display = ''; badge.textContent = '!'; badge.title = 'Extension not installed'; }
     else if (behind) { badge.style.display = ''; badge.textContent = '!'; badge.title = 'Outdated extension v' + installed + ' — reload to v' + LATEST_EXT_VERSION; }
     else { badge.style.display = 'none'; }
   }
@@ -1709,7 +1786,11 @@ function extRenderState(){
   if (!pill) return;
   const v = extInstalledVer();
   const behind = v && cmpVer(v, LATEST_EXT_VERSION) < 0;
-  if (!v) {
+  // Viewer computer + no extension is the intended state, not a failure: grey, not red.
+  if (!isCollectingComputer() && !v) {
+    pill.className = 'ext-pill idle'; pill.textContent = 'Viewing only';
+    if (note) note.innerHTML = 'This computer is set to <strong>viewing only</strong> in <a href="#" onclick="showView(\'settings\');return false" style="color:#2563eb">Settings</a>, so no extension is needed here.';
+  } else if (!v) {
     pill.className = 'ext-pill err'; pill.textContent = 'Not installed';
     if (note) note.innerHTML = 'Radar can\'t collect without it. Download v' + LATEST_EXT_VERSION + ' and follow the install steps.';
   } else if (behind) {
@@ -1773,7 +1854,10 @@ async function extRunDiag(){
   detectExtension();
   extRenderState();
 
-  if (!v) {
+  if (!v && !isCollectingComputer()) {
+    extDiagPaint('inst', 'idle', 'This computer is set to <strong>viewing only</strong> \u2014 no extension expected here.');
+    ['ver','salesnav','sched','owner'].forEach(id => extDiagPaint(id, 'idle', 'not used on a viewing computer'));
+  } else if (!v) {
     extDiagPaint('inst', 'err', 'No extension detected in this browser. <a href="' + EXT_ZIP_URL + '" download style="color:#2563eb;font-weight:600">Download it ↓</a>');
     ['ver','salesnav','sched','owner'].forEach(id => extDiagPaint(id, 'idle', 'needs the extension'));
   } else {
@@ -2001,7 +2085,11 @@ function renderOnboarding(){
   };
   // Botdog is deliberately NOT in REQUIRED: Radar collects and files prospects on its own;
   // Botdog only adds the outreach layer. Setup is "complete" without it.
-  const REQUIRED = ['signin','salesnav','ext','icp','list','source'];
+  // A viewing computer is never asked to install the extension or hold a Sales Nav session —
+  // those two steps belong to the collecting machine, and leaving them in REQUIRED would keep
+  // the checklist permanently open (and permanently wrong) on every viewer.
+  const collecting = isCollectingComputer();
+  const REQUIRED = collecting ? ['signin','salesnav','ext','icp','list','source'] : ['signin','icp','list','source'];
   const total = REQUIRED.length;
   const count = REQUIRED.filter(k => done[k]).length;
   const all = count === total;
@@ -2032,7 +2120,7 @@ function renderOnboarding(){
       '<div class="ob-body"><div class="ob-title done">Signed in with LinkedIn</div></div>' +
     '</div>');
   // 2) Sales Navigator connected — best-effort auto-detected via the extension.
-  steps.push(
+  if (collecting) steps.push(
     '<div class="ob-step">' + obDot(done.salesnav) +
       '<div class="ob-body"><div class="ob-title' + (done.salesnav?' done':'') + '">Sales Navigator connected</div>' +
         (done.salesnav ?
@@ -2047,7 +2135,7 @@ function renderOnboarding(){
   // 3) Chrome extension installed — auto-detected via the content script.
   var extVer = '';
   try { extVer = localStorage.getItem('radar_ext_ver') || ''; } catch(e) {}
-  steps.push(
+  if (collecting) steps.push(
     '<div class="ob-step">' + obDot(done.ext) +
       '<div class="ob-body"><div class="ob-title' + (done.ext?' done':'') + '">' +
         (done.ext ? 'Extension installed' + (extVer ? ' (v' + extVer + ')' : '') : 'Install the Chrome extension') + '</div>' +
@@ -3376,8 +3464,13 @@ function schedBridgesToggle(){
 }
 function loadSchedule(){
   const warn = document.getElementById('schedExtWarn');
+  const vnote = document.getElementById('schedViewerNote');
   const hasExt = document.documentElement.getAttribute('data-radar-ext');
-  if (warn) warn.style.display = hasExt ? 'none' : 'block';
+  // On a viewing computer the schedule genuinely lives elsewhere, so say that quietly instead of
+  // flagging a missing extension as an error.
+  const viewer = !isCollectingComputer();
+  if (vnote) vnote.style.display = (viewer && !hasExt) ? 'block' : 'none';
+  if (warn) warn.style.display = (!hasExt && !viewer) ? 'block' : 'none';
   if (!hasExt) return;
   const onSched = (e) => {
     window.removeEventListener('radar-ext-schedule', onSched);
@@ -3935,6 +4028,9 @@ async function initAuth(){
   loadSalesNavList();
   loadLeadTarget();
   loadIcpTemplate();
+  // Paint the collecting/viewing switch BEFORE the extension probe, so a viewer never sees the
+  // missing-extension warning flash on the way in.
+  renderCollectMode();
   // Start auto-detecting the Chrome extension (and best-effort Sales Nav).
   initExtDetect();
   // Record this login in the Users store (fire-and-forget, through the authenticated proxy).
