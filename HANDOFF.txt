@@ -1,0 +1,107 @@
+================================================================
+HANDOFF.txt  -  radar
+Written by: Claude (Anthropic) - token-limit handoff protocol
+Date: 2026-09-09
+================================================================
+
+0. WHO YOU ARE READING THIS
+----------------------------------------------------------------
+You are an AI assistant taking over work on this repository for
+Olivier Attia, founder / CTO of Gershon Consulting LLC.
+
+Read the MASTER HANDOFF first:
+  github.com/gershonconsulting/memory -> HANDOFF.txt
+
+CRITICAL OPERATING RULES - do not break these:
+  * Olivier does NOT use a terminal, CLI, git or PowerShell. NEVER
+    give him commands, scripts, .bat files or 'just run this' steps.
+  * He does NOT upload, download, move or save files, and does not
+    click buttons an AI injected. If a file has to get somewhere,
+    YOU find the route and execute it.
+  * End every actionable reply with:
+      GREEN CHECK = ready for him to test (+ the link)
+      RED CROSS   = something still to do (+ exactly 3 options he
+                    can actually action - never a CLI step)
+  * Executors: Ariel = code and repo work. Charles = Chrome extension
+    and web admin panels. BOTH ARE AI, NOT HUMANS - 'hand it to
+    Charles' and 'use the browser' are THE SAME ROUTE.
+
+1. WHAT THIS REPO IS
+----------------------------------------------------------------
+Product   : Radar (Sales Navigator Radar)
+Live URL  : radar.gershoncrm.com/app/
+Does      : Watches Sales Navigator sources for new prospects and surfaces them on a dashboard, fed by the Radar Chrome extension
+Users     : Gershon Consulting prospecting
+
+2. STACK AND DEPLOY ROUTE
+----------------------------------------------------------------
+Front end     : static index.html + app/ 
+Back end      : functions/ (Cloudflare Pages Functions)
+Extension     : salesnav-radar-extension/ (source). Zips at root:
+                radar-extension.zip and radar-extension-v1.6.8.zip
+Also in tree  : google-apps-script/ - check what still depends on it
+Docs already here: ARIEL-HANDOFF.md and HEALTH-CHECK-ALERTS.md.
+                READ BOTH before this file's sections 3-8.
+Default branch: main
+
+3. RECENTLY DONE  [DONE]
+----------------------------------------------------------------
+- /api/health status contract added (2026-09-09): it reports
+  last_sync, not just uptime - so 'up' can no longer mask a collector
+  that stopped collecting.
+- v1.13.0 Collecting session ON/OFF per computer. With OFF: both
+  dashboard banners hidden, nav '!' badge off, Setup page shows a
+  neutral 'viewing only' note, Extension page shows a grey 'Viewing
+  only' pill instead of red 'Not installed', health rows go idle,
+  onboarding checklist drops to 4 required steps instead of 6.
+  Flipping the radio repaints every surface immediately, both ways.
+  Verified with Playwright across five states plus a flip in each.
+- Follow-up: staleness notices now point at the COLLECTING computer
+  rather than telling a viewer to check an extension it should not
+  have.
+- Radar favicon set (red radar dial) + PWA icons wired in.
+- ext v1.11.0 source: resolves a Source's Sales Nav org id from its
+  company URL.
+
+4. PENDING  [TODO]
+----------------------------------------------------------------
+- Nothing recorded as open at handoff time. Check ARIEL-HANDOFF.md,
+  which predates this file and may carry live items.
+
+5. MISSING / NOT BUILT YET
+----------------------------------------------------------------
+- Confirm scope with Olivier before starting new work.
+
+6. KNOWN BUGS / NEEDS FIXING
+----------------------------------------------------------------
+- None recorded.
+
+7. NEXT ACTION - START HERE
+----------------------------------------------------------------
+  -> Read ARIEL-HANDOFF.md and HEALTH-CHECK-ALERTS.md, then ask
+     Olivier what he wants next. Radar is in good shape; the viewer-
+     mode and health-contract work both closed cleanly.
+
+8. GOTCHAS / HARD-WON LESSONS
+----------------------------------------------------------------
+- COLLECTING SESSION is PER COMPUTER, never per account. localStorage
+  key `radar_collecting`, card lives in the settings view. Default ON.
+  An account-level flag would follow the login to every machine and
+  silence the machine that actually collects.
+- Staleness is NOT hidden on a viewer. 'No new prospects for N days'
+  and 'Collector idle N days' stay visible - that is exactly what a
+  viewer needs to know. Only the INSTRUCTION changes.
+- Before building anything extension-status related, grep for
+  `_collecting` and 'viewing only' - it is already there.
+- Writes to this repo go through the GitHub web UI in Chrome; `git
+  push` is proxy-refused and the API 403s on write. Verify every
+  commit by reading raw.githubusercontent.com.
+
+9. CONTACT / ESCALATION
+----------------------------------------------------------------
+Olivier Attia - oattia@gmail.com
+Report mailbox - report@gershonconsulting.com
+
+================================================================
+END OF HANDOFF
+================================================================
