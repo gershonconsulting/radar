@@ -620,7 +620,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="page-head"><h2>Dashboard</h2><p>Your engine at a glance — capture health, pipeline totals, and what needs attention today.</p></div>
       <div id="extUpdateBannerHome" class="banner banner-danger" style="display:none">
         <span id="extUpdateMsgHome"></span>
-        <a id="extUpdateDlHome" href="/radar-extension-v1.11.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
+        <a id="extUpdateDlHome" href="/radar-extension-v1.12.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
         <a id="extUpdateHelpTogHome" href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
         <div id="extUpdateHelpHome" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400"></div>
       </div>
@@ -641,7 +641,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
       <div id="extUpdateBanner" class="banner banner-danger" style="display:none">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension-v1.11.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
+        <a id="extUpdateDl" href="/radar-extension-v1.12.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
         <a id="extUpdateHelpTog" href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
         <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400"></div>
       </div>
@@ -729,7 +729,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <div id="extStatePill" class="ext-pill idle">Checking&hellip;</div>
           <div id="extStateNote" style="margin-top:10px;font-size:0.85rem;color:#334155"></div>
           <div class="ext-actions">
-            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.11.0.zip" download>&#11015; Download latest</a>
+            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.12.0.zip" download>&#11015; Download latest</a>
             <button class="ext-btn ghost" onclick="extRunDiag()">Test installation</button>
           </div>
         </div>
@@ -918,7 +918,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.11.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.12.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div id="schedViewerNote" class="field-note" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:12px">This computer is set to <strong>viewing only</strong>, so the schedule below isn&rsquo;t used here &mdash; it lives inside the extension on your collecting computer. Set <em>Collecting session</em> to ON above if you want this computer to collect.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
@@ -1682,7 +1682,7 @@ function detectExtension(){
 }
 
 // ===== Extension version offer (installed vs latest, like the Linalysis check) =====
-const LATEST_EXT_VERSION = '1.11.0';   // latest packaged extension offered on the platform
+const LATEST_EXT_VERSION = '1.12.0';   // latest packaged extension offered on the platform
 const EXT_ZIP_URL = '/radar-extension-v' + LATEST_EXT_VERSION + '.zip';
 function cmpVer(a, b){
   const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
@@ -2815,7 +2815,7 @@ function triggerBridgeList(){
   const st  = document.getElementById('bridgePushStatus');
   const btn = document.getElementById('listBridgesBtn');
   const show = (t, k) => { if (st) { st.style.display='block'; st.className='sync-status '+(k||'info'); st.textContent=t; } };
-  if (!document.documentElement.getAttribute('data-radar-ext')) { show('Chrome extension not detected — install/reload the Radar extension (v1.11.0 or later), then try again.', 'err'); return; }
+  if (!document.documentElement.getAttribute('data-radar-ext')) { show('Chrome extension not detected — install/reload the Radar extension (v1.12.0 or later), then try again.', 'err'); return; }
   if (BRIDGE_LIST_RUNNING) return;
   BRIDGE_LIST_RUNNING = true;
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Filing…'; }
@@ -3651,7 +3651,7 @@ function fileBridgesNow() {
   setTimeout(function () {
     if (answered) return;
     window.removeEventListener('radar-ext-salesnav-bridges-result', onResult);
-    if (status) status.textContent = 'No answer from the extension — check it is installed and running v1.11.0 or later.';
+    if (status) status.textContent = 'No answer from the extension — check it is installed and running v1.12.0 or later.';
   }, 240000);
 }
 
