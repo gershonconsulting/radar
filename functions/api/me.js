@@ -166,6 +166,9 @@ export async function onRequestGet({ request, env, waitUntil }) {
     JSON.stringify({
       ok: true,
       isAdmin,
+      // OPEN BETA (restored 2026-09-23): every account is served as 'pro' = no free-tier caps.
+      // The app's own isOpenBeta() flag was lost in 77e8de3. Remove this line to re-impose the free tier.
+      plan: 'pro',
       user: {
         sub: session.sub,
         email: session.email,
