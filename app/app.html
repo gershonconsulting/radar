@@ -340,6 +340,27 @@ td a:hover{ text-decoration:underline; }
 
 /* ---------- Bridge / Source cards ---------- */
 .card-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+.src-list td{ vertical-align:middle; }
+.src-list .src-name{ font-weight:700; color:#0f172a; display:flex; align-items:center; gap:8px; }
+.src-list .src-sub{ font-size:0.76rem; color:#64748b; margin-top:2px; }
+.src-list .num{ font-weight:700; text-align:right; white-space:nowrap; }
+.src-list .num small{ display:block; font-weight:500; color:#16a34a; font-size:0.72rem; }
+.src-list tr.is-new td{ background:#f0fdf4; }
+.src-list .new-tag{ font-size:0.66rem; font-weight:700; background:#16a34a; color:#fff; border-radius:6px; padding:1px 6px; }
+.prio-sel{ border:1px solid var(--line); border-radius:8px; padding:4px 6px; font-size:0.8rem; font-weight:700; background:#fff; cursor:pointer; }
+.prio-sel.high{ color:#b91c1c; border-color:#fecaca; background:#fef2f2; }
+.prio-sel.medium{ color:#b45309; border-color:#fde68a; background:#fffbeb; }
+.prio-sel.low{ color:#475569; border-color:#e2e8f0; background:#f8fafc; }
+.src-status{ display:inline-block; font-size:0.76rem; font-weight:700; border-radius:999px; padding:3px 10px; white-space:nowrap; }
+.src-status.s-top{ background:#dcfce7; color:#166534; }
+.src-status.s-ok{ background:#dbeafe; color:#1e40af; }
+.src-status.s-low{ background:#fef3c7; color:#92400e; }
+.src-status.s-wait{ background:#f1f5f9; color:#475569; }
+.src-status.s-bad{ background:#fee2e2; color:#991b1b; }
+.src-filter{ display:flex; gap:8px; align-items:center; margin:18px 0 10px; flex-wrap:wrap; font-size:0.85rem; color:#64748b; }
+.src-filter button{ border:1px solid var(--line); background:#fff; border-radius:999px; padding:4px 12px; font-size:0.8rem; cursor:pointer; }
+.src-filter button.on{ background:#1e40af; color:#fff; border-color:#1e40af; }
+@media (max-width:760px){ .src-list .hide-sm{ display:none; } }
 .entity-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
 .entity-card .top{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
 .entity-card h3{ font-size:1rem; font-weight:600; margin-bottom:4px; }
@@ -554,7 +575,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
     </div>
     <div class="brand-meta">
       <div class="eyebrow">by Gershon.AI</div>
-      <div class="ver" id="sideVer">v1.13.1</div>
+      <div class="ver" id="sideVer">v1.14.0</div>
       <div class="ts" id="sideTs"></div>
     </div>
     <div class="user-chip" id="userChip" style="display:none">
@@ -620,7 +641,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="page-head"><h2>Dashboard</h2><p>Your engine at a glance — capture health, pipeline totals, and what needs attention today.</p></div>
       <div id="extUpdateBannerHome" class="banner banner-danger" style="display:none">
         <span id="extUpdateMsgHome"></span>
-        <a id="extUpdateDlHome" href="/radar-extension-v1.14.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
+        <a id="extUpdateDlHome" href="/radar-extension-v1.17.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
         <a id="extUpdateHelpTogHome" href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
         <div id="extUpdateHelpHome" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400"></div>
       </div>
@@ -641,7 +662,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       </div>
       <div id="extUpdateBanner" class="banner banner-danger" style="display:none">
         <span id="extUpdateMsg"></span>
-        <a id="extUpdateDl" href="/radar-extension-v1.14.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
+        <a id="extUpdateDl" href="/radar-extension-v1.17.0.zip" download style="margin-left:10px;font-weight:700;color:#b91c1c;text-decoration:underline">Download latest ↓</a>
         <a id="extUpdateHelpTog" href="#" onclick="toggleExtUpdateHelp();return false" style="margin-left:12px;color:#b91c1c;text-decoration:underline">How to update</a>
         <div id="extUpdateHelp" style="display:none;margin-top:8px;font-size:0.85rem;color:#7f1d1d;font-weight:400"></div>
       </div>
@@ -729,7 +750,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <div id="extStatePill" class="ext-pill idle">Checking&hellip;</div>
           <div id="extStateNote" style="margin-top:10px;font-size:0.85rem;color:#334155"></div>
           <div class="ext-actions">
-            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.14.0.zip" download>&#11015; Download latest</a>
+            <a class="ext-btn" id="extDownloadBtn" href="/radar-extension-v1.17.0.zip" download>&#11015; Download latest</a>
             <button class="ext-btn ghost" onclick="extRunDiag()">Test installation</button>
           </div>
         </div>
@@ -850,8 +871,15 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="page-head"><h2>Sources</h2><p>Organizations you watch and collect connections from.</p></div>
       <div class="settings-card" style="max-width:620px">
         <h2>Add a Source</h2>
-        <p>Just paste an organization's LinkedIn company URL — Radar names the source and resolves its Sales Nav ID to find bridges.</p>
-        <div class="field"><label>LinkedIn company URL</label><input id="srcUrl" placeholder="https://www.linkedin.com/company/..."></div>
+        <p>Paste the organization's LinkedIn company page <strong>or its website</strong> — Radar names the source, finds its LinkedIn page and its bridges.</p>
+        <div class="field"><label>LinkedIn company URL or website</label><input id="srcUrl" placeholder="https://www.linkedin.com/company/...  or  https://www.company.com"></div>
+        <div class="field"><label>Priority</label>
+          <select id="srcPriority">
+            <option value="high">High — collect first</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low — collect last</option>
+          </select>
+        </div>
         <details style="margin:2px 0 10px"><summary style="cursor:pointer;font-size:0.85rem;color:#64748b">Optional details (leave blank to auto-fill)</summary>
           <div class="field" style="margin-top:8px"><label>Source name <span style="color:#94a3b8;font-weight:400">(optional)</span></label><input id="srcName" placeholder="auto-filled from the company page"></div>
           <div class="field"><label>Sales Nav company URL or Org ID <span style="color:#94a3b8;font-weight:400">— almost never needed; Radar reads it off the company page</span></label><input id="srcOrg" placeholder="…/organization/139070  or  139070"></div>
@@ -870,7 +898,8 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <button class="btn-save" onclick="addSource()">+ Add Source</button>
         <div id="srcStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
-      <div class="card-grid" id="sourcesBody"></div>
+      <div class="src-filter" id="srcFilter"></div>
+      <div id="sourcesBody"></div>
     </section>
 
     <!-- ===== Collections ===== -->
@@ -918,7 +947,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>Collection Schedule</h2>
         <p>Radar runs on its own inside the Chrome extension — no external scheduler. Set how often it works below.</p>
-        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.14.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
+        <div id="schedExtWarn" class="sync-status err" style="display:none">Chrome extension not detected — the schedule lives inside it. <a href="/radar-extension-v1.17.0.zip" download style="color:#2563eb;font-weight:600">Download the extension ↓</a> or see <a href="#" onclick="showView('setup');return false" style="color:#2563eb">Setup</a> for install steps.</div>
         <div id="schedViewerNote" class="field-note" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:12px">This computer is set to <strong>viewing only</strong>, so the schedule below isn&rsquo;t used here &mdash; it lives inside the extension on your collecting computer. Set <em>Collecting session</em> to ON above if you want this computer to collect.</div>
         <div class="field">
           <label>Collect new targets (prospects)</label>
@@ -1255,7 +1284,13 @@ async function addSource() {
     const slug = (url.split('?')[0].replace(/\/+$/, '').match(/\/company\/([^/]+)/) || [])[1] || '';
     if (slug) { try { srcName = decodeURIComponent(slug).replace(/-/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase()); } catch(e) { srcName = slug.replace(/-/g, ' '); } }
   }
-  if (!srcName) { st.textContent = 'Paste the LinkedIn company URL — that’s all you need.'; return; }
+  // v1.14: a plain website works too — name from the domain; the hub finds the LinkedIn page.
+  if (!srcName && url && !/linkedin\.com\//i.test(url)) {
+    try { const h = new URL(/^https?:\/\//i.test(url) ? url : 'https://' + url).hostname.replace(/^www\./i, ''); srcName = (h.split('.')[0] || h).replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); } catch(e) {}
+  }
+  if (!srcName) { st.textContent = 'Paste the LinkedIn company URL or the company website — that’s all you need.'; return; }
+  const prioEl = document.getElementById('srcPriority');
+  const priority = prioEl ? prioEl.value : 'medium';
   const srcBlock = sourceCapBlock();
   if (srcBlock) { st.innerHTML = srcBlock + ' <a href="#" onclick="showView(\'billing\');return false;" style="color:#2563eb">Upgrade →</a>'; return; }
   // The org ID is NOT a precondition any more: the extension resolves it from the company URL
@@ -1263,12 +1298,18 @@ async function addSource() {
   let effectiveDiscover = discoverNow;
   st.textContent = 'Adding…';
   try {
-    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: srcName, linkedin_url: url, category: cat, org_id: orgId, discover_keyword: keyword, discover_now: effectiveDiscover }) });
+    const resp = await fetch(CONFIG.WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: 'radar_7Kq3mZ9pX2vL8nT', action: 'addSource', name: srcName, linkedin_url: url, category: cat, org_id: orgId, discover_keyword: keyword, discover_now: effectiveDiscover, priority: priority }) });
     const d = await resp.json();
-    if (d.saved) {
+    if (d.saved && d.needs_linkedin) {
+      st.textContent = '✓ Added "' + srcName + '" — but its website has no LinkedIn link. Paste its LinkedIn company page in the list below (Status column) so Radar can find bridges.';
+      document.getElementById('srcUrl').value = '';
+      await loadSources(); await load();
+    } else if (d.saved) {
+      if (d.linkedin_found) srcName = srcName + '" (LinkedIn page found: ' + d.linkedin_url.replace(/^https?:\/\/(www\.)?/, '') + ')';
+      else srcName = srcName + '"';
       st.textContent = effectiveDiscover
-        ? '✓ Added "' + srcName + '". Radar resolves the company on the next sync, then collects its bridges — or open the Radar extension and click Discover to run now.'
-        : '✓ Added "' + srcName + '". Radar resolves the company’s Sales Nav ID, then finds its bridges automatically.';
+        ? '✓ Added "' + srcName + '. It is at the top of the list below — Radar finds its bridges on the next sync.'
+        : '✓ Added "' + srcName + '. It is at the top of the list below.';
       document.getElementById('srcName').value = ''; document.getElementById('srcUrl').value = ''; document.getElementById('srcOrg').value = ''; document.getElementById('srcKeyword').value = '';
       await loadSources(); await load();
     } else { st.textContent = 'Error: ' + JSON.stringify(d); }
@@ -1682,7 +1723,7 @@ function detectExtension(){
 }
 
 // ===== Extension version offer (installed vs latest, like the Linalysis check) =====
-const LATEST_EXT_VERSION = '1.14.0';   // latest packaged extension offered on the platform
+const LATEST_EXT_VERSION = '1.17.0';   // latest packaged extension offered on the platform
 const EXT_ZIP_URL = '/radar-extension-v' + LATEST_EXT_VERSION + '.zip';
 function cmpVer(a, b){
   const pa = String(a||'0').split('.').map(n => parseInt(n,10)||0);
@@ -3075,37 +3116,106 @@ function sourceAgg(){
   Object.keys(byBridge).forEach(b => { if (b && b !== '—') ensureSrc(bridgeSource(b)).bridges.push(b); });
   return bySource;
 }
+let SRC_FILTER = 'all';
+function srcRecord(name){ return (STORED_SOURCES || []).find(s => _norm(s.name) === _norm(name)) || null; }
+// How well a source is working, from what it has actually produced.
+function sourceStatus(rec, info){
+  const nb = info.bridges.length, leads = info.leads;
+  if (!rec) return { cls:'s-wait', label:'No source', hint:'Prospects that are not linked to any source.', rank:0 };
+  const hasLi = !!(rec && rec.linkedin_url) || !!(rec && rec.org_id);
+  if (rec && !hasLi) return { cls:'s-bad', label:'Needs LinkedIn page', hint:'No LinkedIn company page yet — paste it so Radar can find bridges.', rank:0 };
+  if (!nb && !leads) {
+    if (rec && rec.discover_held) return { cls:'s-wait', label:'On hold', hint:'Bridge search is on hold for this source.', rank:1 };
+    if (rec && rec.discovered) return { cls:'s-bad', label:'No bridges found', hint:'Radar searched this company and found no senior people to use as bridges. Try a role keyword, or add a bridge by hand.', rank:1 };
+    return { cls:'s-wait', label:'Finding bridges', hint:'Queued — Radar finds this company’s bridges on the next sync.', rank:2 };
+  }
+  if (!leads) return { cls:'s-wait', label:'Collecting', hint:nb + ' bridge' + (nb===1?'':'s') + ' found — prospects arrive as the bridges are collected.', rank:3 };
+  const per = leads / Math.max(1, nb);
+  if (per >= 30) return { cls:'s-top', label:'Very effective', hint:Math.round(per) + ' prospects per bridge', rank:6 };
+  if (per >= 10) return { cls:'s-ok', label:'Effective', hint:Math.round(per) + ' prospects per bridge', rank:5 };
+  return { cls:'s-low', label:'Low yield', hint:(Math.round(per*10)/10) + ' prospects per bridge', rank:4 };
+}
+function setSrcFilter(f){ SRC_FILTER = f; renderSources(); }
+async function setSourcePriority(sel, name){
+  const pr = sel.value;
+  sel.className = 'prio-sel ' + pr;
+  const rec = srcRecord(name); if (rec) rec.priority = pr;
+  try {
+    const r = await fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'setSourcePriority', name:name, priority:pr }) });
+    const d = await r.json();
+    if (!(d && d.saved)) { sel.title = 'Not saved: ' + JSON.stringify(d).slice(0,120); sel.style.outline = '2px solid #dc2626'; }
+    else { sel.title = 'Saved'; sel.style.outline = ''; }
+  } catch(e) { sel.title = 'Not saved: ' + e.message; sel.style.outline = '2px solid #dc2626'; }
+  renderSourceFilter();
+}
+async function saveSourceLinkedin(btn, name){
+  const inp = btn.parentElement.querySelector('input');
+  const v = (inp && inp.value || '').trim();
+  if (!/linkedin\.com\/(company|school|showcase)\//i.test(v)) { inp.style.borderColor = '#dc2626'; return; }
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const r = await fetch(CONFIG.WEBAPP_URL, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ secret:'radar_7Kq3mZ9pX2vL8nT', action:'setSourceLinkedin', name:name, linkedin_url:v }) });
+    const d = await r.json();
+    if (d && d.saved) { await loadSources(); renderSources(); return; }
+    btn.textContent = 'Error'; btn.disabled = false;
+  } catch(e) { btn.textContent = 'Error'; btn.disabled = false; }
+}
+function renderSourceFilter(){
+  const el = document.getElementById('srcFilter'); if (!el) return;
+  const all = STORED_SOURCES || [];
+  const n = p => all.filter(s => (s.priority || 'medium') === p).length;
+  const b = (k, label) => '<button class="' + (SRC_FILTER===k?'on':'') + '" onclick="setSrcFilter(\'' + k + '\')">' + label + '</button>';
+  el.innerHTML = '<span>' + all.length + ' source' + (all.length===1?'':'s') + ' · newest first</span>' +
+    b('all','All') + b('high','High (' + n('high') + ')') + b('medium','Medium (' + n('medium') + ')') + b('low','Low (' + n('low') + ')');
+}
 function renderSources(){
   const bySource = sourceAgg();
   const sBody = document.getElementById('sourcesBody');
-  const sEntries = Object.entries(bySource)
+  const weekAgo = Date.now() - 7*864e5;
+  const recent = {};
+  ROWS.forEach(r => { const t = Date.parse(r.collected_date || ''); if (t && t >= weekAgo) { const s = leadSource(r); recent[s] = (recent[s]||0) + 1; } });
+  let entries = Object.entries(bySource)
     .filter(([s, info]) => s && (s !== 'Unassigned' || info.leads > 0))
-    .sort((a,b) => b[1].leads - a[1].leads);
-  sBody.innerHTML = sEntries.length ? sEntries.map(([s, info]) => {
-    const cat = info.category || 'partner';
-    const link = info.url ? '<a href="' + esc(info.url) + '" target="_blank" style="font-size:0.8rem">↗ company</a>' : '';
-    const nb = info.bridges.length;
-    const via = nb
-      ? nb + ' bridge' + (nb===1?'':'s') + ': ' + esc(info.bridges.map(cleanName).join(', '))
-      : (info.leads ? 'leadership collected directly'
-         : (info.org_id ? 'ready — no bridges yet (use “Find Bridges Now” in the extension)'
-            : (info.url ? 'ready — Radar reads the company’s Sales Nav ID off its LinkedIn page on the next sync, then finds bridges'
-                        : 'add the LinkedIn company URL to enable bridge discovery')));
-    const btn = '<button class="btn-secondary" onclick="requestBridges(this,\'' + jsq(s) + '\')">🧭 Find Bridges</button>';
-    // Two headline counts per source: bridges (orange) and targets (blue), clickable through.
-    const counts =
-      '<div class="src-counts">' +
-        '<div class="src-count c-brg" onclick="statGo(\'bridges\',\'\')" title="Bridges found inside ' + esc(s) + '">' +
-          '<div class="n">' + nb + '</div><div class="l">bridge' + (nb===1?'':'s') + '</div></div>' +
-        '<div class="src-count c-tgt" onclick="statGo(\'targets\',\'\')" title="Targets collected via ' + esc(s) + '">' +
-          '<div class="n">' + info.leads + '</div><div class="l">target' + (info.leads===1?'':'s') + '</div></div>' +
-      '</div>';
-    return '<div class="entity-card"><div class="top"><div><h3><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:' + sourceColor(s) + ';margin-right:8px;vertical-align:middle"></span>' + esc(s) + '</h3>' + (link?('<p>'+link+'</p>'):'') +
-      '</div><span class="pill ' + cat + '">' + cat + '</span></div>' +
-      counts +
-      '<p style="margin-top:8px;font-size:0.84rem;color:#64748b">' + via + '</p>' +
-      '<div style="margin-top:12px">' + btn + '<div class="src-bridge-note" data-note style="display:none"></div></div></div>';
-  }).join('') : (
+    .map(([s, info]) => { const rec = srcRecord(s); return { s, info, rec, added: rec && rec.added_date ? Date.parse(rec.added_date) : 0, prio: (rec && rec.priority) || 'medium' }; });
+  // Newest source first; anything without a stored record (e.g. Unassigned) goes last.
+  entries.sort((a, b) => (b.added - a.added) || (b.info.leads - a.info.leads));
+  if (SRC_FILTER !== 'all') entries = entries.filter(e => e.prio === SRC_FILTER);
+  renderSourceFilter();
+  if (!entries.length && (STORED_SOURCES || []).length) { sBody.innerHTML = '<div class="empty">No sources with this priority.</div>'; return; }
+  sBody.innerHTML = entries.length ? (
+    '<div class="table-wrap"><table class="src-list"><thead><tr>' +
+      '<th>Source</th><th class="hide-sm">Added</th><th>Priority</th><th>Status</th><th style="text-align:right">Bridges</th><th style="text-align:right">Prospects</th><th class="hide-sm"></th>' +
+    '</tr></thead><tbody>' +
+    entries.map(({ s, info, rec, added, prio }) => {
+      const st = sourceStatus(rec, info);
+      const isNew = added && (Date.now() - added) < 3*864e5;
+      const links = [];
+      if (rec && rec.linkedin_url) links.push('<a href="' + esc(rec.linkedin_url) + '" target="_blank">LinkedIn ↗</a>');
+      if (rec && rec.website) links.push('<a href="' + esc(rec.website) + '" target="_blank">' + esc(rec.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')) + ' ↗</a>');
+      const cat = info.category || 'partner';
+      const nb = info.bridges.length;
+      const prioCell = rec
+        ? '<select class="prio-sel ' + prio + '" onchange="setSourcePriority(this,\'' + jsq(s) + '\')">' +
+            ['high','medium','low'].map(p => '<option value="' + p + '"' + (p===prio?' selected':'') + '>' + p.charAt(0).toUpperCase() + p.slice(1) + '</option>').join('') +
+          '</select>'
+        : '<span style="color:#94a3b8">—</span>';
+      const needLi = st.label === 'Needs LinkedIn page'
+        ? '<div style="margin-top:6px;display:flex;gap:6px"><input placeholder="https://www.linkedin.com/company/…" style="flex:1;min-width:160px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:0.8rem"><button class="btn-secondary" style="padding:4px 10px;font-size:0.78rem" onclick="saveSourceLinkedin(this,\'' + jsq(s) + '\')">Save</button></div>'
+        : '';
+      const rc = recent[s] || 0;
+      return '<tr class="' + (isNew ? 'is-new' : '') + '">' +
+        '<td><div class="src-name"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + sourceColor(s) + '"></span>' + esc(s) + (isNew ? ' <span class="new-tag">NEW</span>' : '') + '</div>' +
+          '<div class="src-sub"><span class="pill ' + cat + '" style="font-size:0.66rem;padding:1px 7px">' + cat + '</span> ' + links.join(' · ') + '</div></td>' +
+        '<td class="hide-sm" style="white-space:nowrap;color:#64748b">' + (added ? esc(new Date(added).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})) : '—') + '</td>' +
+        '<td>' + prioCell + '</td>' +
+        '<td><span class="src-status ' + st.cls + '" title="' + esc(st.hint) + '">' + st.label + '</span><div class="src-sub">' + esc(st.hint) + '</div>' + needLi + '</td>' +
+        '<td class="num"><a href="#" onclick="statGo(\'bridges\',\'\');return false" title="' + esc(info.bridges.map(cleanName).join(', ')) + '">' + nb + '</a></td>' +
+        '<td class="num"><a href="#" onclick="statGo(\'targets\',\'\');return false">' + info.leads + '</a>' + (rc ? '<small>+' + rc + ' this week</small>' : '') + '</td>' +
+        '<td class="hide-sm">' + (rec ? '<button class="btn-secondary" style="padding:5px 10px;font-size:0.78rem;white-space:nowrap" onclick="requestBridges(this,\'' + jsq(s) + '\')">🧭 Find Bridges</button><div class="src-bridge-note" data-note style="display:none"></div>' : '') + '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table></div>'
+  ) : (
     '<div class="coach" style="grid-column:1/-1">' +
       '<h3>No sources yet — this is where Radar starts</h3>' +
       '<p>A <strong>Source</strong> is an organization whose network is full of your buyers. Not a company you want to sell to — a company whose <em>people already know</em> the people you want to sell to.</p>' +
@@ -3115,7 +3225,7 @@ function renderSources(){
         '<li>A trade association, chamber, or club your customers belong to</li>' +
         '<li>A partner who sells alongside you — or a competitor, whose network is by definition your market</li>' +
       '</ul>' +
-      '<p>Paste its LinkedIn company URL in the box above. Radar names it, finds the senior people inside it (your <strong>bridges</strong>), and starts collecting the prospects in their networks.</p>' +
+      '<p>Paste its LinkedIn company URL or website in the box above. Radar names it, finds the senior people inside it (your <strong>bridges</strong>), and starts collecting the prospects in their networks.</p>' +
       '<button class="btn-secondary" onclick="openTour(1)">See how Radar works →</button>' +
     '</div>');
 }
@@ -3123,7 +3233,7 @@ function renderSources(){
 // Per-source "Find Bridges": look up org_id + discover_keyword in STORED_SOURCES,
 // then POST addSource with discover_now:true (proxy injects owner). Inline note on the card.
 async function requestBridges(btnEl, sourceName){
-  const card = btnEl.closest('.entity-card');
+  const card = btnEl.closest('.entity-card') || btnEl.closest('td');
   const note = card ? card.querySelector('[data-note]') : null;
   const setNote = (msg, cls) => {
     if (!note) return;

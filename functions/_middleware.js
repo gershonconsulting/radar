@@ -5,7 +5,7 @@
 // 2) Keeps the download links / "outdated extension" checks on / and /app pointing at LATEST_EXT
 //    without re-uploading the 260 KB app.html: an older LATEST_EXT_VERSION in the page is raised
 //    to LATEST_EXT on the fly (never lowered). Bump LATEST_EXT here for the next release.
-const LATEST_EXT = '1.15.0';
+const LATEST_EXT = '1.17.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html']);
 
