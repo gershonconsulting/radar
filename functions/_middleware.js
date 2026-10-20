@@ -5,15 +5,15 @@
 // 2) Keeps the download links / "outdated extension" checks on / and /app pointing at LATEST_EXT
 //    without re-uploading the 260 KB app.html: an older LATEST_EXT_VERSION in the page is raised
 //    to LATEST_EXT on the fly (never lowered). Bump LATEST_EXT here for the next release.
-// 3) (2026-10-20, app v1.14.0) Loads app/sources-list.js into the app page - Sources as a priority
-//    list, newest first, with an effectiveness status - and stamps the sidebar version, again
+// 3) (2026-10-20, app v1.14.1) Loads app/sources-list.js into the app page - Sources as a priority
+//    list, newest first, with an effectiveness status, plus a Priority picker on Add a Source - and stamps the sidebar version, again
 //    without re-uploading app.html. Only applies to a page that still has the old card grid
 //    (`id="sourcesBody"` + `card-grid`) and does not already load the script, so it switches itself
 //    off once the list is folded into app.html.
 const LATEST_EXT = '1.15.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
-const APP_VERSION = '1.14.0';
+const APP_VERSION = '1.14.1';
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
 
@@ -56,7 +56,7 @@ export async function onRequest(ctx) {
         .replace(/(LATEST_EXT_VERSION\s*=\s*')\d+\.\d+\.\d+(')/g, '$1' + LATEST_EXT + '$2')
         .split('/radar-extension-v' + old + '.zip').join('/radar-extension-v' + LATEST_EXT + '.zip');
     }
-    // 3) Sources priority list (app v1.14.0)
+    // 3) Sources priority list (app v1.14.x)
     if (/id="sourcesBody"/.test(out) && /class="card-grid" id="sourcesBody"/.test(out)
         && out.indexOf('sources-list.js') === -1 && out.lastIndexOf('</body>') !== -1) {
       const at = out.lastIndexOf('</body>');

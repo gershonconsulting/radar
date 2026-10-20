@@ -1,4 +1,5 @@
-// app/sources-list.js — Radar app v1.14.0 (nightly 2026-10-20)
+// app/sources-list.js — Radar app v1.14.1 (nightly 2026-10-20)
+// v1.14.1: Priority picker (High/Medium/Low, default Medium) on the "Add a Source" form.
 // Sources view as a PRIORITY LIST: newest first, editable High/Medium/Low priority, and an
 // Effectiveness status per source. Loaded into /app by functions/_middleware.js (same on-the-fly
 // pattern already used for LATEST_EXT_VERSION) so the 260 KB app.html did not have to be
@@ -26,7 +27,58 @@
     }
   } catch(e){}
   // 3) Build stamp
-  try { var v = document.getElementById('sideVer'); if (v) v.textContent = 'v1.14.0'; } catch(e){}
+  try { var v = document.getElementById('sideVer'); if (v) v.textContent = 'v1.14.1'; } catch(e){}
+  // 4) v1.14.1 — Priority picker on the "Add a Source" form (sits right under the URL field).
+  try {
+    var urlIn = document.getElementById('srcUrl');
+    var urlField = urlIn && urlIn.closest('.field');
+    if (urlField && !document.getElementById('srcPriority')) {
+      var f = document.createElement('div');
+      f.className = 'field';
+      f.innerHTML = '<label>Priority</label>' +
+        '<select id="srcPriority" title="How important this source is to you — you can change it later in the list">' +
+          '<option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option>' +
+        '</select>';
+      urlField.parentNode.insertBefore(f, urlField.nextSibling);
+      var ps = document.getElementById('srcPriority');
+      ps.addEventListener('change', function(){ ps.setAttribute('data-touched', '1'); });
+    }
+  } catch(e){}
+})();
+
+// v1.14.1 — send the picked priority with addSource. Hub v23's addSource writes `priority` on
+// create (same upsert row), so no second call is needed. addSource is an UPSERT: for a source
+// that already exists, the priority is only sent if the picker was actually changed, so re-adding
+// an existing High source does not silently reset it to Medium.
+(function(){
+  if (window.__srcPrioWrap) return;
+  window.__srcPrioWrap = true;
+  var _f = window.fetch;
+  window.fetch = function(input, init){
+    var pick = null;
+    try {
+      var u = (typeof input === 'string') ? input : (input && input.url) || '';
+      var sel = document.getElementById('srcPriority');
+      if (sel && init && typeof init.body === 'string' && typeof CONFIG !== 'undefined' && u.indexOf(CONFIG.WEBAPP_URL) === 0) {
+        var b = JSON.parse(init.body);
+        if (b && b.action === 'addSource' && b.priority === undefined) {
+          var exists = (typeof STORED_SOURCES !== 'undefined' && STORED_SOURCES || []).some(function(s){ return _norm(s.name) === _norm(b.name); });
+          if (!exists || sel.getAttribute('data-touched') === '1') {
+            b.priority = SRC_PRIO_LABEL[sel.value] ? sel.value : 'medium';
+            init = Object.assign({}, init, { body: JSON.stringify(b) });
+          }
+          pick = sel;
+        }
+      }
+    } catch(e){}
+    var p = _f.call(this, input, init);
+    if (pick) {
+      p.then(function(r){ return r.clone().json(); }).then(function(d){
+        if (d && d.saved) { pick.value = 'medium'; pick.removeAttribute('data-touched'); }
+      }).catch(function(){});
+    }
+    return p;
+  };
 })();
 
 // ===== Sources: priority list, newest first, effectiveness status (v1.14.0) =====

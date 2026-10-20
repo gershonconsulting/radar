@@ -64,6 +64,10 @@ Default branch: main
      functions/_middleware.js (same on-the-fly pattern as the ext
      version bump) - app.html itself is unchanged; the middleware also
      stamps the sidebar version v1.14.0.
+  ✅ v1.14.1: "Add a Source" form has a Priority picker (High / Medium /
+     Low, default Medium), sent with addSource (hub v23 writes it on
+     create). For a source that already exists the priority is only sent
+     if the picker was changed, so a re-add never resets High to Medium.
   ✅ Tested locally with Playwright (mocked hub) desktop + 390px phone.
      Ready to test on https://nightly-2026-10-20-sources-p.gershon-radar.pages.dev/app
 - /api/health status contract added (2026-09-09): it reports
@@ -85,12 +89,9 @@ Default branch: main
 
 4. PENDING  [TODO]
 ----------------------------------------------------------------
-- ❌ Sources priority list (v1.14.0) is on a PREVIEW branch only - it
+- ❌ Sources priority list (v1.14.1) is on a PREVIEW branch only - it
   goes live once the PR 'Nightly 2026-10-20: Sources as priority list'
   is merged to main (Olivier's call).
-- ❌ "Add a Source" form has no Priority picker yet - new sources land
-  as Medium and are changed in the list (hub addSource already accepts
-  'priority', so it is a small UI follow-up).
 - ❌ Fold app/sources-list.js into app.html the next time app.html is
   edited (then the middleware injection switches itself off - it only
   fires while the old `card-grid` Sources markup is still there).
