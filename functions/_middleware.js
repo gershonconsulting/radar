@@ -5,7 +5,7 @@
 // 2) Keeps the download links / "outdated extension" checks on / and /app pointing at LATEST_EXT
 //    without re-uploading the 260 KB app.html: an older LATEST_EXT_VERSION in the page is raised
 //    to LATEST_EXT on the fly (never lowered). Bump LATEST_EXT here for the next release.
-// 3) (2026-10-20, app v1.14.0) Loads /app/sources-list.js into the app page - Sources as a priority
+// 3) (2026-10-20, app v1.14.0) Loads app/sources-list.js into the app page - Sources as a priority
 //    list, newest first, with an effectiveness status - and stamps the sidebar version, again
 //    without re-uploading app.html. Only applies to a page that still has the old card grid
 //    (`id="sourcesBody"` + `card-grid`) and does not already load the script, so it switches itself
@@ -14,7 +14,8 @@ const LATEST_EXT = '1.15.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
 const APP_VERSION = '1.14.0';
-const SOURCES_LIST_SRC = '/app/sources-list.js?v=' + APP_VERSION;
+// Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
+const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
 
 function cmpVer(a, b) {
   const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
@@ -57,7 +58,7 @@ export async function onRequest(ctx) {
     }
     // 3) Sources priority list (app v1.14.0)
     if (/id="sourcesBody"/.test(out) && /class="card-grid" id="sourcesBody"/.test(out)
-        && out.indexOf('/app/sources-list.js') === -1 && out.lastIndexOf('</body>') !== -1) {
+        && out.indexOf('sources-list.js') === -1 && out.lastIndexOf('</body>') !== -1) {
       const at = out.lastIndexOf('</body>');
       out = out.slice(0, at) + '<script src="' + SOURCES_LIST_SRC + '"></script>\n' + out.slice(at);
       out = out.replace(/(id="sideVer">)v\d+\.\d+\.\d+(<)/, (all, a, b) => a + 'v' + APP_VERSION + b);
