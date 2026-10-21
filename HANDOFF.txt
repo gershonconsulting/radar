@@ -63,8 +63,12 @@ Default branch: main
      Ready to test on https://nightly-2026-10-21-unified-d.gershon-radar.pages.dev/app
   ❌ Merge pending: stacked on the 2026-10-20 PR - merge that one first,
      then this PR (it retargets to main).
-  ❌ Chart line colours are set in app.html's JavaScript (blue) and
-     were not changed - fold into app.html next time it is edited.
+  ✅ Charts red too (middleware item 4b rewrites the exact colour
+     literals in the served app.html): Dashboard trend line + 'targets
+     per bridge' bars, Home trend line + 'top bridges' bars. Growth
+     charts keep the stage colours; ICP-grade and per-source colours
+     unchanged. Fold these literals into app.html next time it is edited
+     (the rewrite then finds nothing and does nothing).
 
 - 2026-10-20 nightly (branch nightly/2026-10-20-sources-priority, app v1.14.0)
   Olivier's 2026-10-14 ask: Sources carry a priority, shown as a LIST

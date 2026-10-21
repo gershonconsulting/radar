@@ -16,6 +16,12 @@
 //    red #CC3333 - again without re-uploading app.html. Inserted once, before </head>, and only if
 //    the page does not already reference unified-theme.css (so it switches itself off once the
 //    theme is folded into the HTML). The sidebar version stamp is raised to APP_VERSION here too.
+//    4b) Chart colours: the charts' colours live in app.html's JavaScript, so CSS cannot reach them.
+//    CHART_RED swaps those exact literals (each unique in app.html) for the Gershon red family:
+//    Dashboard trend line + 'targets per bridge' bars (PRIMARY/ACCENT), Home 'new prospects' trend,
+//    Home 'top bridges' bars. Stage colours (Growth charts: sources green / bridges orange /
+//    targets blue), ICP-grade colours and the per-source palette are deliberately NOT touched.
+//    Exact-string swaps are idempotent: once replaced, the old literal is gone.
 const LATEST_EXT = '1.15.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
@@ -23,6 +29,17 @@ const APP_VERSION = '1.15.0';
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
 const THEME_HREF = '/unified-theme.css?v=' + APP_VERSION;
+const CHART_RED = [
+  // Dashboard (renderCharts): trend line colour + 'targets per bridge' bar colour
+  ["const PRIMARY='#1e40af', ACCENT='#3b82f6';", "const PRIMARY='#a8281f', ACCENT='#CC3333';"],
+  ["backgroundColor:'rgba(59,130,246,0.12)'", "backgroundColor:'rgba(204,51,51,0.12)'"],
+  // Home: 'new prospects' trend line
+  ["data:counts, borderColor:'#2563eb',", "data:counts, borderColor:'#CC3333',"],
+  ["backgroundColor:'rgba(37,99,235,.12)'", "backgroundColor:'rgba(204,51,51,.12)'"],
+  ["pointBackgroundColor:'#2563eb'", "pointBackgroundColor:'#CC3333'"],
+  // Home: 'top bridges' leaderboard bars
+  ["lbRows(topBrg, (()=> '#6366f1')", "lbRows(topBrg, (()=> '#CC3333')"]
+];
 
 function cmpVer(a, b) {
   const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
@@ -77,6 +94,10 @@ export async function onRequest(ctx) {
     if (out.indexOf('unified-theme.css') === -1 && out.indexOf('</head>') !== -1) {
       const at = out.indexOf('</head>');
       out = out.slice(0, at) + '<link rel="stylesheet" href="' + THEME_HREF + '">\n' + out.slice(at);
+    }
+    // 4b) Chart colours -> Gershon red (app page only: it is the one that builds charts)
+    if (out.indexOf('id="appShell"') !== -1 && out.indexOf('new Chart(') !== -1) {
+      for (const [from, to] of CHART_RED) out = out.split(from).join(to);
     }
     out = out.replace(/(id="sideVer">)v(\d+\.\d+\.\d+)(<)/, (all, a, v, b) =>
       cmpVer(v, APP_VERSION) < 0 ? a + 'v' + APP_VERSION + b : all);
