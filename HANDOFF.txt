@@ -46,6 +46,30 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-10-20 nightly (branch nightly/2026-10-20-sources-priority, app v1.14.0)
+  Olivier's 2026-10-14 ask: Sources carry a priority, shown as a LIST
+  (not cards), NEWEST first, each with an effectiveness status.
+  ✅ Sources view is now a sortable table, newest first by added_date
+     (click any header to re-sort; choice remembered per browser).
+  ✅ Priority column High / Medium / Low, editable in the row; saves
+     to sources.priority via hub v23 'setSourcePriority' (column and
+     action already live - NO migration). Failed save reverts + says so.
+  ✅ Effectiveness status Strong / Average / Weak / No data yet, with
+     the reason under each badge and the rule in the tooltip + footer.
+     Rule = targets in last 30 days per active bridge: Strong >= 15,
+     Average 5-14, Weak < 5 or nothing in 30 days or bridges but no
+     targets after 14 days; No data yet = nothing found / < 14 days old.
+  ✅ Filters: search, priority, status. Find Bridges kept per row.
+  ✅ Delivered as app/sources-list.js, injected into /app by
+     functions/_middleware.js (same on-the-fly pattern as the ext
+     version bump) - app.html itself is unchanged; the middleware also
+     stamps the sidebar version v1.14.0.
+  ✅ v1.14.1: "Add a Source" form has a Priority picker (High / Medium /
+     Low, default Medium), sent with addSource (hub v23 writes it on
+     create). For a source that already exists the priority is only sent
+     if the picker was changed, so a re-add never resets High to Medium.
+  ✅ Tested locally with Playwright (mocked hub) desktop + 390px phone.
+     Ready to test on https://nightly-2026-10-20-sources-p.gershon-radar.pages.dev/app
 - /api/health status contract added (2026-09-09): it reports
   last_sync, not just uptime - so 'up' can no longer mask a collector
   that stopped collecting.
@@ -65,6 +89,14 @@ Default branch: main
 
 4. PENDING  [TODO]
 ----------------------------------------------------------------
+- ❌ Sources priority list (v1.14.1) is on a PREVIEW branch only - it
+  goes live once the PR 'Nightly 2026-10-20: Sources as priority list'
+  is merged to main (Olivier's call).
+- ❌ Fold app/sources-list.js into app.html the next time app.html is
+  edited (then the middleware injection switches itself off - it only
+  fires while the old `card-grid` Sources markup is still there).
+- ❌ Thresholds (15 / 5 per bridge per 30 days) are a first guess from
+  current data - Olivier to confirm or adjust.
 - Nothing recorded as open at handoff time. Check ARIEL-HANDOFF.md,
   which predates this file and may carry live items.
 
