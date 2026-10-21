@@ -46,6 +46,30 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-10-21 nightly (branch nightly/2026-10-21-unified-design, app v1.15.0)
+  Unified Gershon design (decision 2026-10-13): Radar now looks like
+  Linalysis, the master design, in the Gershon.ai red #CC3333.
+  ✅ New app/unified-theme.css: white 240px sidebar with a thin right
+     border, solid-red active menu pill (white text), red hover tint,
+     white 12px cards, red primary buttons, red focus rings, light
+     sign-in screen. Stage colours KEPT (Sources green, Bridges orange,
+     Targets blue, Leads red) - their menu pills turn solid in that
+     colour when active.
+  ✅ Landing page (/) re-skinned too: light hero, red accents, red
+     call-to-action band, stage-coloured product mock.
+  ✅ Linked into /, /app etc. by functions/_middleware.js item 4 (no
+     re-upload of app.html); sidebar stamp raised to v1.15.0.
+  ✅ Tested locally with Playwright, desktop 1366 + phone 390.
+     Ready to test on https://nightly-2026-10-21-unified-d.gershon-radar.pages.dev/app
+  ❌ Merge pending: stacked on the 2026-10-20 PR - merge that one first,
+     then this PR (it retargets to main).
+  ✅ Charts red too (middleware item 4b rewrites the exact colour
+     literals in the served app.html): Dashboard trend line + 'targets
+     per bridge' bars, Home trend line + 'top bridges' bars. Growth
+     charts keep the stage colours; ICP-grade and per-source colours
+     unchanged. Fold these literals into app.html next time it is edited
+     (the rewrite then finds nothing and does nothing).
+
 - 2026-10-20 nightly (branch nightly/2026-10-20-sources-priority, app v1.14.0)
   Olivier's 2026-10-14 ask: Sources carry a priority, shown as a LIST
   (not cards), NEWEST first, each with an effectiveness status.
@@ -89,6 +113,9 @@ Default branch: main
 
 4. PENDING  [TODO]
 ----------------------------------------------------------------
+- ❌ Unified design (v1.15.0) is on a PREVIEW branch only - live once
+  the PR 'Nightly 2026-10-21: Radar in the unified Gershon design' is
+  merged (after the 2026-10-20 PR).
 - ❌ Sources priority list (v1.14.1) is on a PREVIEW branch only - it
   goes live once the PR 'Nightly 2026-10-20: Sources as priority list'
   is merged to main (Olivier's call).
