@@ -60,7 +60,7 @@ Default branch: main
   ✅ Linked into /, /app etc. by functions/_middleware.js item 4 (no
      re-upload of app.html); sidebar stamp raised to v1.15.0.
   ✅ Tested locally with Playwright, desktop 1366 + phone 390.
-     Ready to test on https://nightly-2026-10-21-unified-de.gershon-radar.pages.dev/app
+     Ready to test on https://nightly-2026-10-21-unified-d.gershon-radar.pages.dev/app
   ❌ Merge pending: stacked on the 2026-10-20 PR - merge that one first,
      then this PR (it retargets to main).
   ❌ Chart line colours are set in app.html's JavaScript (blue) and
