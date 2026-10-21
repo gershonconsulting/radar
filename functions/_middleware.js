@@ -10,12 +10,19 @@
 //    without re-uploading app.html. Only applies to a page that still has the old card grid
 //    (`id="sourcesBody"` + `card-grid`) and does not already load the script, so it switches itself
 //    off once the list is folded into app.html.
+// 4) (2026-10-21, app v1.15.0) Unified Gershon design: links app/unified-theme.css (served at
+//    /unified-theme.css) into the app page AND the landing page, so Radar looks like Linalysis
+//    (the master design: white sidebar, solid-red active pill, white 12px cards) in the Gershon.ai
+//    red #CC3333 - again without re-uploading app.html. Inserted once, before </head>, and only if
+//    the page does not already reference unified-theme.css (so it switches itself off once the
+//    theme is folded into the HTML). The sidebar version stamp is raised to APP_VERSION here too.
 const LATEST_EXT = '1.15.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
-const APP_VERSION = '1.14.1';
+const APP_VERSION = '1.15.0';
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
+const THEME_HREF = '/unified-theme.css?v=' + APP_VERSION;
 
 function cmpVer(a, b) {
   const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
@@ -60,9 +67,19 @@ export async function onRequest(ctx) {
     if (/id="sourcesBody"/.test(out) && /class="card-grid" id="sourcesBody"/.test(out)
         && out.indexOf('sources-list.js') === -1 && out.lastIndexOf('</body>') !== -1) {
       const at = out.lastIndexOf('</body>');
-      out = out.slice(0, at) + '<script src="' + SOURCES_LIST_SRC + '"></script>\n' + out.slice(at);
+      // sources-list.js stamps 'v1.14.1' at run time; the inline line after it puts APP_VERSION back.
+      out = out.slice(0, at) + '<script src="' + SOURCES_LIST_SRC + '"></script>\n'
+        + '<script>try{var sv=document.getElementById("sideVer");if(sv)sv.textContent="v' + APP_VERSION + '";}catch(e){}</script>\n'
+        + out.slice(at);
       out = out.replace(/(id="sideVer">)v\d+\.\d+\.\d+(<)/, (all, a, b) => a + 'v' + APP_VERSION + b);
     }
+    // 4) Unified Gershon design (app v1.15.0)
+    if (out.indexOf('unified-theme.css') === -1 && out.indexOf('</head>') !== -1) {
+      const at = out.indexOf('</head>');
+      out = out.slice(0, at) + '<link rel="stylesheet" href="' + THEME_HREF + '">\n' + out.slice(at);
+    }
+    out = out.replace(/(id="sideVer">)v(\d+\.\d+\.\d+)(<)/, (all, a, v, b) =>
+      cmpVer(v, APP_VERSION) < 0 ? a + 'v' + APP_VERSION + b : all);
     if (out === html) return res;
     const h = new Headers(res.headers);
     h.delete('content-length'); h.delete('etag');
