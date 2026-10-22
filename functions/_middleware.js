@@ -22,10 +22,16 @@
 //    Home 'top bridges' bars. Stage colours (Growth charts: sources green / bridges orange /
 //    targets blue), ICP-grade colours and the per-source palette are deliberately NOT touched.
 //    Exact-string swaps are idempotent: once replaced, the old literal is gone.
+// 5) (2026-10-22, app v1.16.0) "Targets" is now called "Prospects" (Olivier's vocabulary:
+//    Sources > Bridges > Prospects). app/prospects-wording.js re-words the visible text in the
+//    browser (menu, headings, tiles, tooltips, empty states - never ids, data or prospect rows);
+//    CHART_WORDS renames the chart legends, which are drawn on a canvas the script cannot reach.
+//    Inserted once before </body>, only if the page does not already load the script.
 const LATEST_EXT = '1.15.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
-const APP_VERSION = '1.15.0';
+const APP_VERSION = '1.16.0';
+const WORDING_SRC = '/prospects-wording.js?v=' + APP_VERSION;
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
 const THEME_HREF = '/unified-theme.css?v=' + APP_VERSION;
@@ -39,6 +45,10 @@ const CHART_RED = [
   ["pointBackgroundColor:'#2563eb'", "pointBackgroundColor:'#CC3333'"],
   // Home: 'top bridges' leaderboard bars
   ["lbRows(topBrg, (()=> '#6366f1')", "lbRows(topBrg, (()=> '#CC3333')"]
+];
+const CHART_WORDS = [
+  ["label:'Targets'", "label:'Prospects'"],
+  ["label:'New targets'", "label:'New prospects'"]
 ];
 
 function cmpVer(a, b) {
@@ -98,6 +108,12 @@ export async function onRequest(ctx) {
     // 4b) Chart colours -> Gershon red (app page only: it is the one that builds charts)
     if (out.indexOf('id="appShell"') !== -1 && out.indexOf('new Chart(') !== -1) {
       for (const [from, to] of CHART_RED) out = out.split(from).join(to);
+      for (const [from, to] of CHART_WORDS) out = out.split(from).join(to);
+    }
+    // 5) "Targets" -> "Prospects" wording (app page + landing page)
+    if (out.indexOf('prospects-wording.js') === -1 && out.lastIndexOf('</body>') !== -1) {
+      const at = out.lastIndexOf('</body>');
+      out = out.slice(0, at) + '<script src="' + WORDING_SRC + '"></script>\n' + out.slice(at);
     }
     out = out.replace(/(id="sideVer">)v(\d+\.\d+\.\d+)(<)/, (all, a, v, b) =>
       cmpVer(v, APP_VERSION) < 0 ? a + 'v' + APP_VERSION + b : all);
