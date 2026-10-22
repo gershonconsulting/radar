@@ -1,0 +1,265 @@
+/* =====================================================================
+   Radar - unified Gershon design (v1.15.0, 2026-10-21)
+   Decision 2026-10-13: every Gershon app looks like Linalysis (the master
+   design) and the main colour everywhere is the Gershon.ai red #CC3333.
+   This file re-skins Radar without touching the 260 KB app.html: it is
+   linked into the page by functions/_middleware.js (item 4).
+   - The Source / Bridge / Target / Lead stage colours are KEPT on purpose.
+   - App rules are scoped under #appShell / #signinOverlay (they only exist
+     in app.html); landing-page rules are scoped under the landing-only
+     sections (header, section.hero, section.final, ...), so one file can be
+     linked on both pages without the two sets of class names colliding.
+   ===================================================================== */
+
+/* ---------- Tokens (shared; html:root beats the page's own :root) ---------- */
+html:root{
+  --gx-red:#CC3333; --gx-red-dark:#a8281f; --gx-red-light:#fdf2f2; --gx-red-line:#f3caca;
+  --gx-text:#1d1d1f; --gx-muted:#6e6e73; --gx-border:#e5e7eb; --gx-bg:#fafafa; --gx-radius:12px;
+
+  /* app.html tokens */
+  --primary:var(--gx-red-dark); --accent:var(--gx-red);
+  --bg:var(--gx-bg); --ink:var(--gx-text); --muted:var(--gx-muted);
+  --line:var(--gx-border); --card:#ffffff; --sidebar:#ffffff; --side-line:var(--gx-border);
+  --brand:var(--gx-red); --brand-ink:var(--gx-red-dark); --brand-soft:var(--gx-red-light);
+  --gershon-red:var(--gx-red);                       /* sources-list.js */
+
+  /* landing-page tokens (index.html) */
+  --brand2:#f08a8a;
+  --grad:linear-gradient(120deg,#CC3333 0%,#a8281f 100%);
+  --soft:var(--gx-bg);
+  --shadow:0 18px 50px rgba(29,29,31,.08);
+}
+html body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; }
+
+/* =====================================================================
+   APP (app.html)
+   ===================================================================== */
+#appShell{ background:var(--gx-bg); color:var(--gx-text); }
+
+/* ---------- Sign-in screen: light, Linalysis-style ---------- */
+#signinOverlay{ background:linear-gradient(160deg,#ffffff 0%,var(--gx-bg) 55%,var(--gx-red-light) 100%); }
+#signinOverlay .signin-box{ border:1px solid var(--gx-border); box-shadow:0 18px 50px rgba(29,29,31,.08); }
+#signinOverlay .signin-box .logo,
+#signinOverlay .signin-box .sub{ color:var(--gx-red); }
+#signinOverlay .signin-box h1{ color:var(--gx-text); letter-spacing:-0.02em; }
+#signinOverlay .signin-box p{ color:var(--gx-muted); }
+
+/* ---------- Sidebar: white, 240px, 1px border-right ---------- */
+#appShell .sidebar{ width:240px; flex:0 0 240px; background:#fff; color:var(--gx-text); border-right:1px solid var(--gx-border); }
+#appShell .sidebar .brand .logo,
+#appShell .sidebar .brand h1{ color:var(--gx-red); }
+#appShell .sidebar .brand h1{ font-size:1.25rem; letter-spacing:-0.02em; }
+#appShell .brand-meta{ border-bottom-color:var(--gx-border); }
+#appShell .brand-meta .eyebrow,
+#appShell .nav-sec{ font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--gx-muted); }
+#appShell .brand-meta .ver{ color:var(--gx-text); }
+#appShell .brand-meta .ts{ color:var(--gx-muted); }
+#appShell .nav-sec{ padding:14px 12px 4px; }
+#appShell .user-chip{ color:var(--gx-muted); }
+#appShell .user-chip .avatar{ background:var(--gx-red); color:#fff; }
+
+#appShell .nav-item{ color:var(--gx-text); font-weight:500; border-radius:8px; padding:9px 12px; gap:10px; }
+#appShell .nav-item .ico{ color:var(--gx-muted); }
+#appShell .nav-item:hover{ background:var(--gx-red-light); color:var(--gx-red); }
+#appShell .nav-item:hover .ico{ color:var(--gx-red); }
+#appShell .nav-item.active{ background:var(--gx-red); color:#fff; font-weight:600; }
+#appShell .nav-item.active .ico{ color:#fff; }
+#appShell .nav-count{ background:var(--gx-red-light); color:var(--gx-red-dark); }
+#appShell .nav-item.active .nav-count{ background:#fff; color:var(--gx-red-dark); }
+
+/* Stage items keep their colour language: coloured icon, solid stage pill when active */
+#appShell #nav-sources .ico{ color:var(--src-ink); }
+#appShell #nav-bridges .ico{ color:var(--brg-ink); }
+#appShell #nav-targets .ico{ color:var(--tgt-ink); }
+#appShell #nav-leads   .ico{ color:var(--led-ink); }
+#appShell #nav-sources:hover{ background:var(--src-bg); color:var(--src-ink); }
+#appShell #nav-bridges:hover{ background:var(--brg-bg); color:var(--brg-ink); }
+#appShell #nav-targets:hover{ background:var(--tgt-bg); color:var(--tgt-ink); }
+#appShell #nav-leads:hover  { background:var(--led-bg); color:var(--led-ink); }
+#appShell #nav-sources.active{ background:var(--src-ink); color:#fff; }
+#appShell #nav-bridges.active{ background:var(--brg-ink); color:#fff; }
+#appShell #nav-targets.active{ background:var(--tgt-ink); color:#fff; }
+#appShell #nav-leads.active  { background:var(--led-ink); color:#fff; }
+#appShell #nav-sources.active .ico, #appShell #nav-bridges.active .ico,
+#appShell #nav-targets.active .ico, #appShell #nav-leads.active .ico{ color:#fff; }
+
+#appShell .sidebar .foot{ border-top-color:var(--gx-border); }
+#appShell .foot-btn{ border-radius:8px; font-weight:600; font-size:0.88rem; padding:9px 14px; }
+#appShell .foot-btn.primary{ background:var(--gx-red-light); color:var(--gx-red-dark); }
+#appShell .foot-btn.primary:hover{ background:#fbe3e3; }
+#appShell .foot-btn.ghost{ background:#fff; color:var(--gx-text); border-color:var(--gx-border); }
+#appShell .foot-btn.ghost:hover{ border-color:var(--gx-red); color:var(--gx-red); background:#fff; }
+#appShell .foot-domain{ color:var(--gx-muted); }
+
+/* ---------- Page heads / KPI cards / panels ---------- */
+#appShell .page-head h2{ color:var(--gx-text); font-weight:800; letter-spacing:-0.02em; }
+#appShell .page-head p{ color:var(--gx-muted); }
+#appShell .stat,
+#appShell .panel,
+#appShell .entity-card,
+#appShell .table-wrap,
+#appShell .log-rail,
+#appShell .ext-card,
+#appShell .settings-card,
+#appShell .collection-day,
+#appShell .onboard,
+#appShell .onboard-done,
+#appShell .wel,
+#appShell .hc-card,
+#appShell .hc-kpi{ border-radius:var(--gx-radius); box-shadow:none; }
+#appShell .stat .num,
+#appShell .hc-kpi .n,
+#appShell .entity-card .big{ color:var(--gx-text); font-weight:800; letter-spacing:-0.02em; }
+#appShell .stat .label,
+#appShell .hc-kpi .l{ color:var(--gx-muted); font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
+#appShell .stat .sub, #appShell .hc-kpi .s{ color:var(--gx-muted); }
+#appShell .stat.clk:hover,
+#appShell .hc-kpi:hover{ border-color:var(--gx-red-line); box-shadow:0 4px 14px rgba(204,51,51,.10); }
+#appShell .panel h3{ color:var(--gx-text); font-weight:700; }
+#appShell .onboard{ border-top-color:var(--gx-red); }
+
+/* ---------- Buttons ---------- */
+#appShell .sync-btn,
+#appShell .ext-btn,
+#appShell .ob-btn,
+#appShell .btn-save,
+#appShell .tour-btn.pri,
+#appShell .hc-btn.pri{ background:var(--gx-red); border-color:var(--gx-red); color:#fff; border-radius:8px; box-shadow:none; }
+#appShell .sync-btn:hover,
+#appShell .ext-btn:hover,
+#appShell .ob-btn:hover,
+#appShell .btn-save:hover,
+#appShell .tour-btn.pri:hover,
+#appShell .hc-btn.pri:hover{ background:var(--gx-red-dark); filter:none; }
+#appShell .ext-btn.ghost,
+#appShell .ob-btn.ghost,
+#appShell .hc-btn.sec,
+#appShell .btn-save.btn-secondary{ background:#fff; color:var(--gx-text); border:1px solid var(--gx-border); }
+#appShell .ext-btn.ghost:hover,
+#appShell .ob-btn.ghost:hover,
+#appShell .hc-btn.sec:hover,
+#appShell .btn-save.btn-secondary:hover{ border-color:var(--gx-red); color:var(--gx-red); background:#fff; }
+#appShell .btn-secondary{ background:#fff; color:var(--gx-text); border-color:var(--gx-border); }
+#appShell .btn-secondary:hover{ border-color:var(--gx-red); color:var(--gx-red); background:#fff; }
+#appShell .dash-go{ background:#fff; border-color:var(--gx-border); color:var(--gx-text); }
+#appShell .dash-go:hover{ border-color:var(--gx-red); color:var(--gx-red); background:#fff; }
+#appShell .stat-chip{ background:var(--gx-red-light); color:var(--gx-red-dark); }
+
+/* Segmented controls: Linalysis = solid brand when active (stage segs keep their stage ink) */
+#appShell .seg{ background:#fff; border-color:var(--gx-border); }
+#appShell .seg button.active:not(.seg-btn){ background:var(--gx-red); color:#fff; }
+#appShell .hc-range button.on{ background:var(--gx-red); border-color:var(--gx-red); color:#fff; }
+
+/* ---------- Inputs ---------- */
+#appShell input:focus, #appShell select:focus, #appShell textarea:focus{
+  outline:none; border-color:var(--gx-red); box-shadow:0 0 0 3px rgba(204,51,51,.15); }
+#appShell .sel-box{ accent-color:var(--gx-red); }
+#appShell .switch input:checked + .track{ background:var(--gx-red); }
+
+/* ---------- Tables / lists ---------- */
+#appShell th{ background:var(--gx-bg); color:var(--gx-muted); border-bottom:1px solid var(--gx-border); }
+#appShell th.sortable:hover, #appShell th.sorted .arrow{ color:var(--gx-red); }
+#appShell tr:hover td{ background:var(--gx-red-light); }
+#appShell td a{ color:var(--gx-red-dark); }
+#appShell .log-line .lg-source{ color:var(--gx-red-dark); }
+#appShell .collection-day .summary{ color:var(--gx-red-dark); }
+#appShell .hc-lb .row:hover .nm, #appShell .hc-feed .lk{ color:var(--gx-red); }
+#appShell .hc-act .a:hover{ border-color:var(--gx-red-line); background:var(--gx-red-light); }
+
+/* Bridges: the "selected" accent was blue */
+#appShell .bridge-row.on{ border-left-color:var(--gx-red); background:var(--gx-red-light); }
+#appShell .bridge-row .tgtcount b{ color:var(--gx-text); }
+#appShell .bridge-src-head .actives{ color:var(--gx-red-dark); background:var(--gx-red-light); }
+#appShell .bridge-row a.connect{ color:var(--gx-red-dark); background:var(--gx-red-light); border-color:var(--gx-red-line); }
+#appShell .bridge-row a.connect:hover{ background:var(--gx-red); border-color:var(--gx-red); color:#fff; }
+#appShell .icp-grade.g-B{ color:var(--gx-red-dark); background:var(--gx-red-light); border-color:var(--gx-red-line); }
+#appShell .flow-node:hover{ border-color:var(--gx-red); background:var(--gx-red-light); }
+#appShell .flow-node.active{ background:var(--gx-red); border-color:var(--gx-red); color:#fff; }
+#appShell .rmode-opt.sel{ border-color:var(--gx-red); background:var(--gx-red-light); }
+#appShell .ob-field input:focus{ box-shadow:0 0 0 3px rgba(204,51,51,.15); }
+
+/* ---------- Tour ---------- */
+#appShell .tour-chain .n.on{ border-color:var(--gx-red); box-shadow:0 0 0 3px rgba(204,51,51,.10); }
+
+/* ---------- Mobile (sidebar becomes a top strip of pills) ---------- */
+@media (max-width:880px){
+  #appShell .sidebar{ width:100%; flex:none; border-right:none; border-bottom:1px solid var(--gx-border); }
+  #appShell .sidebar .brand{ padding:14px 16px 4px; }
+  #appShell .nav-items{ gap:4px; }
+  #appShell .nav-item{ padding:7px 10px; font-size:0.8rem; }
+}
+
+/* =====================================================================
+   LANDING PAGE (index.html) - light hero, red accents, like linalysis.ai
+   ===================================================================== */
+body > header .brand .dot{ background:var(--gx-red); box-shadow:none; }
+body > header .brand{ color:var(--gx-red); }
+body > header .brand small{ color:var(--gx-muted); }
+body > header .nav-links a.link{ color:var(--gx-text); }
+body > header .nav-links a.link:hover{ color:var(--gx-red); }
+body > header .btn-primary,
+section .btn-primary{ background:var(--gx-red); box-shadow:none; color:#fff; border-radius:999px; }
+body > header .btn-primary:hover,
+section .btn-primary:hover{ background:var(--gx-red-dark); box-shadow:0 8px 22px rgba(204,51,51,.28); }
+
+section.hero{ background:linear-gradient(180deg,#ffffff 0%,var(--gx-bg) 60%,var(--gx-red-light) 100%); color:var(--gx-text); }
+section.hero h1{ color:var(--gx-text); }
+section.hero h1 .g{ background:none; -webkit-background-clip:border-box; background-clip:border-box; color:var(--gx-red); }
+section.hero p.sub{ color:var(--gx-muted); }
+section.hero .kicker{ color:var(--gx-red); background:var(--gx-red-light); border-color:var(--gx-red-line); font-weight:700; }
+section.hero .trust{ color:var(--gx-muted); }
+section.hero .trust a{ color:var(--gx-red) !important; }
+section.hero .btn-lite{ background:#fff; border-color:var(--gx-border); color:var(--gx-text); border-radius:999px; }
+section.hero .btn-lite:hover{ border-color:var(--gx-red); color:var(--gx-red); background:#fff; }
+section.hero .rings{ opacity:.35; }
+section.hero .rings span{ border-color:rgba(204,51,51,.22); }
+section.hero .sweep{ background:conic-gradient(from 0deg,rgba(204,51,51,.16),transparent 30%); }
+section.hero .mock{ background:#fff; border-color:var(--gx-border); box-shadow:0 30px 80px rgba(29,29,31,.10); }
+section.hero .mock .bar{ background:var(--gx-bg); border-bottom-color:var(--gx-border); }
+section.hero .mock .bar i{ background:#d9d9de; }
+section.hero .mock .bar .u{ color:var(--gx-muted); }
+section.hero .stage{ background:#fff; border-color:var(--gx-border); border-radius:var(--gx-radius); }
+section.hero .stage h4{ color:var(--gx-muted); }
+section.hero .stage .big{ color:var(--gx-text); }
+section.hero .stage .lbl, section.hero .stage ul{ color:var(--gx-muted); }
+section.hero .arrow{ color:#c7c7cc; }
+/* stage colour language on the landing mock too */
+section.hero .flow .stage:nth-child(1){ background:var(--src-bg,#eafaf0); border-color:var(--src-line,#bbe8cd); }
+section.hero .flow .stage:nth-child(1) h4{ color:var(--src-ink,#15803d); }
+section.hero .flow .stage:nth-child(3){ background:var(--brg-bg,#fff3e6); border-color:var(--brg-line,#ffd9b0); }
+section.hero .flow .stage:nth-child(3) h4{ color:var(--brg-ink,#c2610a); }
+section.hero .flow .stage:nth-child(5){ background:var(--tgt-bg,#e8f2fe); border-color:var(--tgt-line,#bcd9fb); }
+section.hero .flow .stage:nth-child(5) h4{ color:var(--tgt-ink,#1d4ed8); }
+section.hero .flow .stage:nth-child(1) ul li::before{ background:#15803d; }
+section.hero .flow .stage:nth-child(3) ul li::before{ background:#c2610a; }
+section.hero .flow .stage:nth-child(5) ul li::before{ background:#1d4ed8; }
+
+body > .wrap > .stats{ border-radius:var(--gx-radius); box-shadow:0 18px 50px rgba(29,29,31,.06); }
+body > .wrap > .stats .stat b{ color:var(--gx-text); }
+body > .wrap > .stats .stat span{ color:var(--gx-muted); }
+section.pad .eyebrow, section.pad .extbox-steptitle, section.pad .pricecard .tag{ color:var(--gx-red); }
+section.pad h2.sec{ color:var(--gx-text); }
+section.pad .card{ border-radius:var(--gx-radius); }
+section.pad .card:hover{ border-color:var(--gx-red-line); box-shadow:0 12px 30px rgba(29,29,31,.07); }
+section.pad .card .ic, section.pad .extbox-ic{ background:var(--gx-red-light); border-color:var(--gx-red-line); color:var(--gx-red); }
+section.pad .step{ background:#fff; border-radius:var(--gx-radius); }
+section.pad .step .n{ background:var(--gx-red); box-shadow:none; border-radius:999px; }
+section.band{ background:var(--gx-bg); }
+section.pad .extbox{ border-radius:var(--gx-radius); }
+section.pad .extbox-steps code{ background:var(--gx-red-light); color:var(--gx-red-dark); }
+section.pad .pricecard{ border-radius:var(--gx-radius); }
+
+/* Final call-to-action: solid red band like Linalysis' cta-section */
+section.final{ background:linear-gradient(135deg,var(--gx-red) 0%,var(--gx-red-dark) 100%); }
+section.final p{ color:rgba(255,255,255,.9); }
+section.final .btn-primary{ background:#fff; color:var(--gx-red); }
+section.final .btn-primary:hover{ background:var(--gx-red-light); color:var(--gx-red-dark); }
+section.final .btn-lite{ border-radius:999px; border-color:rgba(255,255,255,.5); }
+
+footer .brand .dot{ background:var(--gx-red); box-shadow:none; }
+
+/* Count badge inside a solid stage pill keeps the stage ink */
+#appShell #nav-sources.active .nav-count{ color:var(--src-ink); }
+#appShell #nav-bridges.active .nav-count{ color:var(--brg-ink); }
+#appShell #nav-targets.active .nav-count{ color:var(--tgt-ink); }
+#appShell #nav-leads.active   .nav-count{ color:var(--led-ink); }
