@@ -1,0 +1,42 @@
+RADAR — SUPABASE EMAIL FUNCTIONS HANDOFF (nightly 2026-10-22, branch nightly/2026-10-22-gc-sender)
+
+WHY THIS FOLDER EXISTS
+- Radar's report emails are NOT sent from this repo's Pages app. They come from Supabase edge
+  functions in project `radar` (pkzeeqehwmtnqxdpdesl), scheduled by pg_cron:
+    daily-report   (05:00 UTC job, deployed v7)  -> "Radar Report — <date> — ..."
+    health-check   (06:00 UTC job, deployed v3)  -> "⚠️ Radar has stopped collecting ..."
+    monthly-report (1st of month, deployed v1)   -> monthly account + estate reports
+  Until tonight their source lived only in Supabase. supabase/functions/ now tracks
+  daily-report and health-check.
+
+WHAT CHANGED
+- Olivier's rule: automated Gershon report emails show a display name starting with "GC ".
+- daily-report and health-check: from "Radar <radar@gershon.ai>" -> "GC Radar Report <radar@gershon.ai>"
+  (now a FROM constant). Address, reply-to, recipients, subjects and HTML are unchanged.
+  These files are the deployed source copied from Supabase. The only intended difference is the FROM
+  constant plus a dated header comment.
+
+❌ NOT LIVE UNTIL DEPLOYED (needs Ariel; nothing was deployed tonight)
+1. Deploy both functions from this folder: Supabase dashboard -> Edge Functions -> daily-report /
+   health-check -> replace index.ts with the file here -> Deploy (keep verify_jwt OFF). Before
+   deploying, compare against the live version: the only difference should be the FROM line and the header comment.
+2. monthly-report (next run Nov 1) has the same sender in index.ts line 19:
+       const FROM = 'Radar <radar@gershon.ai>';
+   change it to   const FROM = 'GC Radar Report <radar@gershon.ai>';
+   It is not copied here because its report.js is 46KB and wasn't transcribed tonight.
+3. Optional: google-apps-script/Code.gs REPORT_FROM ('radar@gershoncrm.com') belongs to the old
+   Apps Script daily mail, which no longer reaches Resend. Leave it or retire it.
+
+HOW IT WAS VERIFIED (emails can't be previewed)
+- Code reading, plus a unit-style test run with node --experimental-strip-types. The test stubs
+  Deno and fetch, calls each handler and checks the Resend payload:
+  from = "GC Radar Report <radar@gershon.ai>", reply_to = support@gershonconsulting.com,
+  to = report@gershonconsulting.com, and subject = "Radar Report — October 20, 2026 — +540 prospects"
+  (identical to the live 21 Oct email) / "⚠️ Radar has stopped collecting — check your Chrome extension".
+- The branch Pages preview is unaffected (static app only).
+
+AUDIT NOTES FOR THE REPORT ITSELF (not changed tonight)
+- "DID NOT RUN" on 6 of the 11 days from 10 to 20 Oct (10, 11, 12, 14, 17, 18). The extension is still on v1.15.0 while v1.17.0 is published.
+- "vs the day before" uses new_targets_prev from radar_daily_stats. On 21 Oct it implied 157 for 19 Oct,
+  but the 19 Oct email said +328. Check the RPC's previous-day window.
+- Header is white text on navy (#0f172a). The house rule for report emails is dark text on light.
