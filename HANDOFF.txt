@@ -1,7 +1,7 @@
 ================================================================
 HANDOFF.txt  -  radar
 Written by: Claude (Anthropic) - token-limit handoff protocol
-Date: 2026-09-09
+Date: 2026-09-09 (updated 2026-10-22)
 ================================================================
 
 0. WHO YOU ARE READING THIS
@@ -46,6 +46,25 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-10-22 nightly (branch nightly/2026-10-22-prospects-wording, app v1.16.0)
+  Olivier's vocabulary (2026-10-09): SOURCES > BRIDGES > PROSPECTS.
+  ✅ Every visible "Targets"/"Target" now reads "Prospects"/"Prospect":
+     menu, headings, tiles, tooltips, placeholders, empty states, landing
+     page, and the chart legends. New app/prospects-wording.js (loaded by
+     functions/_middleware.js item 5) re-words text in the browser and
+     anything rendered later; chart legends are swapped in the middleware
+     (CHART_WORDS). NOT touched: ids, classes, view names, API fields,
+     stored data, prospect rows (a company called "Target" stays), and
+     "Daily lead target" (a goal, not the stage).
+  ✅ Stacked on PR #2 (Targets filters), which was brought up to date with
+     main tonight, so the preview shows filters + unified design + wording.
+  ✅ Tested locally with Playwright (middleware run on the real app.html).
+  ❌ Merge: PR #2 first, then this PR (Olivier's call).
+  ❌ When app.html is next hand-edited: write "Prospects" in it directly
+     (the script then finds nothing), and fold in sources-list.js + theme.
+- 2026-10-21 Olivier merged PR #3 (Sources list) and PR #4 (unified design)
+  to main: v1.15.0 is LIVE.
+
 - 2026-10-21 nightly (branch nightly/2026-10-21-unified-design, app v1.15.0)
   Unified Gershon design (decision 2026-10-13): Radar now looks like
   Linalysis, the master design, in the Gershon.ai red #CC3333.
@@ -60,9 +79,7 @@ Default branch: main
   ✅ Linked into /, /app etc. by functions/_middleware.js item 4 (no
      re-upload of app.html); sidebar stamp raised to v1.15.0.
   ✅ Tested locally with Playwright, desktop 1366 + phone 390.
-     Ready to test on https://nightly-2026-10-21-unified-d.gershon-radar.pages.dev/app
-  ❌ Merge pending: stacked on the 2026-10-20 PR - merge that one first,
-     then this PR (it retargets to main).
+  ✅ Merged to main by Olivier 2026-10-21 (after the 2026-10-20 PR).
   ✅ Charts red too (middleware item 4b rewrites the exact colour
      literals in the served app.html): Dashboard trend line + 'targets
      per bridge' bars, Home trend line + 'top bridges' bars. Growth
@@ -73,6 +90,7 @@ Default branch: main
 - 2026-10-20 nightly (branch nightly/2026-10-20-sources-priority, app v1.14.0)
   Olivier's 2026-10-14 ask: Sources carry a priority, shown as a LIST
   (not cards), NEWEST first, each with an effectiveness status.
+  ✅ Merged to main by Olivier 2026-10-21.
   ✅ Sources view is now a sortable table, newest first by added_date
      (click any header to re-sort; choice remembered per browser).
   ✅ Priority column High / Medium / Low, editable in the row; saves
@@ -86,14 +104,11 @@ Default branch: main
   ✅ Filters: search, priority, status. Find Bridges kept per row.
   ✅ Delivered as app/sources-list.js, injected into /app by
      functions/_middleware.js (same on-the-fly pattern as the ext
-     version bump) - app.html itself is unchanged; the middleware also
-     stamps the sidebar version v1.14.0.
+     version bump) - app.html itself is unchanged.
   ✅ v1.14.1: "Add a Source" form has a Priority picker (High / Medium /
      Low, default Medium), sent with addSource (hub v23 writes it on
      create). For a source that already exists the priority is only sent
      if the picker was changed, so a re-add never resets High to Medium.
-  ✅ Tested locally with Playwright (mocked hub) desktop + 390px phone.
-     Ready to test on https://nightly-2026-10-20-sources-p.gershon-radar.pages.dev/app
 - /api/health status contract added (2026-09-09): it reports
   last_sync, not just uptime - so 'up' can no longer mask a collector
   that stopped collecting.
@@ -113,19 +128,20 @@ Default branch: main
 
 4. PENDING  [TODO]
 ----------------------------------------------------------------
-- ❌ Unified design (v1.15.0) is on a PREVIEW branch only - live once
-  the PR 'Nightly 2026-10-21: Radar in the unified Gershon design' is
-  merged (after the 2026-10-20 PR).
-- ❌ Sources priority list (v1.14.1) is on a PREVIEW branch only - it
-  goes live once the PR 'Nightly 2026-10-20: Sources as priority list'
-  is merged to main (Olivier's call).
-- ❌ Fold app/sources-list.js into app.html the next time app.html is
-  edited (then the middleware injection switches itself off - it only
-  fires while the old `card-grid` Sources markup is still there).
-- ❌ Thresholds (15 / 5 per bridge per 30 days) are a first guess from
-  current data - Olivier to confirm or adjust.
-- Nothing recorded as open at handoff time. Check ARIEL-HANDOFF.md,
-  which predates this file and may carry live items.
+- ❌ PR #2 Targets filters (updated with main 2026-10-22) - merge pending.
+- ❌ PR 'Nightly 2026-10-22: Targets renamed Prospects' (v1.16.0) - merge
+  after PR #2.
+- ❌ PR #1 (old Sources list attempt) is superseded by merged PR #3 -
+  close it.
+- ❌ Fold app/sources-list.js, unified-theme.css, the chart colours and
+  the Prospects wording into app.html the next time app.html is edited
+  by hand (each middleware rewrite then switches itself off). app.html
+  is ~266KB, over the ~250KB GitHub-API push limit, so this needs the
+  browser/web-editor route or Ariel.
+- Thresholds 15 / 5 per bridge per 30 days went live with PR #3 (merged
+  by Olivier 2026-10-21); change only if he asks.
+- Check ARIEL-HANDOFF.md, which predates this file and may carry live
+  items.
 
 5. MISSING / NOT BUILT YET
 ----------------------------------------------------------------
@@ -138,8 +154,7 @@ Default branch: main
 7. NEXT ACTION - START HERE
 ----------------------------------------------------------------
   -> Read ARIEL-HANDOFF.md and HEALTH-CHECK-ALERTS.md, then ask
-     Olivier what he wants next. Radar is in good shape; the viewer-
-     mode and health-contract work both closed cleanly.
+     Olivier what he wants next. Radar is in good shape.
 
 8. GOTCHAS / HARD-WON LESSONS
 ----------------------------------------------------------------
@@ -152,9 +167,12 @@ Default branch: main
   viewer needs to know. Only the INSTRUCTION changes.
 - Before building anything extension-status related, grep for
   `_collecting` and 'viewing only' - it is already there.
-- Writes to this repo go through the GitHub web UI in Chrome; `git
-  push` is proxy-refused and the API 403s on write. Verify every
-  commit by reading raw.githubusercontent.com.
+- Writes: the GitHub MCP connector writes branches/files up to ~250KB
+  (since 2026-10-21); workflow files are refused; plain git push from a
+  cloud session is proxy-refused. Every non-main branch gets a Pages
+  preview at <branch-slug-cut-at-28>.gershon-radar.pages.dev.
+- Previews use the PRODUCTION hub/data: changes made while testing are
+  real.
 
 9. CONTACT / ESCALATION
 ----------------------------------------------------------------
