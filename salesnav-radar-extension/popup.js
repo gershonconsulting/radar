@@ -41,7 +41,7 @@ function renderLog() {
     }
     let html = head +
       '<details style="margin-top:8px;border-top:1px solid #f3f4f6;padding-top:8px;">' +
-      '<summary style="cursor:pointer;font-size:11px;color:#3b82f6;">View log (' + logArr.length + ' steps)</summary>' +
+      '<summary style="cursor:pointer;font-size:11px;color:#CC3333;">View log (' + logArr.length + ' steps)</summary>' +
       '<div style="margin-top:6px;max-height:240px;overflow-y:auto;font-family:ui-monospace,monospace;font-size:10px;line-height:1.4;background:#f9fafb;padding:6px;border-radius:4px;">';
     for (const ev of logArr) {
       const t = (ev.ts || "").slice(11, 19);
