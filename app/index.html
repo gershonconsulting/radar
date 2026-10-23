@@ -6,7 +6,7 @@
 <title>Radar — Warm intros to your ideal customers</title>
 <meta name="description" content="Radar maps the people who can introduce you to your ideal customers. Watch the right organizations, find the bridges inside them, and collect graded prospects — automatically, through a Chrome extension." />
 <meta property="og:title" content="Radar — Warm intros to your ideal customers" />
-<meta property="og:description" content="Source → Bridge → Target. Radar turns the organizations you watch into a steady stream of graded, ready-to-contact prospects." />
+<meta property="og:description" content="Source → Bridge → Prospect. Radar turns the organizations you watch into a steady stream of graded, ready-to-contact prospects." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://radar.gershoncrm.com" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -14,8 +14,8 @@
   :root{
     --bg:#0b1020; --bg2:#0e1530; --ink:#0b1020; --paper:#ffffff;
     --muted:#5b6478; --line:#e6e9f2; --soft:#f5f7fc;
-    --brand:#3b5bfd; --brand2:#22d3ee; --brand-ink:#1e34c4;
-    --grad:linear-gradient(120deg,#3b5bfd 0%,#6366f1 45%,#22d3ee 100%);
+    --brand:#CC3333; --brand2:#a8281f; --brand-ink:#a8281f;
+    --grad:linear-gradient(120deg,#CC3333 0%,#a8281f 100%);
     --ok:#16a34a; --shadow:0 18px 50px rgba(18,28,64,.14);
     --radius:16px;
   }
@@ -25,8 +25,8 @@
   a{color:inherit;text-decoration:none}
   .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
   .btn{display:inline-flex;align-items:center;gap:.5rem;font-weight:600;font-size:.98rem;padding:.8rem 1.25rem;border-radius:12px;border:1px solid transparent;cursor:pointer;transition:.18s;white-space:nowrap}
-  .btn-primary{background:var(--grad);color:#fff;box-shadow:0 8px 22px rgba(59,91,253,.35)}
-  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(59,91,253,.45)}
+  .btn-primary{background:var(--grad);color:#fff;box-shadow:0 8px 22px rgba(204,51,51,.35)}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(204,51,51,.45)}
   .btn-ghost{background:#fff;border-color:var(--line);color:#1a2133}
   .btn-ghost:hover{border-color:#c8cfe6;background:var(--soft)}
   .btn-lite{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#fff}
@@ -36,7 +36,7 @@
   header{position:sticky;top:0;z-index:40;backdrop-filter:saturate(180%) blur(12px);background:rgba(255,255,255,.82);border-bottom:1px solid var(--line)}
   .nav{display:flex;align-items:center;justify-content:space-between;height:66px}
   .brand{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:1.12rem;letter-spacing:-.02em}
-  .brand .dot{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;box-shadow:0 6px 16px rgba(59,91,253,.4)}
+  .brand .dot{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center;box-shadow:0 6px 16px rgba(204,51,51,.4)}
   .brand small{display:block;font-weight:600;font-size:.62rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:-2px}
   .nav-links{display:flex;align-items:center;gap:1.4rem}
   .nav-links a.link{color:#3a4258;font-weight:500;font-size:.95rem}
@@ -91,14 +91,14 @@
   @media(max-width:600px){.grid3{grid-template-columns:1fr}}
   .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px;transition:.18s}
   .card:hover{border-color:#c9d2ee;box-shadow:var(--shadow);transform:translateY(-2px)}
-  .card .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:1.3rem;background:linear-gradient(135deg,#eef2ff,#e0f7ff);border:1px solid #e2e8ff}
+  .card .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:1.3rem;background:linear-gradient(135deg,#fdf2f2,#fbe4e4);border:1px solid #f3d0d0}
   .card h3{margin:.9rem 0 .35rem;font-size:1.08rem;letter-spacing:-.01em}
   .card p{margin:0;color:var(--muted);font-size:.94rem}
 
   .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:44px}
   @media(max-width:820px){.steps{grid-template-columns:1fr}}
   .step{position:relative;padding:26px 22px;background:var(--soft);border:1px solid var(--line);border-radius:var(--radius)}
-  .step .n{width:38px;height:38px;border-radius:11px;background:var(--grad);color:#fff;font-weight:800;display:grid;place-items:center;box-shadow:0 8px 18px rgba(59,91,253,.35)}
+  .step .n{width:38px;height:38px;border-radius:11px;background:var(--grad);color:#fff;font-weight:800;display:grid;place-items:center;box-shadow:0 8px 18px rgba(204,51,51,.35)}
   .step h3{margin:.8rem 0 .3rem;font-size:1.08rem}
   .step p{margin:0;color:var(--muted);font-size:.94rem}
 
@@ -106,7 +106,7 @@
   @media(max-width:820px){.extbox{grid-template-columns:1fr}}
   .extbox-main{padding:30px 32px}
   .extbox-head{display:flex;align-items:center;gap:14px}
-  .extbox-ic{width:52px;height:52px;flex:none;border-radius:14px;display:grid;place-items:center;color:var(--brand-ink);background:linear-gradient(135deg,#eef2ff,#e0f7ff);border:1px solid #e2e8ff}
+  .extbox-ic{width:52px;height:52px;flex:none;border-radius:14px;display:grid;place-items:center;color:var(--brand-ink);background:linear-gradient(135deg,#fdf2f2,#fbe4e4);border:1px solid #f3d0d0}
   .extbox-head h3{margin:0;font-size:1.12rem;letter-spacing:-.01em}
   .extbox-meta{font-size:.85rem;color:var(--muted);margin-top:2px}
   .extbox-dl{margin-top:22px}
@@ -209,8 +209,8 @@
         </div>
         <div class="arrow">→</div>
         <div class="stage">
-          <h4>3 · Targets</h4>
-          <div class="big">Prospects</div>
+          <h4>3 · Prospects</h4>
+          <div class="big">Buyers</div>
           <div class="lbl">graded, deduped, ready to contact</div>
           <ul><li>ICP grade A+ → C</li><li>Pushed to your campaign</li><li>Filed in a Sales Nav list</li></ul>
         </div>
@@ -221,7 +221,7 @@
 
 <div class="wrap">
   <div class="stats">
-    <div class="stat"><b>Source→Bridge→Target</b><span>the whole warm-intro map</span></div>
+    <div class="stat"><b>Source→Bridge→Prospect</b><span>the whole warm-intro map</span></div>
     <div class="stat"><b>Auto</b><span>runs in your browser, daily</span></div>
     <div class="stat"><b>ICP-graded</b><span>quality, not just quantity</span></div>
     <div class="stat"><b>1-click outreach</b><span>straight into Botdog</span></div>
@@ -236,9 +236,9 @@
     <div class="grid3">
       <div class="card"><div class="ic">🏢</div><h3>Watch the right sources</h3><p>Add an organization with just its LinkedIn URL. Radar names it, resolves its Sales Nav ID, and starts finding the people inside it.</p></div>
       <div class="card"><div class="ic">🤝</div><h3>Find your bridges</h3><p>The well-connected insiders who can introduce you. Paste a profile URL and Radar fills in the name, title and connection degree on the next sync.</p></div>
-      <div class="card"><div class="ic">🎯</div><h3>Collect graded targets</h3><p>Every prospect a bridge opens is captured, deduplicated, and scored against your ICP — A+ down to C — so you work the best fits first.</p></div>
+      <div class="card"><div class="ic">🎯</div><h3>Collect graded prospects</h3><p>Every prospect a bridge opens is captured, deduplicated, and scored against your ICP — A+ down to C — so you work the best fits first.</p></div>
       <div class="card"><div class="ic">🧩</div><h3>Chrome extension does the work</h3><p>Installs in a few seconds and collects in your own browser session. No password sharing, no scraping service in the middle.</p></div>
-      <div class="card"><div class="ic">🚀</div><h3>One-click outreach</h3><p>Push non-connected bridges and selected targets straight into your Botdog campaigns, and file every new prospect in a dedicated Sales Navigator list.</p></div>
+      <div class="card"><div class="ic">🚀</div><h3>One-click outreach</h3><p>Push non-connected bridges and selected prospects straight into your Botdog campaigns, and file every new prospect in a dedicated Sales Navigator list.</p></div>
       <div class="card"><div class="ic">📩</div><h3>Daily report &amp; health alerts</h3><p>A morning email shows what Radar collected. If collection ever stalls, you get an alert instead of silent nothing.</p></div>
     </div>
   </div>
@@ -250,7 +250,7 @@
     <h2 class="sec">Three steps to a self-running pipeline.</h2>
     <div class="steps">
       <div class="step"><div class="n">1</div><h3>Sign in &amp; set your ICP</h3><p>Connect with LinkedIn, paste your Sales Navigator search template, and add your first source — the organization your buyers cluster around.</p></div>
-      <div class="step"><div class="n">2</div><h3>Install the extension</h3><p><a href="#extension" style="color:var(--brand);font-weight:600">Download the Radar Chrome extension</a> and pin it. From then on it collects bridges and targets in your browser, on a schedule you set.</p></div>
+      <div class="step"><div class="n">2</div><h3>Install the extension</h3><p><a href="#extension" style="color:var(--brand);font-weight:600">Download the Radar Chrome extension</a> and pin it. From then on it collects bridges and prospects in your browser, on a schedule you set.</p></div>
       <div class="step"><div class="n">3</div><h3>Work your warm list</h3><p>Graded prospects land in your dashboard and your Sales Nav list. Push the best into outreach with a click, and read the daily recap in your inbox.</p></div>
     </div>
   </div>
@@ -351,7 +351,7 @@
       <a class="link" href="/api/auth/linkedin/login">Sign in</a>
       <a class="link" href="mailto:support@gershonconsulting.com">Support</a>
     </div>
-    <div class="copy">© 2026 Gershon.AI · Radar. Warm-intro lead intelligence for LinkedIn Sales Navigator. All rights reserved.</div>
+    <div class="copy">© 2026 Gershon.AI · Radar <span id="siteVer">v1.16.1</span>. Warm-intro lead intelligence for LinkedIn Sales Navigator. All rights reserved.</div>
   </div>
 </footer>
 

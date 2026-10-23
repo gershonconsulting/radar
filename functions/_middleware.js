@@ -27,10 +27,16 @@
 //    browser (menu, headings, tiles, tooltips, empty states - never ids, data or prospect rows);
 //    CHART_WORDS renames the chart legends, which are drawn on a canvas the script cannot reach.
 //    Inserted once before </body>, only if the page does not already load the script.
+// 6) (2026-10-23, app v1.16.1) Leftover old colours: APP_RED swaps the last indigo #6366f1 /
+//    #4f46e5 literals still in app.html (brand tokens, sign-in logo + subtitle, user avatar, first
+//    per-source colour -> slate so no two sources clash with the red) and the old #E01000 browser
+//    theme colour, for every HTML page. The landing page, admin, extension page and sources-list.js
+//    were fixed at the source ("Prospects" wording, og:description, red tokens). The landing page's
+//    footer version (id="siteVer") is stamped like the sidebar's.
 const LATEST_EXT = '1.15.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
-const APP_VERSION = '1.16.0';
+const APP_VERSION = '1.16.1';
 const WORDING_SRC = '/prospects-wording.js?v=' + APP_VERSION;
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
@@ -45,6 +51,14 @@ const CHART_RED = [
   ["pointBackgroundColor:'#2563eb'", "pointBackgroundColor:'#CC3333'"],
   // Home: 'top bridges' leaderboard bars
   ["lbRows(topBrg, (()=> '#6366f1')", "lbRows(topBrg, (()=> '#CC3333')"]
+];
+const APP_RED = [
+  ['<meta name="theme-color" content="#E01000"', '<meta name="theme-color" content="#CC3333"'],
+  ['--brand:#6366f1; --brand-ink:#4f46e5; --brand-soft:#eef0fe;', '--brand:#CC3333; --brand-ink:#a8281f; --brand-soft:#fdf2f2;'],
+  ['.signin-box .logo{ color:#6366f1;', '.signin-box .logo{ color:#CC3333;'],
+  ['.signin-box .sub{ color:#6366f1;', '.signin-box .sub{ color:#CC3333;'],
+  ['border-radius:50%; background:#6366f1;', 'border-radius:50%; background:#CC3333;'],
+  ["const SOURCE_PALETTE = ['#6366f1',", "const SOURCE_PALETTE = ['#64748b',"]
 ];
 const CHART_WORDS = [
   ["label:'Targets'", "label:'Prospects'"],
@@ -110,12 +124,14 @@ export async function onRequest(ctx) {
       for (const [from, to] of CHART_RED) out = out.split(from).join(to);
       for (const [from, to] of CHART_WORDS) out = out.split(from).join(to);
     }
+    // 6) Leftover indigo / old red literals -> Gershon red (app v1.16.1)
+    for (const [from, to] of APP_RED) out = out.split(from).join(to);
     // 5) "Targets" -> "Prospects" wording (app page + landing page)
     if (out.indexOf('prospects-wording.js') === -1 && out.lastIndexOf('</body>') !== -1) {
       const at = out.lastIndexOf('</body>');
       out = out.slice(0, at) + '<script src="' + WORDING_SRC + '"></script>\n' + out.slice(at);
     }
-    out = out.replace(/(id="sideVer">)v(\d+\.\d+\.\d+)(<)/, (all, a, v, b) =>
+    out = out.replace(/(id="(?:sideVer|siteVer)">)v(\d+\.\d+\.\d+)(<)/g, (all, a, v, b) =>
       cmpVer(v, APP_VERSION) < 0 ? a + 'v' + APP_VERSION + b : all);
     if (out === html) return res;
     const h = new Headers(res.headers);
