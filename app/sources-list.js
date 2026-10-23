@@ -12,7 +12,7 @@
   try {
     var st = document.createElement('style');
     st.id = 'radar-sources-list-css';
-    st.textContent = '/* ---------- Sources priority list (v1.14.0) ---------- */\n:root{ --gershon-red:#FE1B04; }\n.src-list-controls{ margin-top:22px; }\n.src-table-wrap{ overflow-x:auto; }\n.src-table{ min-width:900px; }\n.src-table th, .src-table td{ padding:8px 9px; }\n.src-table td:nth-child(2){ min-width:170px; }\n.src-table td{ vertical-align:middle; }\n.src-table .src-nm{ font-weight:600; color:#1e293b; }\n.src-table .src-nm .dot{ display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:8px; vertical-align:middle; }\n.src-table .src-sub{ font-size:0.76rem; color:var(--muted); margin-top:2px; }\n.src-table .num{ font-variant-numeric:tabular-nums; text-align:right; }\n.src-table th.num{ text-align:right; }\n.src-table .muted{ color:#94a3b8; }\n.src-table .new-tag{ display:inline-block; margin-left:6px; padding:0 6px; border-radius:6px; font-size:0.66rem; font-weight:700; background:#fff1ef; color:var(--gershon-red); border:1px solid #ffc9c0; vertical-align:middle; }\n.prio-sel{ appearance:none; -webkit-appearance:none; border:1px solid; border-radius:12px; padding:3px 22px 3px 10px; font-size:0.74rem; font-weight:700; cursor:pointer; font-family:inherit;\n  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);\n  background-position:calc(100% - 11px) 50%, calc(100% - 7px) 50%; background-size:4px 4px; background-repeat:no-repeat; }\n.prio-sel.p-high{ background-color:#fff1ef; color:var(--gershon-red); border-color:#ffb3a6; }\n.prio-sel.p-medium{ background-color:#fff7ed; color:#b45309; border-color:#fed7aa; }\n.prio-sel.p-low{ background-color:#f1f5f9; color:#475569; border-color:#cbd5e1; }\n.prio-sel:disabled{ opacity:.6; cursor:wait; }\n.prio-msg{ display:block; font-size:0.7rem; margin-top:3px; }\n.prio-msg.ok{ color:#15803d; } .prio-msg.err{ color:#dc2626; }\n.eff{ display:inline-flex; align-items:center; gap:6px; padding:2px 10px; border-radius:12px; font-size:0.74rem; font-weight:700; border:1px solid; cursor:help; white-space:nowrap; }\n.eff::before{ content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }\n.eff.e-strong{ background:#ecfdf5; color:#047857; border-color:#a7f3d0; }\n.eff.e-average{ background:#fffbeb; color:#b45309; border-color:#fde68a; }\n.eff.e-weak{ background:#fff1ef; color:var(--gershon-red); border-color:#ffb3a6; }\n.eff.e-none{ background:#f1f5f9; color:#64748b; border-color:#e2e8f0; }\n.eff-why{ display:block; font-size:0.72rem; color:var(--muted); margin-top:3px; min-width:170px; max-width:230px; line-height:1.35; }\n.src-rule{ font-size:0.78rem; color:var(--muted); margin:8px 2px 0; line-height:1.5; }\n.src-rule b{ color:#334155; }\n.src-table .btn-secondary{ padding:4px 10px; font-size:0.74rem; white-space:nowrap; }\n.src-table .src-bridge-note{ max-width:220px; }\n';
+    st.textContent = '/* ---------- Sources priority list (v1.14.0) ---------- */\n:root{ --gershon-red:#CC3333; }\n.src-list-controls{ margin-top:22px; }\n.src-table-wrap{ overflow-x:auto; }\n.src-table{ min-width:900px; }\n.src-table th, .src-table td{ padding:8px 9px; }\n.src-table td:nth-child(2){ min-width:170px; }\n.src-table td{ vertical-align:middle; }\n.src-table .src-nm{ font-weight:600; color:#1e293b; }\n.src-table .src-nm .dot{ display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:8px; vertical-align:middle; }\n.src-table .src-sub{ font-size:0.76rem; color:var(--muted); margin-top:2px; }\n.src-table .num{ font-variant-numeric:tabular-nums; text-align:right; }\n.src-table th.num{ text-align:right; }\n.src-table .muted{ color:#94a3b8; }\n.src-table .new-tag{ display:inline-block; margin-left:6px; padding:0 6px; border-radius:6px; font-size:0.66rem; font-weight:700; background:#fdf2f2; color:var(--gershon-red); border:1px solid #f3c4c4; vertical-align:middle; }\n.prio-sel{ appearance:none; -webkit-appearance:none; border:1px solid; border-radius:12px; padding:3px 22px 3px 10px; font-size:0.74rem; font-weight:700; cursor:pointer; font-family:inherit;\n  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);\n  background-position:calc(100% - 11px) 50%, calc(100% - 7px) 50%; background-size:4px 4px; background-repeat:no-repeat; }\n.prio-sel.p-high{ background-color:#fdf2f2; color:var(--gershon-red); border-color:#f3c4c4; }\n.prio-sel.p-medium{ background-color:#fff7ed; color:#b45309; border-color:#fed7aa; }\n.prio-sel.p-low{ background-color:#f1f5f9; color:#475569; border-color:#cbd5e1; }\n.prio-sel:disabled{ opacity:.6; cursor:wait; }\n.prio-msg{ display:block; font-size:0.7rem; margin-top:3px; }\n.prio-msg.ok{ color:#15803d; } .prio-msg.err{ color:#dc2626; }\n.eff{ display:inline-flex; align-items:center; gap:6px; padding:2px 10px; border-radius:12px; font-size:0.74rem; font-weight:700; border:1px solid; cursor:help; white-space:nowrap; }\n.eff::before{ content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }\n.eff.e-strong{ background:#ecfdf5; color:#047857; border-color:#a7f3d0; }\n.eff.e-average{ background:#fffbeb; color:#b45309; border-color:#fde68a; }\n.eff.e-weak{ background:#fdf2f2; color:var(--gershon-red); border-color:#f3c4c4; }\n.eff.e-none{ background:#f1f5f9; color:#64748b; border-color:#e2e8f0; }\n.eff-why{ display:block; font-size:0.72rem; color:var(--muted); margin-top:3px; min-width:170px; max-width:230px; line-height:1.35; }\n.src-rule{ font-size:0.78rem; color:var(--muted); margin:8px 2px 0; line-height:1.5; }\n.src-rule b{ color:#334155; }\n.src-table .btn-secondary{ padding:4px 10px; font-size:0.74rem; white-space:nowrap; }\n.src-table .src-bridge-note{ max-width:220px; }\n';
     document.head.appendChild(st);
   } catch(e){}
   // 2) Markup: swap the card grid for filter controls + a list container + the rule footer.
@@ -91,14 +91,14 @@ const SRC_PRIO_LABEL = { high:'High', medium:'Medium', low:'Low' };
 const SRC_PRIO_RANK  = { high:3, medium:2, low:1 };
 const SRC_EFF_LABEL  = { strong:'Strong', average:'Average', weak:'Weak', none:'No data yet' };
 const SRC_EFF_RANK   = { strong:4, average:3, weak:2, none:1 };
-const SRC_EFF_STRONG = 15;   // targets per active bridge in the last 30 days
+const SRC_EFF_STRONG = 15;   // prospects per active bridge in the last 30 days
 const SRC_EFF_AVG    = 5;
 const SRC_EFF_GRACE_DAYS = 14;   // a source this young with nothing collected is "No data yet", not "Weak"
 const SRC_EFF_RULE =
-  'Effectiveness = targets collected in the last 30 days per active bridge in that source. ' +
+  'Effectiveness = prospects collected in the last 30 days per active bridge in that source. ' +
   'Strong: ' + SRC_EFF_STRONG + '+ per bridge. Average: ' + SRC_EFF_AVG + '–' + (SRC_EFF_STRONG - 1) + ' per bridge. ' +
-  'Weak: under ' + SRC_EFF_AVG + ' per bridge, nothing in 30 days, or bridges but no targets after ' + SRC_EFF_GRACE_DAYS + ' days. ' +
-  'No data yet: no bridges and no targets, or added less than ' + SRC_EFF_GRACE_DAYS + ' days ago with nothing collected.';
+  'Weak: under ' + SRC_EFF_AVG + ' per bridge, nothing in 30 days, or bridges but no prospects after ' + SRC_EFF_GRACE_DAYS + ' days. ' +
+  'No data yet: no bridges and no prospects, or added less than ' + SRC_EFF_GRACE_DAYS + ' days ago with nothing collected.';
 let SRC_SORT = { key:'added', dir:-1 };   // newest first by default
 try { const sv = JSON.parse(localStorage.getItem('radar_src_sort') || 'null'); if (sv && sv.key) SRC_SORT = sv; } catch(e){}
 
@@ -155,11 +155,11 @@ function sourceEffectiveness(r){
   const per = r.bridges ? (pb + ' per active bridge') : (r.leads30 + ' collected');
   if (!r.bridges && !r.leads) return { eff:'none', why:'No bridges found and nothing collected yet.' };
   if (!r.leads && age !== null && age < SRC_EFF_GRACE_DAYS) return { eff:'none', why:'Added ' + age + ' day' + (age===1?'':'s') + ' ago — ' + r.bridges + ' bridge' + (r.bridges===1?'':'s') + ', first collection still to come.' };
-  if (!r.leads) return { eff:'weak', why: r.bridges + ' bridge' + (r.bridges===1?'':'s') + ' but no targets collected' + (age !== null ? ' in ' + age + ' days.' : '.') };
+  if (!r.leads) return { eff:'weak', why: r.bridges + ' bridge' + (r.bridges===1?'':'s') + ' but no prospects collected' + (age !== null ? ' in ' + age + ' days.' : '.') };
   if (!r.leads30) return { eff:'weak', why:'Nothing collected in the last 30 days' + (lastAgo !== null ? ' (last ' + lastAgo + ' days ago).' : '.') };
-  if (r.perBridge >= SRC_EFF_STRONG) return { eff:'strong', why: r.leads30 + ' targets in 30 days — ' + per + '.' };
-  if (r.perBridge >= SRC_EFF_AVG)    return { eff:'average', why: r.leads30 + ' targets in 30 days — ' + per + '.' };
-  return { eff:'weak', why:'Only ' + r.leads30 + ' target' + (r.leads30===1?'':'s') + ' in 30 days — ' + per + '.' };
+  if (r.perBridge >= SRC_EFF_STRONG) return { eff:'strong', why: r.leads30 + ' prospects in 30 days — ' + per + '.' };
+  if (r.perBridge >= SRC_EFF_AVG)    return { eff:'average', why: r.leads30 + ' prospects in 30 days — ' + per + '.' };
+  return { eff:'weak', why:'Only ' + r.leads30 + ' prospect' + (r.leads30===1?'':'s') + ' in 30 days — ' + per + '.' };
 }
 
 function setSourceSort(key){
@@ -242,7 +242,7 @@ function renderSources(){
       ? '<select class="prio-sel p-' + r.priority + '" data-src="' + esc(s) + '" onchange="onSourcePriority(this)" title="Priority for ' + esc(s) + '">' +
           ['high','medium','low'].map(p => '<option value="' + p + '"' + (p === r.priority ? ' selected' : '') + '>' + SRC_PRIO_LABEL[p] + '</option>').join('') +
         '</select><span class="prio-msg"></span>'
-      : '<span class="muted" title="Not a tracked source — targets whose bridge has no source">—</span>';
+      : '<span class="muted" title="Not a tracked source — prospects whose bridge has no source">—</span>';
     const effTip = SRC_EFF_LABEL[r.eff] + ': ' + r.why + '\n\n' + SRC_EFF_RULE;
     const eff = '<span class="eff e-' + r.eff + '" title="' + esc(effTip) + '">' + SRC_EFF_LABEL[r.eff] + '</span><span class="eff-why">' + esc(r.why) + '</span>';
     const added = r.added
@@ -256,7 +256,7 @@ function renderSources(){
       '<td>' + eff + '</td>' +
       '<td class="num"><a href="#" onclick="statGo(\'bridges\',\'\');return false" title="Active bridges in ' + esc(s) + '">' + r.bridges + '</a></td>' +
       '<td class="num">' + r.leads30 + '</td>' +
-      '<td class="num"><a href="#" onclick="homeGoSource(\'' + jsq(s) + '\');return false" title="Open Targets filtered on ' + esc(s) + '">' + r.leads + '</a></td>' +
+      '<td class="num"><a href="#" onclick="homeGoSource(\'' + jsq(s) + '\');return false" title="Open Prospects filtered on ' + esc(s) + '">' + r.leads + '</a></td>' +
       '<td class="num">' + (r.bridges ? (Math.round(r.perBridge * 10) / 10) : '<span class="muted">—</span>') + '</td>' +
       '<td>' + (r.last ? esc(fmtDate(r.last)) : '<span class="muted">never</span>') + '</td>' +
       '<td>' + btn + '</td>' +
@@ -270,9 +270,9 @@ function renderSources(){
       th('priority', 'Priority', '', 'High / Medium / Low — change it in the row; it is saved to your account') +
       th('eff', 'Effectiveness', '', SRC_EFF_RULE) +
       th('bridges', 'Bridges', 'num', 'Active bridges in this source') +
-      th('leads30', 'Targets 30d', 'num', 'Targets collected in the last 30 days') +
-      th('leads', 'Targets', 'num', 'All targets ever collected via this source') +
-      th('per', 'Per bridge', 'num', 'Targets in the last 30 days ÷ active bridges') +
+      th('leads30', 'Prospects 30d', 'num', 'Prospects collected in the last 30 days') +
+      th('leads', 'Prospects', 'num', 'All prospects ever collected via this source') +
+      th('per', 'Per bridge', 'num', 'Prospects in the last 30 days ÷ active bridges') +
       th('last', 'Last collected') +
       '<th></th>' +
     '</tr></thead><tbody>' +
