@@ -1,7 +1,7 @@
 ================================================================
 HANDOFF.txt  -  radar
 Written by: Claude (Anthropic) - token-limit handoff protocol
-Date: 2026-09-09 (updated 2026-10-22)
+Date: 2026-09-09 (updated 2026-10-23)
 ================================================================
 
 0. WHO YOU ARE READING THIS
@@ -46,6 +46,33 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-10-23 nightly (branch nightly/2026-10-23-radar-wording, app v1.16.1)
+  Stacked on PR #5 (which is stacked on PR #2). Merge order: #2 -> #5 -> this.
+  ✅ Landing page fixed AT THE SOURCE (so link previews / view-source are
+     right too, not only the browser): og:description "Source -> Bridge ->
+     Prospect", stage "3 · Prospects", stat "Source→Bridge→Prospect", cards
+     "Collect graded prospects" / "selected prospects", step 2 "bridges and
+     prospects". Old blue/indigo tokens (#3b5bfd, #6366f1, #22d3ee) -> red.
+  ✅ Visible version on the landing page footer: "Radar v1.16.1"
+     (id="siteVer", stamped by the middleware like the app sidebar).
+  ✅ Admin + extension help pages: indigo brand -> #CC3333; admin column
+     "Targets" -> "Prospects". sources-list.js: #FE1B04 -> #CC3333 and its
+     tooltips/headers say Prospects. Web manifest + app theme-color -> #CC3333.
+  ✅ Middleware item 6 (APP_RED): last #6366f1 literals in app.html (brand
+     tokens, sign-in logo/subtitle, avatar, first per-source colour -> slate)
+     rewritten when served. app.html (270 KB) still not re-uploaded.
+  ✅ Checked on the branch preview nightly-2026-10-23-radar-wor.gershon-
+     radar.pages.dev with Playwright, desktop 1366 + phone 390: og tag says
+     Prospect, cards right, footer v1.16.1, zero #6366f1/#FE1B04 in / and
+     /app source, no sideways scroll, no page errors (only the expected 401
+     from /api/me when signed out). Signed-in screens not seen (needs login).
+  ❌ Chrome extension (v1.15.0, in Supabase storage): desktop notifications
+     still say "New targets" and the popup still uses #FE1B04. Needs a v1.15.1
+     extension build + upload - not done unattended. The extension source
+     in salesnav-radar-extension/ is v1.11.0 (older than the live 1.15.0).
+  ❌ "Daily lead target" intentionally kept (a goal). Prospect data untouched.
+  ❌ app/extension.html (old alpha install page) still links the v1.5.3 zip -
+     not changed tonight (wording/colour only).
 - 2026-10-22 nightly (branch nightly/2026-10-22-prospects-wording, app v1.16.0)
   Olivier's vocabulary (2026-10-09): SOURCES > BRIDGES > PROSPECTS.
   ✅ Every visible "Targets"/"Target" now reads "Prospects"/"Prospect":
@@ -131,6 +158,8 @@ Default branch: main
 - ❌ PR #2 Targets filters (updated with main 2026-10-22) - merge pending.
 - ❌ PR 'Nightly 2026-10-22: Targets renamed Prospects' (v1.16.0) - merge
   after PR #2.
+- ❌ PR 'Nightly 2026-10-23: Radar wording + colour leftovers' (v1.16.1) -
+  merge after PR #5 (order #2 -> #5 -> 2026-10-23).
 - ❌ PR #1 (old Sources list attempt) is superseded by merged PR #3 -
   close it.
 - ❌ Fold app/sources-list.js, unified-theme.css, the chart colours and
