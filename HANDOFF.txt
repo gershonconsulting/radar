@@ -37,8 +37,10 @@ Users     : Gershon Consulting prospecting
 ----------------------------------------------------------------
 Front end     : static index.html + app/ 
 Back end      : functions/ (Cloudflare Pages Functions)
-Extension     : salesnav-radar-extension/ (source). Zips at root:
-                radar-extension.zip and radar-extension-v1.6.8.zip
+Extension     : salesnav-radar-extension/ (source, v1.17.1 since the
+                2026-10-23 extension branch). Builds are served from the
+                Supabase public bucket radar-releases via functions/_middleware.js
+                (LATEST_EXT). Old zips in app/ (newest v1.14.0) and at root (v1.6.8).
 Also in tree  : google-apps-script/ - check what still depends on it
 Docs already here: ARIEL-HANDOFF.md and HEALTH-CHECK-ALERTS.md.
                 READ BOTH before this file's sections 3-8.
@@ -46,6 +48,39 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-10-23 nightly (branch nightly/2026-10-23-radar-extension, extension v1.17.1)
+  Stacked on PR #7. Merge order: #2 -> #5 -> #7 -> this.
+  ✅ Repo extension source caught up. salesnav-radar-extension/ held the
+     v1.11.0 source, but v1.15.0 (2026-09-23), v1.16.0 (2026-10-09) and
+     v1.17.0 (2026-10-14) had been built and put in the radar-releases
+     bucket without the source being committed. The folder is now the
+     v1.17.0 release source (from radar-extension-v1.17.0.zip, incl. the
+     new capture.js) plus the changes below. Version is 1.17.1, NOT 1.16.0:
+     a different extension v1.16.0 already exists in the bucket.
+  ✅ Notifications say "prospects" ("New prospects", "Sync complete -
+     N new prospects saved"). Internal names (targetsEveryHours,
+     setTargetUrls, saveTargetsToSalesNavList, hub fields) unchanged.
+  ✅ Popup red #FE1B04 -> #CC3333 (hover #d11200 -> #a8281f; "View log" link
+     blue -> red). Rendered at 360px: no overflow, no errors (chrome API stubbed).
+  ✅ Help page (app/extension.html, /extension): download link was the
+     ancient v1.5.3 zip -> now /radar-extension-v1.15.0.zip, the same build
+     the app offers (LATEST_EXT='1.15.0'; served from the bucket by the
+     middleware). Newest zip committed in the repo is only v1.14.0. Install
+     step now says "Sync Now" (the real popup button).
+  ❌ v1.17.1 zip not built/uploaded (binary files cannot be pushed from the
+     nightly tool; nothing was published). For Ariel, after merge:
+       1. Copy salesnav-radar-extension/ to a folder radar-extension/ and add
+          the icons/ folder (icon16/48/128.png) - icons are NOT in the repo;
+          take them from radar-extension-v1.17.0.zip in the bucket.
+       2. Zip the folder CONTENTS (manifest.json at the zip root) as
+          radar-extension-v1.17.1.zip and upload it to the radar-releases
+          bucket (or commit it to app/).
+       3. Set LATEST_EXT = '1.17.1' in functions/_middleware.js and change the
+          help page link in app/extension.html to radar-extension-v1.17.1.zip.
+  ❌ Decision for Olivier: v1.16.0 and v1.17.0 sit in the bucket but the app
+     still offers v1.15.0 (LATEST_EXT never raised). Shipping v1.17.1 also
+     ships those two (per-account ICP search, source priority order).
+
 - 2026-10-23 nightly (branch nightly/2026-10-23-radar-wording, app v1.16.1)
   Stacked on PR #5 (which is stacked on PR #2). Merge order: #2 -> #5 -> this.
   ✅ Landing page fixed AT THE SOURCE (so link previews / view-source are
@@ -70,9 +105,11 @@ Default branch: main
      still say "New targets" and the popup still uses #FE1B04. Needs a v1.15.1
      extension build + upload - not done unattended. The extension source
      in salesnav-radar-extension/ is v1.11.0 (older than the live 1.15.0).
+     -> Source fixed on nightly/2026-10-23-radar-extension (v1.17.1, see above).
   ❌ "Daily lead target" intentionally kept (a goal). Prospect data untouched.
   ❌ app/extension.html (old alpha install page) still links the v1.5.3 zip -
      not changed tonight (wording/colour only).
+     -> Fixed on nightly/2026-10-23-radar-extension (now links v1.15.0).
 - 2026-10-22 nightly (branch nightly/2026-10-22-prospects-wording, app v1.16.0)
   Olivier's vocabulary (2026-10-09): SOURCES > BRIDGES > PROSPECTS.
   ✅ Every visible "Targets"/"Target" now reads "Prospects"/"Prospect":
@@ -160,6 +197,9 @@ Default branch: main
   after PR #2.
 - ❌ PR 'Nightly 2026-10-23: Radar wording + colour leftovers' (v1.16.1) -
   merge after PR #5 (order #2 -> #5 -> 2026-10-23).
+- ❌ PR 'Nightly 2026-10-23: Chrome extension says Prospects + Gershon red'
+  (extension v1.17.1) - merge after PR #7 (order #2 -> #5 -> #7 -> this),
+  then Ariel builds + uploads the v1.17.1 zip (steps in section 3).
 - ❌ PR #1 (old Sources list attempt) is superseded by merged PR #3 -
   close it.
 - ❌ Fold app/sources-list.js, unified-theme.css, the chart colours and
