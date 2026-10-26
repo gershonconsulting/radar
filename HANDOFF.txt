@@ -46,6 +46,27 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-10-26 nightly (branch nightly/2026-10-26-radar-eod-cron)
+  Claude scheduled task #22 "Radar EOD report" moved INTO the repo as a
+  standalone Cloudflare cron Worker (cron/, Worker gershon-radar-eod-cron).
+  ✅ cron/worker.js: daily 22:05 UTC -> POST hub runDaily, GET hub rows,
+     today's New York date: new targets total + by bridge (desc), with
+     LinkedIn URL vs unresolved, pushed to Botdog, grand total; warning
+     when 0 of today's targets have a linkedin_url (enricherPro).
+     Emails report@gershonconsulting.com from "GC Radar <reports@gershon.ai>",
+     subject "[22] Radar EOD — <N> new targets — <YYYY-MM-DD>".
+  ✅ Offline checks cron/worker.test.mjs pass; parsing validated against
+     the live hub GET (225 rows).
+  ✅ .github/workflows/deploy-eod-cron.yml: checks on PR, deploy on main only.
+  ❌ Merge pending Olivier's OK (PR "Radar EOD report (#22) as a cron Worker").
+  ❌ GitHub Actions secrets needed before the first deploy (Charles,
+     GitHub > radar > Settings > Secrets > Actions): CLOUDFLARE_API_TOKEN,
+     CLOUDFLARE_ACCOUNT_ID, RADAR_HUB_SECRET, RESEND_API_KEY.
+  ❌ After the first good email, retire Claude scheduled task #22
+     (not touched by this PR).
+  ❌ The un-authenticated hub GET currently returns 225 rows, newest
+     collected 2026-07-13 - check the email shows real daily numbers;
+     if it stays at 0, the hub GET needs secret/owner params.
 - 2026-10-21 nightly (branch nightly/2026-10-21-unified-design, app v1.15.0)
   Unified Gershon design (decision 2026-10-13): Radar now looks like
   Linalysis, the master design, in the Gershon.ai red #CC3333.
@@ -113,6 +134,8 @@ Default branch: main
 
 4. PENDING  [TODO]
 ----------------------------------------------------------------
+- ❌ Radar EOD cron Worker (#22, cron/) - merge pending Olivier's OK,
+  then the 4 Actions secrets (see section 3, 2026-10-26).
 - ❌ Unified design (v1.15.0) is on a PREVIEW branch only - live once
   the PR 'Nightly 2026-10-21: Radar in the unified Gershon design' is
   merged (after the 2026-10-20 PR).
