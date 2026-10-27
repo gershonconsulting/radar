@@ -9,8 +9,8 @@
  *   2. GET the hub ?callback=cb (JSONP) -> {success,count,rows}.
  *   3. Keep rows whose collected_date falls on TODAY in America/New_York.
  *   4. Email report@gershonconsulting.com via Resend from "GC Radar <reports@gershon.ai>":
- *      new targets total, by bridge (radar_person) desc, with linkedin_url vs unresolved,
- *      pushed to Botdog, grand total; flag when none of today's targets has a linkedin_url
+ *      new prospects total, by bridge (radar_person) desc, with linkedin_url vs unresolved,
+ *      pushed to Botdog, grand total; flag when none of today's prospects has a linkedin_url
  *      (enricherPro not populating).
  *
  * Secrets (Worker secrets, never in git): RADAR_HUB_SECRET, RESEND_API_KEY.
@@ -77,23 +77,23 @@ export function summarize(rows, date) {
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 export function subject(s) {
-  return `[22] Radar EOD — ${s.total} new targets — ${s.date}`;
+  return `[22] Radar EOD — ${s.total} new prospects — ${s.date}`;
 }
 
 export function renderText(s, runDaily) {
   const L = [];
   L.push(`Radar EOD report — ${s.date} (New York)`, "");
-  if (s.noUrlFlag) L.push("WARNING: 0 of today's targets have a LinkedIn URL — enricherPro is not populating linkedin_url.", "");
-  L.push(`New targets today: ${s.total}`);
+  if (s.noUrlFlag) L.push("WARNING: 0 of today's prospects have a LinkedIn URL — enricherPro is not populating linkedin_url.", "");
+  L.push(`New prospects today: ${s.total}`);
   L.push(`  with LinkedIn URL: ${s.withUrl}`);
   L.push(`  unresolved (no URL): ${s.unresolved}`);
   L.push(`  pushed to Botdog: ${s.pushed}`);
   L.push(`Grand total in Radar: ${s.grandTotal}`, "");
   if (s.byBridge.length) {
-    L.push("By bridge (most new targets first):");
+    L.push("By bridge (most new prospects first):");
     for (const b of s.byBridge) L.push(`  ${b.bridge}: ${b.total} new — ${b.withUrl} with URL, ${b.unresolved} unresolved, ${b.pushed} pushed to Botdog`);
   } else {
-    L.push(`No new targets were collected today. Latest collected date in the hub: ${s.latest || "n/a"}.`);
+    L.push(`No new prospects were collected today. Latest collected date in the hub: ${s.latest || "n/a"}.`);
   }
   L.push("", `Daily hub run (runDaily): ${runDaily.ok ? "OK" : "FAILED — " + runDaily.detail}`);
   L.push("", `Open Radar: ${APP_URL}`, "", "— GC Radar (automated report #22)");
@@ -111,9 +111,9 @@ export function renderHtml(s, runDaily) {
   ).join("");
   const table = s.byBridge.length
     ? `<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin-top:16px;"><tr><th style="${th}">Bridge</th><th style="${th}${num}">New</th><th style="${th}${num}">With URL</th><th style="${th}${num}">Unresolved</th><th style="${th}${num}">Pushed to Botdog</th></tr>${rows}</table>`
-    : `<p style="font-size:14px;color:#444;margin-top:16px;">No new targets were collected today. Latest collected date in the hub: <b>${esc(s.latest || "n/a")}</b>.</p>`;
+    : `<p style="font-size:14px;color:#444;margin-top:16px;">No new prospects were collected today. Latest collected date in the hub: <b>${esc(s.latest || "n/a")}</b>.</p>`;
   const flag = s.noUrlFlag
-    ? `<div style="background:#fdecec;border:1px solid #CC3333;color:#a12020;padding:12px;border-radius:8px;font-size:14px;margin-bottom:16px;"><b>Warning:</b> 0 of today's ${s.total} targets have a LinkedIn URL — enricherPro is not populating <code>linkedin_url</code>.</div>`
+    ? `<div style="background:#fdecec;border:1px solid #CC3333;color:#a12020;padding:12px;border-radius:8px;font-size:14px;margin-bottom:16px;"><b>Warning:</b> 0 of today's ${s.total} prospects have a LinkedIn URL — enricherPro is not populating <code>linkedin_url</code>.</div>`
     : "";
   const hub = runDaily.ok
     ? `<span style="color:#1a7f37;">OK</span>`
@@ -124,7 +124,7 @@ export function renderHtml(s, runDaily) {
 <h1 style="font-size:22px;color:#111;margin:6px 0 16px;">Radar EOD — ${esc(s.date)}</h1>
 ${flag}
 <table cellpadding="0" cellspacing="8" style="width:100%;border-collapse:separate;"><tr>
-${kpi("New targets today", s.total)}${kpi("With LinkedIn URL", s.withUrl)}${kpi("Unresolved", s.unresolved)}${kpi("Pushed to Botdog", s.pushed)}
+${kpi("New prospects today", s.total)}${kpi("With LinkedIn URL", s.withUrl)}${kpi("Unresolved", s.unresolved)}${kpi("Pushed to Botdog", s.pushed)}
 </tr></table>
 ${table}
 <p style="font-size:14px;color:#444;margin-top:16px;">Grand total in Radar: <b>${s.grandTotal}</b></p>

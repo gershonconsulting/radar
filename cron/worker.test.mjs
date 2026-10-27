@@ -28,7 +28,7 @@ assert.equal(s.pushed, 1);
 assert.equal(s.grandTotal, 5);
 assert.deepEqual(s.byBridge.map((b) => [b.bridge, b.total]), [["Elie Cohen", 2], ["Jane Doe", 1]]);
 assert.equal(s.noUrlFlag, false);
-assert.equal(subject(s), "[22] Radar EOD — 3 new targets — 2026-10-26");
+assert.equal(subject(s), "[22] Radar EOD — 3 new prospects — 2026-10-26");
 
 const noUrl = summarize([{ collected_date: "2026-10-26T15:00:00Z", radar_person: "X", linkedin_url: "" }], "2026-10-26");
 assert.equal(noUrl.noUrlFlag, true);
