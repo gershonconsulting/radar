@@ -29,12 +29,6 @@
 //    browser (menu, headings, tiles, tooltips, empty states - never ids, data or prospect rows);
 //    CHART_WORDS renames the chart legends, which are drawn on a canvas the script cannot reach.
 //    Inserted once before </body>, only if the page does not already load the script.
-// 6) (2026-10-23, app v1.16.1) Leftover old colours: APP_RED swaps the last indigo #6366f1 /
-//    #4f46e5 literals still in app.html (brand tokens, sign-in logo + subtitle, user avatar, first
-//    per-source colour -> slate so no two sources clash with the red) and the old #E01000 browser
-//    theme colour, for every HTML page. The landing page, admin, extension page and sources-list.js
-//    were fixed at the source ("Prospects" wording, og:description, red tokens). The landing page's
-//    footer version (id="siteVer") is stamped like the sidebar's.
 const LATEST_EXT = '1.17.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
@@ -54,6 +48,12 @@ const CHART_RED = [
   // Home: 'top bridges' leaderboard bars
   ["lbRows(topBrg, (()=> '#6366f1')", "lbRows(topBrg, (()=> '#CC3333')"]
 ];
+// 6) (2026-10-23, app v1.16.1) Leftover old colours: APP_RED swaps the last indigo #6366f1 /
+//    #4f46e5 literals still in app.html (brand tokens, sign-in logo + subtitle, user avatar, first
+//    per-source colour -> slate so no two sources clash with the red) and the old #E01000 browser
+//    theme colour, for every HTML page. The landing page, admin, extension page and sources-list.js
+//    were fixed at the source ("Prospects" wording, og:description, red tokens). The landing page's
+//    footer version (id="siteVer") is stamped like the sidebar's.
 const APP_RED = [
   ['<meta name="theme-color" content="#E01000"', '<meta name="theme-color" content="#CC3333"'],
   ['--brand:#6366f1; --brand-ink:#4f46e5; --brand-soft:#eef0fe;', '--brand:#CC3333; --brand-ink:#a8281f; --brand-soft:#fdf2f2;'],
