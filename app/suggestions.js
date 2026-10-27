@@ -94,8 +94,9 @@
       } else {
         var br = SUG.bridges[i];
         var urnSlug = (br.linkedin && (br.linkedin.match(/\/in\/([^/?#]+)/)||[])[1]) || slug(br.name+' '+(br.company||''));
+        try { urnSlug = decodeURIComponent(urnSlug); } catch(x){}
         var src = (SUG.sources||[]).find(function(s){ return br.company && n(br.company).indexOf(n(s.name).split(' ')[0])===0; });
-        await post({ action:'addBridges', source: (src && src.name) || br.company || 'Suggested', bridges:[{ urn:'manual:'+decodeURIComponent(urnSlug), name:br.name, title:br.title||'', linkedin_url: br.linkedin||null, active:true }] });
+        await post({ action:'addBridges', source: (src && src.name) || br.company || 'Suggested', bridges:[{ urn:'manual:'+urnSlug, name:br.name, title:br.title||'', linkedin_url: br.linkedin||null, active:true }] });
         bridges().push({ source:(src&&src.name)||br.company||'Suggested', name:br.name, title:br.title||'', urn:'manual:'+urnSlug, linkedin_url:br.linkedin||'', active:true });
       }
       render();
@@ -114,11 +115,14 @@
       render();
     } catch(x){}
   }
-  var tries = 0;
+  var tries = 0, lastSig = '';
   var t = setInterval(function(){
     tries++;
     if (typeof CONFIG !== 'undefined' && CONFIG.WEBAPP_URL && !SUG && tries % 3 === 1) load();
-    if (SUG) render();
+    // Repaint only when the account's sources/bridges change (e.g. after the app reloads its data),
+    // so a click is never interrupted by a redraw.
+    if (SUG) { var sig = stored().length + ':' + bridges().length + ':' + !!document.getElementById('sugPanel');
+      if (sig !== lastSig) { lastSig = sig; render(); } }
     if (tries > 400) clearInterval(t);
   }, 3000);
 })();
