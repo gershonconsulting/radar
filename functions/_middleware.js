@@ -5,6 +5,8 @@
 // 2) Keeps the download links / "outdated extension" checks on / and /app pointing at LATEST_EXT
 //    without re-uploading the 260 KB app.html: an older LATEST_EXT_VERSION in the page is raised
 //    to LATEST_EXT on the fly (never lowered). Bump LATEST_EXT here for the next release.
+//    ⚑ 2026-10-26: LATEST_EXT had been left at 1.15.0 when 1.16.0/1.17.0 shipped (only Supabase
+//    config latest_ext_version was bumped), so new users downloaded 1.15.0. Bump it HERE too.
 // 3) (2026-10-20, app v1.14.1) Loads app/sources-list.js into the app page - Sources as a priority
 //    list, newest first, with an effectiveness status, plus a Priority picker on Add a Source - and stamps the sidebar version, again
 //    without re-uploading app.html. Only applies to a page that still has the old card grid
@@ -27,7 +29,7 @@
 //    browser (menu, headings, tiles, tooltips, empty states - never ids, data or prospect rows);
 //    CHART_WORDS renames the chart legends, which are drawn on a canvas the script cannot reach.
 //    Inserted once before </body>, only if the page does not already load the script.
-const LATEST_EXT = '1.15.0';
+const LATEST_EXT = '1.17.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
 const APP_VERSION = '1.16.0';
