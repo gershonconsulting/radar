@@ -24,6 +24,11 @@
 //    Home 'top bridges' bars. Stage colours (Growth charts: sources green / bridges orange /
 //    targets blue), ICP-grade colours and the per-source palette are deliberately NOT touched.
 //    Exact-string swaps are idempotent: once replaced, the old literal is gone.
+// 5) (2026-10-22, app v1.16.0) "Targets" is now called "Prospects" (Olivier's vocabulary:
+//    Sources > Bridges > Prospects). app/prospects-wording.js re-words the visible text in the
+//    browser (menu, headings, tiles, tooltips, empty states - never ids, data or prospect rows);
+//    CHART_WORDS renames the chart legends, which are drawn on a canvas the script cannot reach.
+//    Inserted once before </body>, only if the page does not already load the script.
 const LATEST_EXT = '1.17.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
@@ -47,11 +52,6 @@ const CHART_WORDS = [
   ["label:'Targets'", "label:'Prospects'"],
   ["label:'New targets'", "label:'New prospects'"]
 ];
-// 5) (2026-10-22, app v1.16.0) "Targets" is now called "Prospects" (Olivier's vocabulary:
-//    Sources > Bridges > Prospects). app/prospects-wording.js re-words the visible text in the
-//    browser (menu, headings, tiles, tooltips, empty states - never ids, data or prospect rows);
-//    CHART_WORDS renames the chart legends, which are drawn on a canvas the script cannot reach.
-//    Inserted once before </body>, only if the page does not already load the script.
 
 function cmpVer(a, b) {
   const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
