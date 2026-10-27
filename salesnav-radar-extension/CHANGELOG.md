@@ -1,3 +1,104 @@
+# Changelog
+
+## 1.17.1 — 2026-10-23 — wording + Gershon red
+- Notifications say "prospects" instead of "targets" ("New prospects", "Sync complete — N new
+  prospects saved"), matching the app's Sources > Bridges > Prospects wording (app v1.16.0).
+  Internal names (`targetsEveryHours`, `setTargetUrls`, `saveTargetsToSalesNavList`, hub fields) are
+  unchanged, so nothing the hub or the app reads changes.
+- Popup uses the Gershon.ai red #CC3333 (hover #a8281f) instead of the old #FE1B04 / #d11200; the
+  "View log" link is red instead of blue.
+- Repo source caught up: until now `salesnav-radar-extension/` held the v1.11.0 source while
+  v1.15.0, v1.16.0 and v1.17.0 were built and uploaded to the radar-releases bucket. This version is
+  the v1.17.0 release source (taken from radar-extension-v1.17.0.zip) plus the changes above.
+
+## 1.17.0 — 2026-10-14 — Source priority
+- Each Source has a priority (High / Medium / Low) set in the Radar app. Bridges of High sources are collected first in every session, then Medium, then Low (still randomized within each tier). Bridge discovery follows the same order.
+- Logged on `scrape:bridges` as `order: priority-then-random` + a per-priority count.
+
+## 1.16.0 — 2026-10-09
+
+**Each account now searches its OWN ICP.** Up to 1.15.0 the bridge search was hard-coded to
+Owner/CXO · 11-50 employees · Europe (Gershon's ICP) for every account. The saved Sales Nav
+search template (Settings → ICP) was stored but never read — 0 of David Liese's 2,378 prospects
+matched his US pharma/chemical R&D ICP. Now:
+- `loadIcpFilters()` reads `salesnav_search_template` from the hub, lifts its `filters:List(...)`
+  items as-is, drops CONNECTION_OF/RELATIONSHIP, and appends `CONNECTION_OF <bridge>`.
+  No (or unreadable) template → the legacy default, so existing accounts are unchanged.
+- Logged once per run as `icp:search` {source, filters}.
+
+**Language-proof data.** The hidden capture never fired on real accounts (every page logged
+`scrape:capture-fallback`), so data came from reading the cards — English-only:
+- Results are now read from Sales Nav's own `salesApiLeadSearch` response (re-issued from the
+  page, same URL) → title, company, location as data in every UI language. Logged `scrape:data`.
+- DOM fallback strips translated a11y labels ("X zur Auswahl hinzufügen"), status suffixes
+  ("ist erreichbar"), and translated CTA copy ("Speichern Sie diesen Lead…") — plus any title
+  repeated on ≥3 cards of one page, and degree/credential junk in the country field.
+
+## 1.15.0 — 2026-09-23 — human rhythm + invisible collection
+- Collection runs in a MINIMIZED window: results are read from Sales Nav's own search API responses (new capture.js, MAIN world). Nothing pops up. If that read fails the window is shown unfocused for that page only; 3 misses in a row = visible mode for 3 days, then hidden is retried.
+- Human rhythm: 120 search pages/day max, split into sessions of 25-40 pages with 45-110 min breaks; 18-55 s between pages (+ occasional 1-3 min pause); 40-120 s between bridges.
+- Automatic runs only Mon-Fri 08:30-19:00 local; outside hours they wait for the next window. Manual Sync now is never deferred.
+- LinkedIn checkpoint / login wall / captcha = everything stops for 24 h + desktop notification.
+- Bridges already collected today are skipped by later sessions; URL backfill and bridge-URL resolution run in the first session of the day only.
+- Prospect titles/companies/degree now come from the API response (real job titles).
+
+## 1.14.0 — 2026-09-23 — bridges you add by hand actually collect
+
+- **The bug.** A bridge added from a profile link (Bridges → Add) was stored with the placeholder urn
+  `manual:<slug>`. No Sales Navigator search can be built from that, so every run logged
+  `scrape:invalid-urn`, the hub switched the bridge OFF, and it never collected a single prospect.
+  (Found 2026-09-23: Serge Saxonov and Lance Liotta on Amos Lee's account.)
+- **The fix.** New phase `resolveManualBridges()` runs before collection: /in/ slug → LinkedIn member id
+  (voyager identity) → Sales Nav member urn (salesApiProfiles), then hub `setBridgeUrn` swaps the urn,
+  switches the bridge ON and records name, headline and degree. Two API calls per person, no page
+  loads, no profile views, up to 10 per run; unresolved ones stay queued for the next run.
+  Logs: `manual-bridge:resolve-start|resolved|unresolved|refused`; `run:done` reports
+  `manualBridgesResolved` / `manualBridgesPending`.
+- Includes everything in 1.13.0 (LinkedIn gate check before every page) — 1.13.0 itself was never published.
+
+## 1.13.0 — 2026-09-17 — Radar now asks the LinkedIn gate first
+
+- Before every Sales Navigator search page, every bridge-discovery search and every lead-page open, the
+  extension asks the shared LinkedIn gate (via the `radar-gate` function) and stops when it says no.
+  Up to 1.12.0 Radar only reported its volume afterwards, so nothing could hold it back.
+- Unit = one search results page (25 cards) or one lead page, not one row.
+- Short pacing holds (up to 7 min) are waited out; any other refusal stops LinkedIn work for the run,
+  the rest of the run (list filing, Botdog, URL backfill) continues, and a `gateResume` alarm restarts
+  the run when the gate says to come back (5 min – 12 h).
+- Fails closed: gate unreachable = hold, retry in 15 min.
+- Discovery only clears the sources it actually searched, so a held source stays pending.
+- Not yet metered: Sales API URL lookups and lead-list filing.
+
+## v1.12.0 - 2026-09-09 - the missing /in/ URLs
+
+**The bug.** A prospect's public /in/ URL was only ever resolved in memory, during the run that
+scraped them, under the shared `MAX_RESOLVE_PER_RUN` budget of 400. A run collects 1000+. Everything
+past the budget was posted to the hub with a blank `linkedin_url` and was never looked at again by
+anything - there was no backfill in the system at all. The shortfall compounded every single day
+until **2150 of 2676 prospects (80%) had no URL**.
+
+That is also why prospects never reached Botdog: Botdog addresses people BY public profile URL, so a
+prospect without one is undeliverable. One defect, both symptoms.
+
+The resolver itself was never at fault. On 2026-09-09 it was asked for 132 and returned 132, a 100%
+hit rate. Nothing ever asked it a second time.
+
+**The fix.** A new `backfillTargetUrls()` phase runs on EVERY sync, including runs that collect
+nothing new - a quiet run still has yesterday's overflow to catch up on, and that catching up is
+precisely what never happened. It pulls the standing backlog from the hub (`resolvePending`),
+resolves it through the same cheap one-tab API path used in-run (no profile views, no page loads),
+and writes the results back (`setTargetUrls`). `BACKFILL_URLS_PER_RUN = 500`, comfortably ahead of
+what a day collects, so the backlog drains instead of growing.
+
+`run:done` now reports `urlsBackfilled` and `urlsMissing`, so the number is visible in the daily
+report rather than silently rotting.
+
+Requires hub v18 (`resolvePending`, `setTargetUrls`) - already deployed.
+
+Note: pushing prospects to Botdog is deliberately NOT done here. It needs no LinkedIn session, so it
+runs server-side on a schedule (the `botdog-push` function, every 10 min) and no longer depends on a
+browser being awake or an extension build being current.
+
 ## 1.11.0 - 2026-08-28
 The Org ID stops being the user's problem.
 
