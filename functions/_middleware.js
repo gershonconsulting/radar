@@ -27,10 +27,11 @@
 // 6) (2026-10-27, app v1.18.0) Loads app/suggestions.js into the app page: the "Suggested by
 //    Gershon" panel on Sources (pre-analysis ICP, competitor sources and bridges, all OFF, each
 //    with an ON switch). Only on the app page (has id="sourcesBody"), once.
+//    v1.18.1 (2026-10-28): suggestions are real OFF rows too (hub v24) - see suggestions.js.
 const LATEST_EXT = '1.17.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
-const APP_VERSION = '1.18.0';
+const APP_VERSION = '1.18.1';
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
 const SUGGESTIONS_SRC = '/suggestions.js?v=' + APP_VERSION;
@@ -96,7 +97,7 @@ export async function onRequest(ctx) {
         + out.slice(at);
       out = out.replace(/(id="sideVer">)v\d+\.\d+\.\d+(<)/, (all, a, b) => a + 'v' + APP_VERSION + b);
     }
-    // 6) Suggested by Gershon - OFF panel (app v1.18.0); after sources-list.js so it sits above the list
+    // 6) Suggested by Gershon - OFF panel (app v1.18.x); after sources-list.js so it sits above the list
     if (/id="sourcesBody"/.test(out) && out.indexOf('suggestions.js') === -1 && out.lastIndexOf('</body>') !== -1) {
       const at = out.lastIndexOf('</body>');
       out = out.slice(0, at) + '<script src="' + SUGGESTIONS_SRC + '"></script>\n' + out.slice(at);

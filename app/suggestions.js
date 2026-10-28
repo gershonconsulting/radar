@@ -1,12 +1,12 @@
-// app/suggestions.js - Radar app v1.18.0 (2026-10-27)
+// app/suggestions.js - Radar app v1.18.1 (2026-10-28)
 // "Suggested by Gershon - OFF" panel on the Sources page.
 // Olivier 2026-10-27: place the pre-analysis (ICP, competitor sources, bridges) on each client's
 // account as OFF; the client switches items ON for the campaign.
-// Data: config key `preanalysis_suggestions` (JSON written by Gershon). Nothing in it is collected:
-// the extension only reads the sources/bridges tables. Switching an item ON creates the real row
-// with existing hub actions - addSource (discover_now -> bridges are found on the next sync) and
-// addBridges (urn manual:<slug>, active) - so no hub or database change is needed.
-// An item counts as ON when a source / bridge with the same name exists in the account.
+// Data: config key `preanalysis_suggestions` (JSON written by Gershon).
+// v1.18.1 (2026-10-28, hub v24): suggestions are ALSO real rows now - sources with category
+// 'suggested' (hub hides them from the extension) and bridges with active=false - so they show in
+// the Sources / Bridges lists. Those count as OFF; switching ON flips the same row (same name / urn):
+// addSource with category competitor + discover_now, addBridges with the same urn and active:true.
 // Loaded by functions/_middleware.js (item 6), like sources-list.js.
 (function(){
   if (window.__radarSuggest) return; window.__radarSuggest = true;
@@ -17,8 +17,10 @@
   function slug(s){ return n(s).replace(/ /g,'-').slice(0,60) || ('b'+Date.now()); }
   function stored(){ try { return (typeof STORED_SOURCES!=='undefined' && STORED_SOURCES) || []; } catch(x){ return []; } }
   function bridges(){ try { return (typeof BRIDGES!=='undefined' && BRIDGES) || []; } catch(x){ return []; } }
-  function srcOn(s){ var k=n(s.name); return stored().some(function(x){ return n(x.name)===k; }); }
-  function brOn(b){ var k=n(b.name); return bridges().some(function(x){ return n(x.name)===k; }); }
+  function isSug(x){ return x.category==='suggested' || x.suggested===true; }
+  function srcOn(s){ var k=n(s.name); return stored().some(function(x){ return n(x.name)===k && !isSug(x); }); }
+  function brOn(b){ var k=n(b.name); return bridges().some(function(x){ return n(x.name)===k && x.active!==false && String(x.active)!=='false'; }); }
+  function brRow(b){ var k=n(b.name); return bridges().find(function(x){ return n(x.name)===k; }); }
 
   var css = document.createElement('style');
   css.textContent = '#sugPanel{margin:18px 0 6px;border:1px solid #f1d4d0;background:#fffaf9;border-radius:12px;padding:14px 16px}'+
@@ -27,7 +29,7 @@
     '#sugPanel table{width:100%;border-collapse:collapse;font-size:.8rem;background:#fff}#sugPanel th,#sugPanel td{padding:6px 8px;border-bottom:1px solid #f1f5f9;text-align:left;vertical-align:middle}'+
     '#sugPanel th{color:#64748b;font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em}'+
     '#sugPanel h4{margin:12px 0 6px;font-size:.85rem;color:#1e293b}'+
-    '.sug-sw{display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;border-radius:14px;padding:2px 10px;font-size:.72rem;font-weight:700;cursor:pointer;background:#f1f5f9;color:#475569}'+
+    '.sug-sw{display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;border-radius:14px;padding:2px 10px;font-size:.72rem;font-weight:700;cursor:pointer;background:#f1f5f9;color:#475569;white-space:nowrap}'+
     '.sug-sw.on{background:#ecfdf5;border-color:#a7f3d0;color:#047857;cursor:default}.sug-sw:disabled{opacity:.6;cursor:wait}'+
     '.sug-sw::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}'+
     '#sugPanel .sug-toggle{float:right;font-size:.75rem;color:#CC3333;cursor:pointer;background:none;border:0}'+
@@ -90,14 +92,20 @@
       if (act==='src'){
         var s = SUG.sources[i];
         var d = await post({ action:'addSource', name:s.name, linkedin_url: s.linkedin || s.website || '', website: s.website || '', priority:'high', category:'competitor', discover_now:true });
-        stored().push({ name:s.name, linkedin_url:d.linkedin_url||s.linkedin||'', website:s.website||'', priority:'high', category:'competitor', added_date:new Date().toISOString(), discover_pending:true });
+        var ex = stored().find(function(x){ return n(x.name)===n(s.name); });
+        if (ex) { ex.category='competitor'; ex.suggested=false; ex.priority='high'; ex.discover_pending=true; }
+        else stored().push({ name:s.name, linkedin_url:d.linkedin_url||s.linkedin||'', website:s.website||'', priority:'high', category:'competitor', added_date:new Date().toISOString(), discover_pending:true });
       } else {
         var br = SUG.bridges[i];
         var urnSlug = (br.linkedin && (br.linkedin.match(/\/in\/([^/?#]+)/)||[])[1]) || slug(br.name+' '+(br.company||''));
         try { urnSlug = decodeURIComponent(urnSlug); } catch(x){}
         var src = (SUG.sources||[]).find(function(s){ return br.company && n(br.company).indexOf(n(s.name).split(' ')[0])===0; });
-        await post({ action:'addBridges', source: (src && src.name) || br.company || 'Suggested', bridges:[{ urn:'manual:'+urnSlug, name:br.name, title:br.title||'', linkedin_url: br.linkedin||null, active:true }] });
-        bridges().push({ source:(src&&src.name)||br.company||'Suggested', name:br.name, title:br.title||'', urn:'manual:'+urnSlug, linkedin_url:br.linkedin||'', active:true });
+        var row = brRow(br);
+        var urn = row ? row.urn : 'manual:'+urnSlug;
+        var srcName = row ? row.source : ((src && src.name) || br.company || 'Suggested');
+        await post({ action:'addBridges', source: srcName, bridges:[{ urn:urn, name:br.name, title:br.title||'', linkedin_url: br.linkedin||null, active:true }] });
+        if (row) row.active = true;
+        else bridges().push({ source:srcName, name:br.name, title:br.title||'', urn:urn, linkedin_url:br.linkedin||'', active:true });
       }
       render();
       try { if (typeof renderSources==='function') renderSources(); } catch(x){}
