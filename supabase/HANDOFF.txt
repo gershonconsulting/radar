@@ -1,3 +1,10 @@
+2026-10-28 nightly (branch nightly/2026-10-28-radar-email, stacked on #11 -> #6): daily-report v8 -
+  "vs the day before" now skips days that did not run ("+N since Fri 10-23 — 2 days without a run",
+  else vs 7-day avg); per-browser banner uses each browser's own saved count (no more "v1.15.0
+  collected nothing" next to "258 saved"); sender "GC Radar <radar@gershon.ai>" in daily-report AND
+  health-check. ❌ Not live until Ariel deploys daily-report + health-check (verify_jwt OFF).
+  ❌ monthly-report: use const FROM = 'GC Radar <radar@gershon.ai>'; (item 2 below updated).
+
 RADAR — SUPABASE EMAIL FUNCTIONS HANDOFF (nightly 2026-10-22, branch nightly/2026-10-22-gc-sender)
 
 WHY THIS FOLDER EXISTS
@@ -22,7 +29,7 @@ WHAT CHANGED
    deploying, compare against the live version: the only difference should be the FROM line and the header comment.
 2. monthly-report (next run Nov 1) has the same sender in index.ts line 19:
        const FROM = 'Radar <radar@gershon.ai>';
-   change it to   const FROM = 'GC Radar Report <radar@gershon.ai>';
+   change it to   const FROM = 'GC Radar <radar@gershon.ai>';   (2026-10-28: was 'GC Radar Report')
    It is not copied here because its report.js is 46KB and wasn't transcribed tonight.
 3. Optional: google-apps-script/Code.gs REPORT_FROM ('radar@gershoncrm.com') belongs to the old
    Apps Script daily mail, which no longer reaches Resend. Leave it or retire it.
@@ -39,4 +46,6 @@ AUDIT NOTES FOR THE REPORT ITSELF (not changed tonight)
 - "DID NOT RUN" on 6 of the 11 days from 10 to 20 Oct (10, 11, 12, 14, 17, 18). The extension is still on v1.15.0 while v1.17.0 is published.
 - "vs the day before" uses new_targets_prev from radar_daily_stats. On 21 Oct it implied 157 for 19 Oct,
   but the 19 Oct email said +328. Check the RPC's previous-day window.
+  2026-10-28: daily-report v8 no longer reads new_targets_prev; it calls the same RPC for each earlier
+  ET day (up to 7) and uses the first one that ran. The RPC itself was not changed or inspected.
 - Header is white text on navy (#0f172a). The house rule for report emails is dark text on light.
