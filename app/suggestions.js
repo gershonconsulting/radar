@@ -1,4 +1,5 @@
-// app/suggestions.js - Radar app v1.18.2 (2026-10-28)
+// app/suggestions.js - Radar app v1.18.3 (2026-10-28)
+// v1.18.3: company and person NAMES are clickable (LinkedIn company page / profile), in the panel, the Sources list and the Bridges page.
 // v1.18.2: items switched ON can be switched OFF again (Olivier: "I turned on one but I cannot turn it off").
 // "Suggested by Gershon - OFF" panel on the Sources page.
 // Olivier 2026-10-27: place the pre-analysis (ICP, competitor sources, bridges) on each client's
@@ -34,9 +35,34 @@
     '.sug-sw.on{background:#ecfdf5;border-color:#a7f3d0;color:#047857}.sug-sw:disabled{opacity:.6;cursor:wait}'+
     '.sug-sw::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}'+
     '#sugPanel .sug-toggle{float:right;font-size:.75rem;color:#CC3333;cursor:pointer;background:none;border:0}'+
+    '.sug-nm{color:inherit;text-decoration:none;border-bottom:1px dotted #CC3333}.sug-nm:hover{color:#CC3333}'+
     '#sugPanel .muted{color:#94a3b8}#sugPanel .sug-msg{font-size:.7rem;margin-left:6px}#sugPanel .sug-msg.err{color:#dc2626}';
   document.head.appendChild(css);
 
+  function nameLink(u, t, tip){ return u ? '<a class="sug-nm" href="'+e(u)+'" target="_blank" rel="noopener" title="'+e(tip)+'">'+e(t)+' &#8599;</a>' : e(t); }
+  // Sources list: the company NAME opens its LinkedIn company page too (Olivier 2026-10-28).
+  function linkListNames(){
+    document.querySelectorAll('#sourcesBody .src-nm').forEach(function(nm){
+      if (nm.querySelector('a')) return;
+      var a = nm.parentNode && nm.parentNode.querySelector('.src-sub a[href*="linkedin.com"]'); if (!a) return;
+      var last = nm.lastChild; if (!last || last.nodeType!==3 || !last.textContent.trim()) return;
+      var l = document.createElement('a'); l.href=a.href; l.target='_blank'; l.rel='noopener'; l.className='sug-nm'; l.title='Open the LinkedIn company page';
+      l.textContent = last.textContent; nm.replaceChild(l, last);
+    });
+  }
+  // Bridges page: the person NAME opens their LinkedIn profile (or a LinkedIn people search when
+  // Radar has no profile URL for them yet).
+  function linkBridgeNames(){
+    document.querySelectorAll('#bridgesBody .bridge-row .nm').forEach(function(nm){
+      if (nm.querySelector('a.sug-nm')) return;
+      var first = nm.firstChild; if (!first || first.nodeType!==3) return;
+      var txt = first.textContent.replace(/\s+$/,''); if (!txt.trim()) return;
+      var c = nm.querySelector('a.connect');
+      var href = (c && /linkedin\.com\/in\//.test(c.href)) ? c.href : 'https://www.linkedin.com/search/results/people/?keywords='+encodeURIComponent(txt.trim());
+      var l = document.createElement('a'); l.href=href; l.target='_blank'; l.rel='noopener'; l.className='sug-nm'; l.title='Open the LinkedIn profile';
+      l.textContent = txt; nm.replaceChild(l, first); nm.insertBefore(document.createTextNode(' '), l.nextSibling);
+    });
+  }
   function link(u, t){ return u ? '<a href="'+e(u)+'" target="_blank" rel="noopener">'+t+'</a>' : '<span class="muted">-</span>'; }
 
   function render(){
@@ -60,14 +86,14 @@
       if (srcs.length){
         h += '<h4>Competitor sources</h4><table><thead><tr><th>Company</th><th>Website</th><th>LinkedIn</th><th></th></tr></thead><tbody>';
         srcs.forEach(function(s,i){ var on=srcOn(s);
-          h += '<tr><td><b>'+e(s.name)+'</b></td><td>'+link(s.website,'site')+'</td><td>'+link(s.linkedin,'company page')+'</td><td>'+
+          h += '<tr><td><b>'+nameLink(s.linkedin||s.website, s.name, 'Open the LinkedIn company page')+'</b></td><td>'+link(s.website,'site')+'</td><td>'+link(s.linkedin,'company page')+'</td><td>'+
             (on ? '<button class="sug-sw on" data-act="srcoff" data-i="'+i+'" title="Switch OFF: Radar stops using this source and its bridges">ON - switch OFF</button><span class="sug-msg"></span>' : '<button class="sug-sw" data-act="src" data-i="'+i+'" title="Add as a source: Radar finds its bridges on the next sync">OFF - switch ON</button><span class="sug-msg"></span>')+'</td></tr>'; });
         h += '</tbody></table>';
       }
       if (brs.length){
         h += '<h4>Bridges</h4><table><thead><tr><th>Name</th><th>Role</th><th>LinkedIn</th><th></th></tr></thead><tbody>';
         brs.forEach(function(b,i){ var on=brOn(b);
-          h += '<tr><td><b>'+e(b.name)+'</b></td><td>'+e([b.title,b.company].filter(Boolean).join(', '))+'</td><td>'+
+          h += '<tr><td><b>'+nameLink(b.linkedin || ('https://www.linkedin.com/search/results/people/?keywords='+encodeURIComponent(b.name+' '+(b.company||''))), b.name, 'Open the LinkedIn profile')+'</b></td><td>'+e([b.title,b.company].filter(Boolean).join(', '))+'</td><td>'+
             (b.linkedin ? link(b.linkedin,'profile') : link('https://www.linkedin.com/search/results/people/?keywords='+encodeURIComponent(b.name+' '+(b.company||'')),'search'))+'</td><td>'+
             (on ? '<button class="sug-sw on" data-act="broff" data-i="'+i+'" title="Switch OFF: Radar stops collecting through this bridge">ON - switch OFF</button><span class="sug-msg"></span>' : '<button class="sug-sw" data-act="br" data-i="'+i+'" title="Add as an active bridge">OFF - switch ON</button><span class="sug-msg"></span>')+'</td></tr>'; });
         h += '</tbody></table>';
@@ -128,6 +154,7 @@
       }
       render();
       try { if (typeof renderSources==='function') renderSources(); } catch(x){}
+      try { linkListNames(); } catch(x){}
     } catch(err){
       b.disabled=false; b.textContent= off ? 'ON - switch OFF' : 'OFF - switch ON'; if (msg){ msg.textContent='Not saved: '+err.message; msg.className='sug-msg err'; }
     } finally { delete busy[key]; }
@@ -150,6 +177,9 @@
     // so a click is never interrupted by a redraw.
     if (SUG) { var sig = stored().length + ':' + bridges().length + ':' + !!document.getElementById('sugPanel');
       if (sig !== lastSig) { lastSig = sig; render(); } }
+    try { linkListNames(); linkBridgeNames(); } catch(x){}
     if (tries > 400) clearInterval(t);
   }, 3000);
+  // keep names clickable after the app re-renders its lists
+  setInterval(function(){ try { linkListNames(); linkBridgeNames(); } catch(x){} }, 1500);
 })();
