@@ -1,4 +1,5 @@
-// app/suggestions.js - Radar app v1.18.1 (2026-10-28)
+// app/suggestions.js - Radar app v1.18.2 (2026-10-28)
+// v1.18.2: items switched ON can be switched OFF again (Olivier: "I turned on one but I cannot turn it off").
 // "Suggested by Gershon - OFF" panel on the Sources page.
 // Olivier 2026-10-27: place the pre-analysis (ICP, competitor sources, bridges) on each client's
 // account as OFF; the client switches items ON for the campaign.
@@ -30,7 +31,7 @@
     '#sugPanel th{color:#64748b;font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em}'+
     '#sugPanel h4{margin:12px 0 6px;font-size:.85rem;color:#1e293b}'+
     '.sug-sw{display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;border-radius:14px;padding:2px 10px;font-size:.72rem;font-weight:700;cursor:pointer;background:#f1f5f9;color:#475569;white-space:nowrap}'+
-    '.sug-sw.on{background:#ecfdf5;border-color:#a7f3d0;color:#047857;cursor:default}.sug-sw:disabled{opacity:.6;cursor:wait}'+
+    '.sug-sw.on{background:#ecfdf5;border-color:#a7f3d0;color:#047857}.sug-sw:disabled{opacity:.6;cursor:wait}'+
     '.sug-sw::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}'+
     '#sugPanel .sug-toggle{float:right;font-size:.75rem;color:#CC3333;cursor:pointer;background:none;border:0}'+
     '#sugPanel .muted{color:#94a3b8}#sugPanel .sug-msg{font-size:.7rem;margin-left:6px}#sugPanel .sug-msg.err{color:#dc2626}';
@@ -60,7 +61,7 @@
         h += '<h4>Competitor sources</h4><table><thead><tr><th>Company</th><th>Website</th><th>LinkedIn</th><th></th></tr></thead><tbody>';
         srcs.forEach(function(s,i){ var on=srcOn(s);
           h += '<tr><td><b>'+e(s.name)+'</b></td><td>'+link(s.website,'site')+'</td><td>'+link(s.linkedin,'company page')+'</td><td>'+
-            (on ? '<span class="sug-sw on">ON</span>' : '<button class="sug-sw" data-act="src" data-i="'+i+'" title="Add as a source: Radar finds its bridges on the next sync">OFF - switch ON</button><span class="sug-msg"></span>')+'</td></tr>'; });
+            (on ? '<button class="sug-sw on" data-act="srcoff" data-i="'+i+'" title="Switch OFF: Radar stops using this source and its bridges">ON - switch OFF</button><span class="sug-msg"></span>' : '<button class="sug-sw" data-act="src" data-i="'+i+'" title="Add as a source: Radar finds its bridges on the next sync">OFF - switch ON</button><span class="sug-msg"></span>')+'</td></tr>'; });
         h += '</tbody></table>';
       }
       if (brs.length){
@@ -68,7 +69,7 @@
         brs.forEach(function(b,i){ var on=brOn(b);
           h += '<tr><td><b>'+e(b.name)+'</b></td><td>'+e([b.title,b.company].filter(Boolean).join(', '))+'</td><td>'+
             (b.linkedin ? link(b.linkedin,'profile') : link('https://www.linkedin.com/search/results/people/?keywords='+encodeURIComponent(b.name+' '+(b.company||'')),'search'))+'</td><td>'+
-            (on ? '<span class="sug-sw on">ON</span>' : '<button class="sug-sw" data-act="br" data-i="'+i+'" title="Add as an active bridge">OFF - switch ON</button><span class="sug-msg"></span>')+'</td></tr>'; });
+            (on ? '<button class="sug-sw on" data-act="broff" data-i="'+i+'" title="Switch OFF: Radar stops collecting through this bridge">ON - switch OFF</button><span class="sug-msg"></span>' : '<button class="sug-sw" data-act="br" data-i="'+i+'" title="Add as an active bridge">OFF - switch ON</button><span class="sug-msg"></span>')+'</td></tr>'; });
         h += '</tbody></table>';
       }
     }
@@ -87,11 +88,29 @@
     var act = b.getAttribute('data-act');
     if (act==='collapse'){ var p=document.getElementById('sugPanel'); p.setAttribute('data-collapsed', p.getAttribute('data-collapsed')==='1'?'0':'1'); render(); return; }
     var i = +b.getAttribute('data-i'), key = act+i; if (busy[key]) return; busy[key]=1;
-    var msg = b.nextElementSibling; b.disabled = true; b.textContent = 'Switching ON...';
+    var off = /off$/.test(act);
+    var msg = b.nextElementSibling; b.disabled = true; b.textContent = off ? 'Switching OFF...' : 'Switching ON...';
     try {
-      if (act==='src'){
+      if (act==='srcoff'){
+        // OFF = back to a suggestion: hub v24 hides category 'suggested' from the extension,
+        // and every bridge found under it is deactivated so nothing is collected through it.
+        var so = SUG.sources[i], sk = n(so.name);
+        var row0 = stored().find(function(x){ return n(x.name)===sk; });
+        var realName = row0 ? row0.name : so.name;
+        await post({ action:'addSource', name: realName, category:'suggested' });
+        if (row0) { row0.category='suggested'; row0.suggested=true; }
+        var under = bridges().filter(function(x){ return n(x.source)===sk && x.active!==false && String(x.active)!=='false'; });
+        for (var j=0;j<under.length;j++){ await post({ action:'setBridgeActive', urn: under[j].urn, active:false }); under[j].active=false; }
+      } else if (act==='broff'){
+        var bo = brRow(SUG.bridges[i]);
+        if (bo) { await post({ action:'setBridgeActive', urn: bo.urn, active:false }); bo.active=false; }
+      } else if (act==='src'){
         var s = SUG.sources[i];
         var d = await post({ action:'addSource', name:s.name, linkedin_url: s.linkedin || s.website || '', website: s.website || '', priority:'high', category:'competitor', discover_now:true });
+        // Bridges Radar had found under it before it was switched OFF come back ON with it
+        // (hand-picked suggested bridges keep their own switch).
+        var back = bridges().filter(function(x){ return n(x.source)===n(s.name) && !/^manual:/.test(x.urn||'') && (x.active===false || String(x.active)==='false'); });
+        for (var k=0;k<back.length;k++){ await post({ action:'setBridgeActive', urn: back[k].urn, active:true }); back[k].active=true; }
         var ex = stored().find(function(x){ return n(x.name)===n(s.name); });
         if (ex) { ex.category='competitor'; ex.suggested=false; ex.priority='high'; ex.discover_pending=true; }
         else stored().push({ name:s.name, linkedin_url:d.linkedin_url||s.linkedin||'', website:s.website||'', priority:'high', category:'competitor', added_date:new Date().toISOString(), discover_pending:true });
@@ -110,7 +129,7 @@
       render();
       try { if (typeof renderSources==='function') renderSources(); } catch(x){}
     } catch(err){
-      b.disabled=false; b.textContent='OFF - switch ON'; if (msg){ msg.textContent='Not saved: '+err.message; msg.className='sug-msg err'; }
+      b.disabled=false; b.textContent= off ? 'ON - switch OFF' : 'OFF - switch ON'; if (msg){ msg.textContent='Not saved: '+err.message; msg.className='sug-msg err'; }
     } finally { delete busy[key]; }
   });
 
