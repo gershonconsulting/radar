@@ -292,6 +292,9 @@ tr.row-excluded td:first-child{ text-decoration:none; }
 .table-controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
 .table-controls input, .table-controls select{ padding:8px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:0.85rem; background:#fff; }
 .table-controls input[type=text]{ flex:1; min-width:180px; }
+.table-controls select.on{ border-color:var(--brand-ink,#4f46e5); background:var(--brand-soft,#eef0fe); color:var(--brand-ink,#4f46e5); font-weight:600; }
+.table-controls .t-clear{ padding:8px 12px; border:1px solid #fca5a5; background:#fef2f2; color:#b91c1c; border-radius:8px; font-size:0.82rem; font-weight:600; cursor:pointer; }
+.table-controls .t-clear:hover{ background:#fee2e2; }
 .result-count{ margin-left:auto; color:var(--muted); font-size:0.82rem; }
 .table-wrap{ background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
 table{ width:100%; border-collapse:collapse; }
@@ -687,7 +690,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <div class="stat clk s-tgt" onclick="statGo('targets','week')" title="Collected in the last 7 days"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
           <div class="stat clk s-tgt" onclick="statGo('targets','nolink')" title="Targets still missing a LinkedIn URL — they can't be contacted"><div class="num" id="statLinkedPct">0%</div><div class="label">Have LinkedIn link</div><div class="sub" id="statLinkedSub">0 of 0</div></div>
           <div class="stat clk s-tgt" onclick="statGo('targets','pushed')" title="Targets pushed to your outreach campaign"><div class="num" id="statPushedPct">0%</div><div class="label">On Botdog</div><div class="sub" id="statPushedSub">0 of 0</div></div>
-          <div class="stat clk s-tgt" onclick="statGo('targets','')" title="A+ and A graded targets — your best fits"><div class="num" id="statTopGrade">0</div><div class="label">A+ / A grade</div><div class="sub" id="statTopGradeSub">best fits</div></div>
+          <div class="stat clk s-tgt" onclick="statGo('targets','');var g=document.getElementById('tGrade');if(g){g.value='A+,A';renderTargets();}" title="A+ and A graded targets — your best fits"><div class="num" id="statTopGrade">0</div><div class="label">A+ / A grade</div><div class="sub" id="statTopGradeSub">best fits</div></div>
         </div>
         <div class="grid-2">
           <div class="panel"><h3>ICP grade distribution <span class="hint">— quality of what you're collecting</span></h3><div class="chart-wrap"><canvas id="chartGrades"></canvas></div></div>
@@ -778,8 +781,23 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="page-head"><h2>Targets</h2><p>Every connection collected through your bridges.</p></div>
       <div class="table-controls">
         <input type="text" id="tSearch" placeholder="Search name, title, company…" oninput="renderTargets()">
-        <select id="tBridge" onchange="renderTargets()"><option value="">All bridges</option></select>
-        <select id="tSource" onchange="renderTargets()"><option value="">All sources</option></select>
+        <select id="tSource" onchange="onTargetSourceChange()" title="Source"><option value="">All sources</option></select>
+        <select id="tBridge" onchange="renderTargets()" title="Bridge (limited to the selected source)"><option value="">All bridges</option></select>
+        <select id="tGrade" onchange="renderTargets()" title="ICP grade">
+          <option value="">All grades</option><option value="A+">A+ only</option><option value="A+,A">A+ and A</option><option value="A+,A,B">B and above</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+        </select>
+        <select id="tBotdog" onchange="renderTargets()" title="Botdog status">
+          <option value="">Botdog: any</option><option value="yes">On Botdog</option><option value="no">Not on Botdog</option>
+        </select>
+        <select id="tLink" onchange="renderTargets()" title="LinkedIn link">
+          <option value="">LinkedIn: any</option><option value="yes">Has LinkedIn link</option><option value="no">Missing link</option>
+        </select>
+        <select id="tDate" onchange="renderTargets()" title="Date collected">
+          <option value="">Any date</option><option value="1">Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option>
+        </select>
+        <select id="tLang" onchange="renderTargets()" title="Language"><option value="">All languages</option></select>
+        <select id="tCountry" onchange="renderTargets()" title="Country"><option value="">All countries</option></select>
+        <button type="button" class="t-clear" id="tClear" onclick="clearTargetFilters()" style="display:none">✕ Clear filters</button>
         <label class="excl-toggle"><input type="checkbox" id="tShowExcluded" onchange="toggleShowExcluded()"> Show unselected</label>
         <span class="result-count" id="tCount">0 targets</span>
       </div>
@@ -1201,6 +1219,8 @@ function statGo(view, filter){
     const s = document.getElementById('tSearch'); if (s) s.value = '';
     const b = document.getElementById('tBridge'); if (b) b.value = '';
     const so = document.getElementById('tSource'); if (so) so.value = '';
+    ['tGrade','tBotdog','tLink','tDate','tLang','tCountry'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    if (typeof populateBridgeFilter === 'function') populateBridgeFilter();
     showView('targets'); renderTargets();
   } else if (view === 'bridges') {
     BRIDGE_FILTER = 'active';
@@ -2227,14 +2247,16 @@ function setHomeRange(n){ HOME_RANGE = n; renderHome(); }
 function homeGoSource(name){
   if (typeof STAT_FILTER !== 'undefined') STAT_FILTER = '';
   const so=document.getElementById('tSource'); if(so) so.value=name||'';
+  if (typeof populateBridgeFilter==='function') populateBridgeFilter();
   const b=document.getElementById('tBridge'); if(b) b.value='';
   const s=document.getElementById('tSearch'); if(s) s.value='';
   showView('targets'); if (typeof renderTargets==='function') renderTargets();
 }
 function homeGoBridge(name){
   if (typeof STAT_FILTER !== 'undefined') STAT_FILTER = '';
-  const b=document.getElementById('tBridge'); if(b) b.value=name||'';
   const so=document.getElementById('tSource'); if(so) so.value='';
+  if (typeof populateBridgeFilter==='function') populateBridgeFilter();
+  const b=document.getElementById('tBridge'); if(b) b.value=name||'';
   const s=document.getElementById('tSearch'); if(s) s.value='';
   showView('targets'); if (typeof renderTargets==='function') renderTargets();
 }
@@ -2666,14 +2688,41 @@ function triggerSync(){
 }
 
 // ----- Targets view -----
+function rowCountry(r){
+  const c = String(r.country||'').trim();
+  if (c) return c;
+  const loc = String(r.location||'').trim();
+  if (!loc) return '';
+  const parts = loc.split(',').map(x => x.trim()).filter(Boolean);
+  return parts.length ? parts[parts.length-1] : '';
+}
+function _fillSelect(id, label, values){
+  const el = document.getElementById(id); if (!el) return;
+  const v = el.value;
+  el.innerHTML = '<option value="">' + label + '</option>' + values.map(x => '<option>' + esc(x) + '</option>').join('');
+  el.value = values.includes(v) ? v : '';
+}
 function populateFilters(){
-  const bridges = Array.from(new Set(ROWS.map(r => r.radar_person).filter(Boolean))).sort();
   const sources = Array.from(new Set(ROWS.map(leadSource).filter(Boolean))).sort();
-  const bSel = document.getElementById('tBridge'), sSel = document.getElementById('tSource');
-  const bVal = bSel.value, sVal = sSel.value;
-  bSel.innerHTML = '<option value="">All bridges</option>' + bridges.map(b => '<option>' + esc(b) + '</option>').join('');
-  sSel.innerHTML = '<option value="">All sources</option>' + sources.map(s => '<option>' + esc(s) + '</option>').join('');
-  bSel.value = bVal; sSel.value = sVal;
+  _fillSelect('tSource', 'All sources', sources);
+  populateBridgeFilter();
+  _fillSelect('tLang', 'All languages', Array.from(new Set(ROWS.map(r => String(r.language||'').trim()).filter(Boolean))).sort());
+  _fillSelect('tCountry', 'All countries', Array.from(new Set(ROWS.map(rowCountry).filter(Boolean))).sort());
+}
+// Bridge list follows the selected source (drill-down: Source → Bridge → Prospect).
+function populateBridgeFilter(){
+  const fs = (document.getElementById('tSource')||{}).value || '';
+  const rows = fs ? ROWS.filter(r => leadSource(r) === fs) : ROWS;
+  _fillSelect('tBridge', 'All bridges', Array.from(new Set(rows.map(r => r.radar_person).filter(Boolean))).sort());
+}
+function onTargetSourceChange(){ populateBridgeFilter(); renderTargets(); }
+const T_FILTER_IDS = ['tSource','tBridge','tGrade','tBotdog','tLink','tDate','tLang','tCountry'];
+function clearTargetFilters(){
+  T_FILTER_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const s = document.getElementById('tSearch'); if (s) s.value = '';
+  STAT_FILTER = '';
+  populateBridgeFilter();
+  renderTargets();
 }
 
 // Compose a display location from city/country, falling back to r.location.
@@ -2720,9 +2769,28 @@ function renderTargets(){
   const q = (document.getElementById('tSearch').value||'').toLowerCase().trim();
   const fb = document.getElementById('tBridge').value;
   const fs = document.getElementById('tSource').value;
+  const _v = id => ((document.getElementById(id)||{}).value || '');
+  const fg = _v('tGrade'), fbd = _v('tBotdog'), fl = _v('tLink'), fd = _v('tDate'), flang = _v('tLang'), fc = _v('tCountry');
   let list = ROWS.map(rowFields);
   if (fb) list = list.filter(x => x.bridge === fb);
   if (fs) list = list.filter(x => x.source === fs);
+  if (fg) { const gs = fg.split(','); list = list.filter(x => gs.includes(x.grade || 'D')); }
+  if (fbd === 'yes') list = list.filter(x => x.botdog === 1);
+  else if (fbd === 'no') list = list.filter(x => x.botdog !== 1);
+  if (fl === 'yes') list = list.filter(x => String((x._r && x._r.linkedin_url) || '').trim());
+  else if (fl === 'no') list = list.filter(x => !String((x._r && x._r.linkedin_url) || '').trim());
+  if (fd) {
+    if (fd === '1') list = list.filter(x => isToday(x._r.collected_date));
+    else { const cut = Date.now() - Number(fd) * 86400000; list = list.filter(x => x.date && x.date >= cut); }
+  }
+  if (flang) list = list.filter(x => String(x._r.language||'').trim() === flang);
+  if (fc) list = list.filter(x => rowCountry(x._r) === fc);
+  // Highlight active filters + show the Clear button.
+  let _active = STAT_FILTER ? 1 : 0;
+  T_FILTER_IDS.forEach(id => { const el = document.getElementById(id); if (el) { el.classList.toggle('on', !!el.value); if (el.value) _active++; } });
+  if (q) _active++;
+  const _clr = document.getElementById('tClear');
+  if (_clr) { _clr.style.display = _active ? '' : 'none'; _clr.textContent = '✕ Clear filters' + (_active > 1 ? ' (' + _active + ')' : ''); }
   if (q)  list = list.filter(x => (x.name+' '+x.title+' '+x.company+' '+x.location+' '+x.language).toLowerCase().includes(q));
   if (STAT_FILTER === 'today')       list = list.filter(x => isToday(x._r.collected_date));
   else if (STAT_FILTER === 'week')   list = list.filter(x => isThisWeek(x._r.collected_date));
