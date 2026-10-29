@@ -29,13 +29,17 @@
 //    with an ON switch). Only on the app page (has id="sourcesBody"), once.
 //    v1.18.1 (2026-10-28): suggestions are real OFF rows too (hub v24). v1.18.2: ON items can be switched OFF.
 //    v1.18.3: company / person names are clickable LinkedIn links (panel, Sources list, Bridges page).
+// 7) (2026-10-29, app v1.19.0) Loads app/bridge-icp.js into the app page: "Which bridges bring your ICP"
+//    panel on the Bridges page + a verdict badge per bridge (Focus / Keep / Slow down / Not enough data),
+//    from /api/bridge-icp (owner from the session only - each account sees only its own bridges).
 const LATEST_EXT = '1.17.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
-const APP_VERSION = '1.18.3';
+const APP_VERSION = '1.19.0';
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
 const SUGGESTIONS_SRC = '/suggestions.js?v=' + APP_VERSION;
+const BRIDGE_ICP_SRC = '/bridge-icp.js?v=' + APP_VERSION;
 const THEME_HREF = '/unified-theme.css?v=' + APP_VERSION;
 const CHART_RED = [
   // Dashboard (renderCharts): trend line colour + 'targets per bridge' bar colour
@@ -102,6 +106,11 @@ export async function onRequest(ctx) {
     if (/id="sourcesBody"/.test(out) && out.indexOf('suggestions.js') === -1 && out.lastIndexOf('</body>') !== -1) {
       const at = out.lastIndexOf('</body>');
       out = out.slice(0, at) + '<script src="' + SUGGESTIONS_SRC + '"></script>\n' + out.slice(at);
+    }
+    // 7) Bridge ICP ranking panel (app v1.19.0) - app page only (has id="bridgesBody"), once
+    if (/id="bridgesBody"/.test(out) && out.indexOf('bridge-icp.js') === -1 && out.lastIndexOf('</body>') !== -1) {
+      const at = out.lastIndexOf('</body>');
+      out = out.slice(0, at) + '<script src="' + BRIDGE_ICP_SRC + '"></script>\n' + out.slice(at);
     }
     // 4) Unified Gershon design (app v1.15.0)
     if (out.indexOf('unified-theme.css') === -1 && out.indexOf('</head>') !== -1) {
