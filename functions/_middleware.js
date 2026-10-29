@@ -36,11 +36,15 @@
 //    person names; "Daily lead target" is a goal and keeps its wording); CHART_WORDS renames the chart
 //    legends, which are drawn on a canvas the script cannot reach. Inserted once before </body>, only
 //    if the page does not already load the script. The landing page, admin page and sources-list.js
-//    are re-worded at the source. The landing footer version (id="siteVer") is stamped like the sidebar's.
+//    are re-worded at the source. v1.18.5: PR #7's colour leftovers (indigo -> Gershon red #CC3333,
+//    dark #a8281f, tint #fdf2f2) fixed at the source in admin / extension / landing pages, favicon
+//    and manifest; the literals inside app.html are rewritten when served (APP_RED).
+//    Stage colours (Sources green, Bridges orange, Prospects blue, Leads red) and grades are untouched.
+//    The landing footer version (id="siteVer") is stamped like the sidebar's.
 const LATEST_EXT = '1.17.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
-const APP_VERSION = '1.18.4';
+const APP_VERSION = '1.18.5';
 const WORDING_SRC = '/prospects-wording.js?v=' + APP_VERSION;
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
@@ -56,6 +60,20 @@ const CHART_RED = [
   ["pointBackgroundColor:'#2563eb'", "pointBackgroundColor:'#CC3333'"],
   // Home: 'top bridges' leaderboard bars
   ["lbRows(topBrg, (()=> '#6366f1')", "lbRows(topBrg, (()=> '#CC3333')"]
+];
+// Leftover indigo / old-red literals still inside app.html (v1.18.5, PR #7 colour leftovers). The
+// unified theme already overrides the tokens; these are the hard-coded ones it cannot reach.
+const APP_RED = [
+  ['<meta name="theme-color" content="#E01000"', '<meta name="theme-color" content="#CC3333"'],
+  ['--brand:#6366f1; --brand-ink:#4f46e5; --brand-soft:#eef0fe;', '--brand:#CC3333; --brand-ink:#a8281f; --brand-soft:#fdf2f2;'],
+  ['.signin-box .logo{ color:#6366f1;', '.signin-box .logo{ color:#CC3333;'],
+  ['.signin-box .sub{ color:#6366f1;', '.signin-box .sub{ color:#CC3333;'],
+  ['border-radius:50%; background:#6366f1;', 'border-radius:50%; background:#CC3333;'],
+  ['box-shadow:0 4px 14px rgba(99,102,241,0.14); border-color:#c7cbf5;', 'box-shadow:0 4px 14px rgba(204,51,51,0.14); border-color:#f3c4c4;'],
+  ["const SOURCE_PALETTE = ['#6366f1',", "const SOURCE_PALETTE = ['#64748b',"],
+  ["var(--brand,#4f46e5)", "var(--brand,#CC3333)"],
+  ["var(--brand-ink,#4f46e5)", "var(--brand-ink,#a8281f)"],
+  ["var(--brand-soft,#eef0fe)", "var(--brand-soft,#fdf2f2)"]
 ];
 const CHART_WORDS = [
   ["label:'Targets'", "label:'Prospects'"],
@@ -126,6 +144,8 @@ export async function onRequest(ctx) {
       for (const [from, to] of CHART_RED) out = out.split(from).join(to);
       for (const [from, to] of CHART_WORDS) out = out.split(from).join(to);
     }
+    // 6) Leftover indigo literals -> Gershon red (app v1.18.5)
+    for (const [from, to] of APP_RED) out = out.split(from).join(to);
     // 5) "Targets" -> "Prospects" wording (app page + landing page)
     if (out.indexOf('prospects-wording.js') === -1 && out.lastIndexOf('</body>') !== -1) {
       const at = out.lastIndexOf('</body>');
