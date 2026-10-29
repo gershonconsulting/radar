@@ -29,7 +29,8 @@
 //    with an ON switch). Only on the app page (has id="sourcesBody"), once.
 //    v1.18.1 (2026-10-28): suggestions are real OFF rows too (hub v24). v1.18.2: ON items can be switched OFF.
 //    v1.18.3: company / person names are clickable LinkedIn links (panel, Sources list, Bridges page).
-const LATEST_EXT = '1.17.0';
+// 2026-10-29: 1.17.1 = ICP intensity (focus bridges first + up to 40 pages). Needs hub v25 for the verdicts.
+const LATEST_EXT = '1.17.1';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
 const APP_VERSION = '1.18.3';
