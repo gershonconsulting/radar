@@ -1,4 +1,5 @@
 // app/bridge-icp.js - Radar app v1.19.0 (2026-10-29)
+// + source company of each bridge, and a 'best source companies' table (Olivier 2026-10-29).
 // "Which bridges bring your ICP" panel on the Bridges page + a verdict badge on each bridge row.
 // Olivier 2026-10-28/29: Radar must learn which bridges bring ICP prospects and push those harder;
 // the report is PER USER - each account sees only its own bridges (owner from the session, server-side).
@@ -15,6 +16,7 @@
   };
   function e(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function n(s){ return String(s||'').replace(/\s+was last active.*$/i,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
+  function src(r){ var x = String(r.source||''); return x==='Manual' ? 'Added by hand' : (x || 'Unknown source'); }
   function pct(r){ return r.scorable ? Math.round(100*r.icp/r.scorable)+'%' : '\u2014'; }
 
   var css = document.createElement('style');
@@ -55,20 +57,24 @@
     var slow = rows.filter(function(r){ return r.verdict==='slow'; });
     var cant = rows.filter(function(r){ return r.verdict==='cant_judge' && r.prospects>=20; });
     var todo = [];
-    if (foc.length) todo.push('<b>High intensity:</b> '+foc.slice(0,6).map(function(r){ return e(r.bridge)+' ('+r.icp+' ICP)'; }).join(', ')+' - their networks match your ICP best.');
+    if (foc.length) todo.push('<b>High intensity:</b> '+foc.slice(0,6).map(function(r){ return e(r.bridge)+' \u00b7 '+e(src(r))+' ('+r.icp+' ICP)'; }).join(', ')+' - their networks match your ICP best.');
     else todo.push('<b>No bridge has proven itself yet</b> - a bridge needs 10+ prospects with a job title and a 60%+ hit rate.');
-    if (slow.length) todo.push('<b>Slow down:</b> '+slow.map(function(r){ return e(r.bridge)+' ('+r.icp+' of '+r.scorable+')'; }).join(', ')+' - their connections rarely match your ICP.');
+    if (slow.length) todo.push('<b>Slow down:</b> '+slow.map(function(r){ return e(r.bridge)+' \u00b7 '+e(src(r))+' ('+r.icp+' of '+r.scorable+')'; }).join(', ')+' - their connections rarely match your ICP.');
     if (cant.length) todo.push('<b>'+cant.length+' bridge(s) not judged yet</b> - most of their older prospects have no job title. New collections always include it, so they will get a verdict soon.');
+    var agg = {}; rows.forEach(function(r){ var k = src(r); var a = agg[k] || (agg[k] = {n:0,p:0,s:0,i:0}); a.n++; a.p += +r.prospects||0; a.s += +r.scorable||0; a.i += +r.icp||0; });
+    var srcRows = Object.keys(agg).map(function(k){ return [k, agg[k]]; }).sort(function(x,y){ return (y[1].i - x[1].i) || (y[1].p - x[1].p); }).slice(0, 8);
+    var srcTbl = '<h4 style="margin:12px 0 6px;font-size:.85rem;color:#1e293b">Your best source companies</h4><div class="icp-tw"><table><thead><tr><th>Source company</th><th class="r">Bridges</th><th class="r">Prospects</th><th class="r">ICP</th><th class="r">Hit rate</th></tr></thead><tbody>' +
+      srcRows.map(function(x){ var a = x[1]; return '<tr><td>'+e(x[0])+'</td><td class="r">'+a.n+'</td><td class="r">'+a.p+'</td><td class="r"><b>'+a.i+'</b></td><td class="r">'+(a.s?Math.round(100*a.i/a.s)+'%':'\u2014')+'</td></tr>'; }).join('') + '</tbody></table></div><h4 style="margin:12px 0 6px;font-size:.85rem;color:#1e293b">Your bridges</h4>';
     var shown = window.__icpAll ? rows : rows.slice(0, 15);
     var tr = shown.map(function(r){
       var v = V[r.verdict] || V.cant_judge;
-      return '<tr><td>'+e(String(r.bridge).replace(/\s+was last active.*$/i,''))+'</td><td class="r">'+r.prospects+'</td><td class="r">'+r.scorable+'</td><td class="r"><b>'+r.icp+'</b></td><td class="r">'+pct(r)+'</td><td><span class="icp-b '+v[0]+'">'+v[1]+'</span></td></tr>';
+      return '<tr><td>'+e(String(r.bridge).replace(/\s+was last active.*$/i,''))+'</td><td>'+e(src(r))+'</td><td class="r">'+r.prospects+'</td><td class="r">'+r.scorable+'</td><td class="r"><b>'+r.icp+'</b></td><td class="r">'+pct(r)+'</td><td><span class="icp-b '+v[0]+'">'+v[1]+'</span></td></tr>';
     }).join('');
     return head +
       '<div class="icp-kpis"><div><b>'+(t.prospects||0).toLocaleString()+'</b>prospects</div><div><b>'+(t.scorable||0).toLocaleString()+'</b>with a job title</div>'+
       '<div><b>'+(t.icp||0).toLocaleString()+'</b>match your ICP</div><div><b>'+(t.scorable?Math.round(100*t.icp/t.scorable):0)+'%</b>hit rate</div></div>'+
-      '<ul class="icp-todo">'+todo.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ul>'+
-      '<div class="icp-tw"><table><thead><tr><th>Bridge</th><th class="r">Prospects</th><th class="r">With title</th><th class="r">ICP</th><th class="r">Hit rate</th><th>Verdict</th></tr></thead><tbody>'+tr+'</tbody></table></div>'+
+      '<ul class="icp-todo">'+todo.map(function(x){ return '<li>'+x+'</li>'; }).join('')+'</ul>'+srcTbl+
+      '<div class="icp-tw"><table><thead><tr><th>Bridge</th><th>Source company</th><th class="r">Prospects</th><th class="r">With title</th><th class="r">ICP</th><th class="r">Hit rate</th><th>Verdict</th></tr></thead><tbody>'+tr+'</tbody></table></div>'+
       (rows.length>15 ? '<button class="icp-more" id="icpMore">'+(window.__icpAll?'Show top 15':'Show all '+rows.length+' bridges')+'</button>' : '')+
       '<p class="muted">Focus = 60%+ hit rate with 10+ ICP prospects \u00b7 Slow down = under 30% \u00b7 Not enough data yet = fewer than 10 prospects with a job title.</p>';
   }

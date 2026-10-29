@@ -4,7 +4,7 @@
 // The owner comes ONLY from the verified LinkedIn session cookie (radar_session), never from the URL,
 // so one client can never read another client's ranking.
 //
-// GET /api/bridge-icp -> { success, icp, totals:{prospects,scorable,icp}, bridges:[{bridge,prospects,scorable,
+// GET /api/bridge-icp -> { success, icp, totals:{prospects,scorable,icp}, bridges:[{bridge,source,prospects,scorable,
 //                          icp,grade_a,hit_pct,verdict,last_collected}] }
 // Data: Supabase view bridge_icp_stats (fed by the targets ICP-score trigger) + table icp_rules.
 // verdict: focus (60%+ hit rate and 10+ ICP) | normal | slow (<30%) | cant_judge (<10 prospects with a title)
@@ -48,7 +48,7 @@ export async function onRequest({ request, env }) {
   if (!owner) return json({ success: false, error: 'not signed in' }, 401);
   try {
     const [rows, rule] = await Promise.all([
-      sb(env, `bridge_icp_stats?owner_key=eq.${enc(owner)}&select=bridge,prospects,scorable,icp,grade_a,hit_pct,verdict,last_collected&order=icp.desc,prospects.desc`),
+      sb(env, `bridge_icp_stats?owner_key=eq.${enc(owner)}&select=bridge,source,prospects,scorable,icp,grade_a,hit_pct,verdict,last_collected&order=icp.desc,prospects.desc`),
       sb(env, `icp_rules?owner_key=eq.${enc(owner)}&select=note`)
     ]);
     const totals = { prospects: 0, scorable: 0, icp: 0 };
