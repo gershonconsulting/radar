@@ -32,7 +32,7 @@
 const LATEST_EXT = '1.17.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
-const APP_VERSION = '1.18.3';
+const APP_VERSION = '1.18.6';
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
 const SUGGESTIONS_SRC = '/suggestions.js?v=' + APP_VERSION;
