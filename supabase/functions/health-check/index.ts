@@ -11,11 +11,12 @@
 // 2026-10-22 (repo copy of deployed v3): sender display name "Radar" -> "GC Radar Report"
 // (Olivier's GC-prefix rule). Address, reply-to, recipients and subject unchanged.
 // 2026-10-27: house style - white header with red #CC3333 title/rule instead of white-on-red; 680px; links #1f6f5c.
+// 2026-10-28: sender display name "GC Radar Report" -> "GC Radar" (GC-prefix rule, same as daily-report v8).
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 const GLOBAL_OWNER_KEY = 'xTVW0K1qKi';
-const FROM = 'GC Radar Report <radar@gershon.ai>';
+const FROM = 'GC Radar <radar@gershon.ai>';
 const STALE_HOURS = 36;      // no capture in this many hours (with bridges present) => alert
 const REALERT_HOURS = 20;    // don't re-alert the same owner more often than this
 const CORS = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'authorization,apikey,content-type' };
