@@ -1,4 +1,4 @@
-// Radar — daily-report edge function (v7)
+// Radar — daily-report edge function (v8)
 // ONE email per day, per user, describing YESTERDAY (America/New_York day).
 // Triggered by pg_cron: POST { secret } (or GET ?secret=). verify_jwt=false.
 // Optional overrides for testing: ?date=YYYY-MM-DD (the ET day to report on), ?to=email, ?dry=1
@@ -10,7 +10,20 @@
 // (Olivier's GC-prefix rule, see FROM below). Address, reply-to, recipients and subject unchanged.
 // 2026-10-27: house style for report emails - white header (dark #12211d text, Gershon red #CC3333
 // accent rule) instead of white-on-navy; white page, max-width 680px; links/button #1f6f5c, no light-on-dark.
+//
+// v8 (2026-10-28) — three fixes after the 2026-10-26 email:
+//  1. "+1259 vs the day before" compared against a day that did NOT run (0 prospects). The
+//     comparison now looks back (up to 7 ET days, same radar_daily_stats RPC, read-only) for the
+//     last day that actually ran and says so: "+1259 since Fri 10-23 — 2 days without a run". If
+//     nothing ran in the 7 days before, it compares against the 7-day average instead.
+//     (new_targets_prev from the RPC is no longer used for this - see supabase/HANDOFF.txt.)
+//  2. browsersVerdict said "v1.15.0 ... collected nothing" while the "Browsers that ran" table
+//     printed 258 saved for v1.15.0. It assumed every old-build browser collects nothing and
+//     credited the day to the current build. It now reads each browser's own `saved` - the
+//     number the table prints - so the banner and the table always agree.
+//  3. Sender display name "GC Radar Report" -> "GC Radar" (GC-prefix rule for Gershon internal reports).
 
+const REPORT_VERSION = 'v8';
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
@@ -19,7 +32,7 @@ const TZ = 'America/New_York';
 const APP_URL = 'https://radar.gershoncrm.com/app.html';
 const FALLBACK_LATEST_EXT = '1.7.3';
 const SENT_KEY = 'daily_report_sent_for';
-const FROM = 'GC Radar Report <radar@gershon.ai>';
+const FROM = 'GC Radar <radar@gershon.ai>';
 
 // v5 (2026-08-28) — the report blended several browsers into one verdict.
 // Under a single owner_key, one Chrome on ext v1.9.1 collects at 02:30-04:10 ET while other,
@@ -76,6 +89,16 @@ function shortDate(ymd: string): string {
   return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric' })
     .format(new Date(Date.UTC(y, m - 1, d, 12)));
 }
+// The ET day before `ymd`.
+function prevYmd(ymd: string): string {
+  return etYmd(new Date(etMidnightUtc(ymd).getTime() - 12 * 3600 * 1000));
+}
+// "Fri 10-23"
+function dayLabel(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const wd = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'short' }).format(new Date(Date.UTC(y, m - 1, d, 12)));
+  return `${wd} ${ymd.slice(5)}`;
+}
 function agoText(iso: string | null): string {
   if (!iso) return 'never';
   const h = (Date.now() - new Date(iso).getTime()) / 3600000;
@@ -102,6 +125,31 @@ async function stats(ownerKey: string, start: Date, end: Date): Promise<any> {
   const rows = await sb('rpc/radar_daily_stats', { method: 'POST', body: { p_owner: ownerKey, p_start: start.toISOString(), p_end: end.toISOString() } });
   return rows || {};
 }
+// v8: what "New prospects" is compared against. The day before only counts if Radar actually
+// ran that day (a run was recorded, or prospects landed). Otherwise walk back to the last day
+// that ran; after LOOKBACK_DAYS with no run, fall back to the 7-day average.
+const LOOKBACK_DAYS = 7;
+type PrevRef = { ymd: string; n: number; gap: number } | null;   // gap = days without a run in between
+function dayRan(ps: any): boolean {
+  return (+ps?.runs || 0) > 0 || (+ps?.new_targets || 0) > 0;
+}
+async function lastRunDay(ownerKey: string, dayYmd: string, statsFn = stats): Promise<PrevRef> {
+  let ymd = dayYmd;
+  for (let i = 0; i < LOOKBACK_DAYS; i++) {
+    const p = prevYmd(ymd);
+    const ps = await statsFn(ownerKey, etMidnightUtc(p), etMidnightUtc(ymd));
+    if (dayRan(ps)) return { ymd: p, n: +ps.new_targets || 0, gap: i };
+    ymd = p;
+  }
+  return null;
+}
+// Returns the card's sub-line for "New prospects".
+function prevDeltaHtml(cur: number, ref: PrevRef, avg7: number): string {
+  if (!ref) return delta(cur, avg7, `7-day avg (no run in the ${LOOKBACK_DAYS} days before)`);
+  if (ref.gap === 0) return delta(cur, ref.n, 'the day before');
+  return delta(cur, ref.n, `${dayLabel(ref.ymd)} — ${ref.gap} day${ref.gap === 1 ? '' : 's'} without a run`, 'since');
+}
+
 async function configMap(ownerKey: string): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   try {
@@ -217,8 +265,11 @@ type VerRow = { version: string; runs: number; found: number; saved: number; lis
 function browsersVerdict(s: any, latest: string): Verdict | null {
   const rows: VerRow[] = Array.isArray(s.by_version) ? s.by_version : [];
   if (rows.length < 2) return null;
-  const stale = rows.filter(r => r.version === 'unreported' || cmpVer(r.version, latest) < 0);
-  const good = rows.filter(r => r.version !== 'unreported' && cmpVer(r.version, latest) >= 0);
+  const isStale = (r: VerRow) => r.version === 'unreported' || cmpVer(r.version, latest) < 0;
+  const stale = rows.filter(isStale);
+  const good = rows.filter(r => !isStale(r));
+  const vl = (r: VerRow) => `v${r.version === 'unreported' ? '?' : r.version}`;
+  const savedOf = (r: VerRow) => +r.saved || 0;
   // v6 (2026-08-28, Olivier's call): only ONE browser has to work. Other Chromes are knowingly
   // left on old builds and will not be fixed, so shouting about them daily would train the reader
   // to ignore a red banner - the exact habit that let a real outage hide for days. Red is reserved
@@ -229,25 +280,56 @@ function browsersVerdict(s: any, latest: string): Verdict | null {
   // 2026-08-28 v1.9.1 showed 8 runs, run_done 0, saved 0 while 1133 targets actually landed. So do
   // NOT gate on r.saved alone: if a current build ran at all and the day produced prospects, it
   // was that browser (the stale ones demonstrably collect nothing).
-  const dayProduced = (+s.new_targets || 0) > 0 || (+s.best_saved || 0) > 0;
-  const workingCurrent = good.filter(r => (+r.saved || 0) > 0);
-  const currentIsWorking = workingCurrent.length > 0 || (good.length > 0 && dayProduced);
+  //
+  // v8: ...except when they do. On 2026-10-26 the v1.15.0 browser saved 258 (printed in the
+  // "Browsers that ran" table) while this banner said it "collected nothing" and credited the day
+  // to the current build. Every per-browser statement below now comes from that browser's own
+  // `saved` - the same number the table prints. The dayProduced heuristic is only used when NO
+  // browser reported a saved count.
   if (!stale.length) {
     return { level: 'ok', title: `${rows.length} browsers collecting, all on v${latest}`, body: rows.map(r => `v${r.version}: ${r.runs} run(s), ${r.saved} saved`).join(' · ') };
   }
-  const deadWeight = stale.reduce((n, r) => n + (+r.errors || 0), 0);
-  if (currentIsWorking) {
-    const w = workingCurrent[0] || good[0];
-    const did = (+w.saved || 0) > 0
-      ? `saved ${w.saved} record(s)`
-      : `brought in the day's ${s.new_targets} new prospect(s)`;
+  const dayProduced = (+s.new_targets || 0) > 0 || (+s.best_saved || 0) > 0;
+  const collecting = rows.filter(r => savedOf(r) > 0).sort((a, b) => savedOf(b) - savedOf(a));
+  const staleIdle = stale.filter(r => savedOf(r) === 0);
+  const idleErrors = staleIdle.reduce((n, r) => n + (+r.errors || 0), 0);
+  const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const idleLine = staleIdle.length
+    ? ` ${staleIdle.map(vl).join(', ')} ${staleIdle.length === 1 ? 'is' : 'are'} on an old build and saved 0${idleErrors ? `; ${idleErrors} of the log lines below come from ${staleIdle.length === 1 ? 'it' : 'them'}, not from your working setup` : ''}.`
+    : '';
+
+  if (collecting.length) {
+    const w = collecting[0];
+    const others = collecting.slice(1).map(r => `${vl(r)}${isStale(r) ? ' (old build)' : ''} also saved ${r.saved}`);
+    const othersLine = others.length ? ` ${others.join('; ')}.` : '';
+    if (!isStale(w)) {
+      // A current build did the most work.
+      return {
+        level: 'ok',
+        title: `Collecting on ${vl(w)} — ${plural(stale.length, 'other browser')} on old builds`,
+        body: `${vl(w)} saved ${w.saved} record(s) yesterday.${othersLine}${idleLine} Left alone deliberately — nothing to do here.`,
+      };
+    }
+    // The browser doing the work is itself on an old build: still collecting, so not red.
+    const curIdle = good.filter(r => savedOf(r) === 0);
     return {
-      level: 'ok',
-      title: `Collecting on v${w.version} — ${stale.length} other browser${stale.length === 1 ? '' : 's'} not in use`,
-      body: `v${w.version} ${did} yesterday. ${stale.length} other browser${stale.length === 1 ? '' : 's'} (${stale.map(r => `v${r.version === 'unreported' ? '?' : r.version}`).join(', ')}) still run the extension on old builds and collected nothing; ${deadWeight} of the log lines below come from them, not from your working setup. Left alone deliberately — nothing to do here.`,
+      level: 'warn',
+      title: `Collecting on old build ${vl(w)} — v${latest} available`,
+      body: `${vl(w)} saved ${w.saved} record(s) yesterday, so collection works, but on an old build.${othersLine}${curIdle.length ? ` ${curIdle.map(vl).join(', ')} ran too and saved 0.` : ''}${idleLine} Update the collecting browser from the Extension page in Radar, then reload it at chrome://extensions.`,
     };
   }
-  const staleDesc = stale.map(r => `v${r.version === 'unreported' ? '?' : r.version} (${r.runs} run(s), ${r.saved} saved, ${r.errors} error(s))`).join(', ');
+
+  // No browser reported a saved count (run:done can lag - see v7 above).
+  if (good.length && dayProduced) {
+    const w = good[0];
+    return {
+      level: 'ok',
+      title: `Collecting on ${vl(w)} — ${plural(stale.length, 'other browser')} on old builds`,
+      body: `${vl(w)} brought in the day's ${s.new_targets} new prospect(s) yesterday (no browser has reported its saved count yet).${idleLine} Left alone deliberately — nothing to do here.`,
+    };
+  }
+  const deadWeight = stale.reduce((n, r) => n + (+r.errors || 0), 0);
+  const staleDesc = stale.map(r => `${vl(r)} (${r.runs} run(s), ${r.saved} saved, ${r.errors} error(s))`).join(', ');
   return {
     level: 'critical',
     title: `${stale.length} outdated browser${stale.length === 1 ? '' : 's'} still running Radar`,
@@ -273,11 +355,11 @@ function banner(v: Verdict, big = false): string {
     </td></tr></table>`;
 }
 
-function delta(cur: number, ref: number, refLabel: string): string {
+function delta(cur: number, ref: number, refLabel: string, joiner = 'vs'): string {
   const round = Math.round((cur - ref) * 10) / 10;
   if (Math.abs(round) < 0.05) return `<span style="color:#94a3b8;">&#8212; same as ${esc(refLabel)}</span>`;
   const up = round > 0;
-  return `<span style="color:${up ? '#16a34a' : '#dc2626'};font-weight:600;">${up ? '&#9650; +' : '&#9660; '}${round}</span> <span style="color:#94a3b8;">vs ${esc(refLabel)}</span>`;
+  return `<span style="color:${up ? '#16a34a' : '#dc2626'};font-weight:600;">${up ? '&#9650; +' : '&#9660; '}${round}</span> <span style="color:#94a3b8;">${esc(joiner)} ${esc(refLabel)}</span>`;
 }
 
 function card(label: string, value: string | number, sub: string): string {
@@ -297,9 +379,8 @@ function sectionTitle(t: string): string {
   return `<div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin:22px 0 8px;font-weight:700;">${esc(t)}</div>`;
 }
 
-function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verdict, browsers: Verdict | null): string {
+function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verdict, browsers: Verdict | null, prevRef: PrevRef = null): string {
   const newTargets = +s.new_targets || 0;
-  const prev = +s.new_targets_prev || 0;
   const avg7 = +s.avg7 || 0;
   const byBridge: Array<{ bridge: string; n: number }> = Array.isArray(s.by_bridge) ? s.by_bridge : [];
   const problems: string[] = Array.isArray(s.problems) ? s.problems : [];
@@ -333,7 +414,7 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
 
     ${sectionTitle('Progress yesterday')}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      ${card('New prospects', newTargets, delta(newTargets, prev, 'the day before'))}
+      ${card('New prospects', newTargets, prevDeltaHtml(newTargets, prevRef, avg7))}
       ${card('7-day average', avg7, delta(newTargets, avg7, '7-day avg'))}
       ${card('Total collected', s.total_targets ?? 0, `<span style=\"color:#94a3b8;\">all time</span>`)}
     </tr></table>
@@ -374,7 +455,7 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
     </div>
   </td></tr>
   <tr><td style="padding:16px 24px 22px;border-top:1px solid #e2e8f0;">
-    <div style="font-size:12px;color:#94a3b8;line-height:1.6;">Generated by Radar &#8212; radar.gershoncrm.com. Covers ${esc(longDate(dayYmd))}, midnight to midnight, New York time.<br/>Reply to <a href="mailto:support@gershonconsulting.com" style="color:#1f6f5c;text-decoration:underline;">support@gershonconsulting.com</a>.</div>
+    <div style="font-size:12px;color:#94a3b8;line-height:1.6;">Generated by Radar (daily-report ${REPORT_VERSION}) &#8212; radar.gershoncrm.com. Covers ${esc(longDate(dayYmd))}, midnight to midnight, New York time.<br/>Reply to <a href="mailto:support@gershonconsulting.com" style="color:#1f6f5c;text-decoration:underline;">support@gershonconsulting.com</a>.</div>
   </td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -432,7 +513,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const job = jobVerdict(s);
       const ext = extVerdict(s, latestExt);
       const browsers = browsersVerdict(s, latestExt);
-      const html = buildHtml(r.display_name || '', s, dayYmd, job, ext, browsers);
+      let prevRef: PrevRef = null;
+      try { prevRef = await lastRunDay(r.owner_key, dayYmd); } catch (_e) { prevRef = null; /* falls back to the 7-day average */ }
+      const html = buildHtml(r.display_name || '', s, dayYmd, job, ext, browsers, prevRef);
 
       const tag = (browsers && browsers.level === 'critical' && job.level !== 'critical')
         ? ' — ⚠️ OUTDATED BROWSER'
