@@ -1,4 +1,4 @@
-/* prospects-wording.js - Radar app v1.16.0 (nightly 2026-10-22)
+/* prospects-wording.js - Radar app v1.18.4 (nightly 2026-10-29; first written for v1.16.0, PR #5)
  * Olivier's vocabulary (2026-10-09): SOURCES > BRIDGES > PROSPECTS. The word "Targets" is renamed
  * "Prospects" everywhere it is shown (menu, headings, tiles, buttons, tooltips, placeholders,
  * empty states, charts' labels), without re-uploading the 260 KB app.html: the page is re-worded
@@ -6,6 +6,8 @@
  * NOT touched: ids, classes, view names, API fields, stored data, and the prospect rows themselves
  * (a company really called "Target" stays "Target"). "Daily lead target" (a goal, not a stage) keeps
  * its wording. Once app.html itself says "Prospects", this script finds nothing and does nothing.
+ * v1.18.4: also leaves alone the company / person names of the Sources list and the Suggested by
+ * Gershon panel (.src-nm, a.sug-nm, LinkedIn links) - they are data, like the prospect rows.
  */
 (function () {
   'use strict';
@@ -39,6 +41,9 @@
       // Prospect rows are data (names, titles, companies) - leave them exactly as collected.
       if (e.tagName === 'TR' && e.parentNode && e.parentNode.id === 'targetsBody' && !e.querySelector('td.empty')) return true;
       if (e.hasAttribute && e.hasAttribute('data-keep-wording')) return true;
+      // Company / person names (Sources list, Suggested panel, Bridges page links) are data too.
+      if (e.classList && (e.classList.contains('src-nm') || e.classList.contains('sug-nm'))) return true;
+      if (e.tagName === 'A' && /linkedin\.com\//i.test(e.getAttribute('href') || '')) return true;
     }
     return false;
   }

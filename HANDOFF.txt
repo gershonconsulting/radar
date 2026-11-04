@@ -1,7 +1,7 @@
 ================================================================
 HANDOFF.txt  -  radar
 Written by: Claude (Anthropic) - token-limit handoff protocol
-Date: 2026-09-09 (updated 2026-10-23)
+Date: 2026-09-09
 ================================================================
 
 0. WHO YOU ARE READING THIS
@@ -37,10 +37,8 @@ Users     : Gershon Consulting prospecting
 ----------------------------------------------------------------
 Front end     : static index.html + app/ 
 Back end      : functions/ (Cloudflare Pages Functions)
-Extension     : salesnav-radar-extension/ (source, v1.17.1 since the
-                2026-10-23 extension branch). Builds are served from the
-                Supabase public bucket radar-releases via functions/_middleware.js
-                (LATEST_EXT). Old zips in app/ (newest v1.14.0) and at root (v1.6.8).
+Extension     : salesnav-radar-extension/ (source). Zips at root:
+                radar-extension.zip and radar-extension-v1.6.8.zip
 Also in tree  : google-apps-script/ - check what still depends on it
 Docs already here: ARIEL-HANDOFF.md and HEALTH-CHECK-ALERTS.md.
                 READ BOTH before this file's sections 3-8.
@@ -48,86 +46,16 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
-- 2026-10-23 nightly (branch nightly/2026-10-23-radar-extension, extension v1.17.1)
-  Stacked on PR #7. Merge order: #2 -> #5 -> #7 -> this.
-  ✅ Repo extension source caught up. salesnav-radar-extension/ held the
-     v1.11.0 source, but v1.15.0 (2026-09-23), v1.16.0 (2026-10-09) and
-     v1.17.0 (2026-10-14) had been built and put in the radar-releases
-     bucket without the source being committed. The folder is now the
-     v1.17.0 release source (from radar-extension-v1.17.0.zip, incl. the
-     new capture.js) plus the changes below. Version is 1.17.1, NOT 1.16.0:
-     a different extension v1.16.0 already exists in the bucket.
-  ✅ Notifications say "prospects" ("New prospects", "Sync complete -
-     N new prospects saved"). Internal names (targetsEveryHours,
-     setTargetUrls, saveTargetsToSalesNavList, hub fields) unchanged.
-  ✅ Popup red #FE1B04 -> #CC3333 (hover #d11200 -> #a8281f; "View log" link
-     blue -> red). Rendered at 360px: no overflow, no errors (chrome API stubbed).
-  ✅ Help page (app/extension.html, /extension): download link was the
-     ancient v1.5.3 zip -> now /radar-extension-v1.15.0.zip, the same build
-     the app offers (LATEST_EXT='1.15.0'; served from the bucket by the
-     middleware). Newest zip committed in the repo is only v1.14.0. Install
-     step now says "Sync Now" (the real popup button).
-  ❌ v1.17.1 zip not built/uploaded (binary files cannot be pushed from the
-     nightly tool; nothing was published). For Ariel, after merge:
-       1. Copy salesnav-radar-extension/ to a folder radar-extension/ and add
-          the icons/ folder (icon16/48/128.png) - icons are NOT in the repo;
-          take them from radar-extension-v1.17.0.zip in the bucket.
-       2. Zip the folder CONTENTS (manifest.json at the zip root) as
-          radar-extension-v1.17.1.zip and upload it to the radar-releases
-          bucket (or commit it to app/).
-       3. Set LATEST_EXT = '1.17.1' in functions/_middleware.js and change the
-          help page link in app/extension.html to radar-extension-v1.17.1.zip.
-  ❌ Decision for Olivier: v1.16.0 and v1.17.0 sit in the bucket but the app
-     still offers v1.15.0 (LATEST_EXT never raised). Shipping v1.17.1 also
-     ships those two (per-account ICP search, source priority order).
-
-- 2026-10-23 nightly (branch nightly/2026-10-23-radar-wording, app v1.16.1)
-  Stacked on PR #5 (which is stacked on PR #2). Merge order: #2 -> #5 -> this.
-  ✅ Landing page fixed AT THE SOURCE (so link previews / view-source are
-     right too, not only the browser): og:description "Source -> Bridge ->
-     Prospect", stage "3 · Prospects", stat "Source→Bridge→Prospect", cards
-     "Collect graded prospects" / "selected prospects", step 2 "bridges and
-     prospects". Old blue/indigo tokens (#3b5bfd, #6366f1, #22d3ee) -> red.
-  ✅ Visible version on the landing page footer: "Radar v1.16.1"
-     (id="siteVer", stamped by the middleware like the app sidebar).
-  ✅ Admin + extension help pages: indigo brand -> #CC3333; admin column
-     "Targets" -> "Prospects". sources-list.js: #FE1B04 -> #CC3333 and its
-     tooltips/headers say Prospects. Web manifest + app theme-color -> #CC3333.
-  ✅ Middleware item 6 (APP_RED): last #6366f1 literals in app.html (brand
-     tokens, sign-in logo/subtitle, avatar, first per-source colour -> slate)
-     rewritten when served. app.html (270 KB) still not re-uploaded.
-  ✅ Checked on the branch preview nightly-2026-10-23-radar-wor.gershon-
-     radar.pages.dev with Playwright, desktop 1366 + phone 390: og tag says
-     Prospect, cards right, footer v1.16.1, zero #6366f1/#FE1B04 in / and
-     /app source, no sideways scroll, no page errors (only the expected 401
-     from /api/me when signed out). Signed-in screens not seen (needs login).
-  ❌ Chrome extension (v1.15.0, in Supabase storage): desktop notifications
-     still say "New targets" and the popup still uses #FE1B04. Needs a v1.15.1
-     extension build + upload - not done unattended. The extension source
-     in salesnav-radar-extension/ is v1.11.0 (older than the live 1.15.0).
-     -> Source fixed on nightly/2026-10-23-radar-extension (v1.17.1, see above).
-  ❌ "Daily lead target" intentionally kept (a goal). Prospect data untouched.
-  ❌ app/extension.html (old alpha install page) still links the v1.5.3 zip -
-     not changed tonight (wording/colour only).
-     -> Fixed on nightly/2026-10-23-radar-extension (now links v1.15.0).
-- 2026-10-22 nightly (branch nightly/2026-10-22-prospects-wording, app v1.16.0)
-  Olivier's vocabulary (2026-10-09): SOURCES > BRIDGES > PROSPECTS.
-  ✅ Every visible "Targets"/"Target" now reads "Prospects"/"Prospect":
-     menu, headings, tiles, tooltips, placeholders, empty states, landing
-     page, and the chart legends. New app/prospects-wording.js (loaded by
-     functions/_middleware.js item 5) re-words text in the browser and
-     anything rendered later; chart legends are swapped in the middleware
-     (CHART_WORDS). NOT touched: ids, classes, view names, API fields,
-     stored data, prospect rows (a company called "Target" stays), and
-     "Daily lead target" (a goal, not the stage).
-  ✅ Stacked on PR #2 (Targets filters), which was brought up to date with
-     main tonight, so the preview shows filters + unified design + wording.
-  ✅ Tested locally with Playwright (middleware run on the real app.html).
-  ❌ Merge: PR #2 first, then this PR (Olivier's call).
-  ❌ When app.html is next hand-edited: write "Prospects" in it directly
-     (the script then finds nothing), and fold in sources-list.js + theme.
-- 2026-10-21 Olivier merged PR #3 (Sources list) and PR #4 (unified design)
-  to main: v1.15.0 is LIVE.
+- 2026-11-04 nightly (branch nightly/2026-11-04-radar-prospects-combined, app v1.18.6)
+  Combines PRs #5, #7, #8 rebuilt on current main (they conflicted).
+  * #5 / #7 (Targets -> Prospects wording, colour leftovers): already on
+    main via PR #15 (v1.18.4 / v1.18.5) - nothing left to re-apply.
+  * #8 (extension v1.17.1 source): salesnav-radar-extension/ taken from
+    #8 as-is (main had not touched it since); help page app/extension.html
+    gets #8's wording and links the current released build v1.17.0.
+  ❌ v1.17.1 zip still not built/uploaded to radar-releases; when it is,
+     set LATEST_EXT = '1.17.1' in functions/_middleware.js and point
+     app/extension.html at radar-extension-v1.17.1.zip.
 
 - 2026-10-21 nightly (branch nightly/2026-10-21-unified-design, app v1.15.0)
   Unified Gershon design (decision 2026-10-13): Radar now looks like
@@ -143,7 +71,9 @@ Default branch: main
   ✅ Linked into /, /app etc. by functions/_middleware.js item 4 (no
      re-upload of app.html); sidebar stamp raised to v1.15.0.
   ✅ Tested locally with Playwright, desktop 1366 + phone 390.
-  ✅ Merged to main by Olivier 2026-10-21 (after the 2026-10-20 PR).
+     Ready to test on https://nightly-2026-10-21-unified-d.gershon-radar.pages.dev/app
+  ❌ Merge pending: stacked on the 2026-10-20 PR - merge that one first,
+     then this PR (it retargets to main).
   ✅ Charts red too (middleware item 4b rewrites the exact colour
      literals in the served app.html): Dashboard trend line + 'targets
      per bridge' bars, Home trend line + 'top bridges' bars. Growth
@@ -154,7 +84,6 @@ Default branch: main
 - 2026-10-20 nightly (branch nightly/2026-10-20-sources-priority, app v1.14.0)
   Olivier's 2026-10-14 ask: Sources carry a priority, shown as a LIST
   (not cards), NEWEST first, each with an effectiveness status.
-  ✅ Merged to main by Olivier 2026-10-21.
   ✅ Sources view is now a sortable table, newest first by added_date
      (click any header to re-sort; choice remembered per browser).
   ✅ Priority column High / Medium / Low, editable in the row; saves
@@ -168,11 +97,14 @@ Default branch: main
   ✅ Filters: search, priority, status. Find Bridges kept per row.
   ✅ Delivered as app/sources-list.js, injected into /app by
      functions/_middleware.js (same on-the-fly pattern as the ext
-     version bump) - app.html itself is unchanged.
+     version bump) - app.html itself is unchanged; the middleware also
+     stamps the sidebar version v1.14.0.
   ✅ v1.14.1: "Add a Source" form has a Priority picker (High / Medium /
      Low, default Medium), sent with addSource (hub v23 writes it on
      create). For a source that already exists the priority is only sent
      if the picker was changed, so a re-add never resets High to Medium.
+  ✅ Tested locally with Playwright (mocked hub) desktop + 390px phone.
+     Ready to test on https://nightly-2026-10-20-sources-p.gershon-radar.pages.dev/app
 - /api/health status contract added (2026-09-09): it reports
   last_sync, not just uptime - so 'up' can no longer mask a collector
   that stopped collecting.
@@ -192,25 +124,19 @@ Default branch: main
 
 4. PENDING  [TODO]
 ----------------------------------------------------------------
-- ❌ PR #2 Targets filters (updated with main 2026-10-22) - merge pending.
-- ❌ PR 'Nightly 2026-10-22: Targets renamed Prospects' (v1.16.0) - merge
-  after PR #2.
-- ❌ PR 'Nightly 2026-10-23: Radar wording + colour leftovers' (v1.16.1) -
-  merge after PR #5 (order #2 -> #5 -> 2026-10-23).
-- ❌ PR 'Nightly 2026-10-23: Chrome extension says Prospects + Gershon red'
-  (extension v1.17.1) - merge after PR #7 (order #2 -> #5 -> #7 -> this),
-  then Ariel builds + uploads the v1.17.1 zip (steps in section 3).
-- ❌ PR #1 (old Sources list attempt) is superseded by merged PR #3 -
-  close it.
-- ❌ Fold app/sources-list.js, unified-theme.css, the chart colours and
-  the Prospects wording into app.html the next time app.html is edited
-  by hand (each middleware rewrite then switches itself off). app.html
-  is ~266KB, over the ~250KB GitHub-API push limit, so this needs the
-  browser/web-editor route or Ariel.
-- Thresholds 15 / 5 per bridge per 30 days went live with PR #3 (merged
-  by Olivier 2026-10-21); change only if he asks.
-- Check ARIEL-HANDOFF.md, which predates this file and may carry live
-  items.
+- ❌ Unified design (v1.15.0) is on a PREVIEW branch only - live once
+  the PR 'Nightly 2026-10-21: Radar in the unified Gershon design' is
+  merged (after the 2026-10-20 PR).
+- ❌ Sources priority list (v1.14.1) is on a PREVIEW branch only - it
+  goes live once the PR 'Nightly 2026-10-20: Sources as priority list'
+  is merged to main (Olivier's call).
+- ❌ Fold app/sources-list.js into app.html the next time app.html is
+  edited (then the middleware injection switches itself off - it only
+  fires while the old `card-grid` Sources markup is still there).
+- ❌ Thresholds (15 / 5 per bridge per 30 days) are a first guess from
+  current data - Olivier to confirm or adjust.
+- Nothing recorded as open at handoff time. Check ARIEL-HANDOFF.md,
+  which predates this file and may carry live items.
 
 5. MISSING / NOT BUILT YET
 ----------------------------------------------------------------
@@ -223,7 +149,8 @@ Default branch: main
 7. NEXT ACTION - START HERE
 ----------------------------------------------------------------
   -> Read ARIEL-HANDOFF.md and HEALTH-CHECK-ALERTS.md, then ask
-     Olivier what he wants next. Radar is in good shape.
+     Olivier what he wants next. Radar is in good shape; the viewer-
+     mode and health-contract work both closed cleanly.
 
 8. GOTCHAS / HARD-WON LESSONS
 ----------------------------------------------------------------
@@ -236,12 +163,9 @@ Default branch: main
   viewer needs to know. Only the INSTRUCTION changes.
 - Before building anything extension-status related, grep for
   `_collecting` and 'viewing only' - it is already there.
-- Writes: the GitHub MCP connector writes branches/files up to ~250KB
-  (since 2026-10-21); workflow files are refused; plain git push from a
-  cloud session is proxy-refused. Every non-main branch gets a Pages
-  preview at <branch-slug-cut-at-28>.gershon-radar.pages.dev.
-- Previews use the PRODUCTION hub/data: changes made while testing are
-  real.
+- Writes to this repo go through the GitHub web UI in Chrome; `git
+  push` is proxy-refused and the API 403s on write. Verify every
+  commit by reading raw.githubusercontent.com.
 
 9. CONTACT / ESCALATION
 ----------------------------------------------------------------
