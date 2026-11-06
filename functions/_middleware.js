@@ -41,10 +41,12 @@
 //    and manifest; the literals inside app.html are rewritten when served (APP_RED).
 //    Stage colours (Sources green, Bridges orange, Prospects blue, Leads red) and grades are untouched.
 //    The landing footer version (id="siteVer") is stamped like the sidebar's.
+//    v1.18.6 (2026-11-04): PR #8 rebuilt on main - extension source v1.17.1 (not yet released:
+//    LATEST_EXT stays 1.17.0 until the 1.17.1 zip is in radar-releases), help page links 1.17.0.
 const LATEST_EXT = '1.17.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
-const APP_VERSION = '1.18.5';
+const APP_VERSION = '1.18.6';
 const WORDING_SRC = '/prospects-wording.js?v=' + APP_VERSION;
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
