@@ -22,8 +22,22 @@
 //     credited the day to the current build. It now reads each browser's own `saved` - the
 //     number the table prints - so the banner and the table always agree.
 //  3. Sender display name "GC Radar Report" -> "GC Radar" (GC-prefix rule for Gershon internal reports).
+//
+// v9 (2026-11-07) — three fixes after the 2026-11-05 email (stacked on #21, which makes
+// radar_daily_stats count "new" on targets.first_seen_at):
+//  a. "+633 new prospects" next to "wrote 603 records" - two numbers that look like the same thing.
+//     They are not: "New to Radar" = people first seen that day (the RPC's new_targets, one row per
+//     person); "Records written" = what the extension reported in its run:done lines, which includes
+//     people Radar already had AND is only reported by runs that finished. They now carry distinct
+//     labels everywhere (verdict, cards, pipeline table) and the verdict never says "N of them".
+//  b. Health: a green "did its job" next to 114 dead bridges and several HTTP 429s. Any dead bridge
+//     (active, never produced a prospect) or any HTTP 429/401 in the day's log turns the verdict amber
+//     and lists each issue with a cross.
+//  c. "DID NOT RUN" when only the primary account (xTVW0K1qKi) collected nothing while other owners
+//     collected (10-30, 11-04). The report now looks at every owner: DID NOT RUN only when NO owner
+//     collected; otherwise the silent owners are listed (with "did not run" / "ran, saved 0").
 
-const REPORT_VERSION = 'v8';
+const REPORT_VERSION = 'v9';
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
@@ -150,6 +164,71 @@ function prevDeltaHtml(cur: number, ref: PrevRef, avg7: number): string {
   return delta(cur, ref.n, `${dayLabel(ref.ymd)} — ${ref.gap} day${ref.gap === 1 ? '' : 's'} without a run`, 'since');
 }
 
+// v9 (c): every owner that collects. Candidates = extension clients seen in the last 14 days,
+// app users, and anyone who logged a run that day. An owner belongs to the fleet if it collected
+// that day or in the 7 days before (so test/abandoned installs are not reported as "silent").
+type OwnerDay = { owner_key: string; label: string; runs: number; newTargets: number; written: number; collected: boolean };
+function collectedOn(s: any): boolean {
+  return (+s?.new_targets || 0) > 0 || (+s?.best_saved || 0) > 0;
+}
+async function fleetDay(start: Date, end: Date, names: Record<string, string>, primary: string, primaryStats: any, statsFn = stats): Promise<OwnerDay[]> {
+  const keys = new Set<string>([primary]);
+  try {
+    const since = new Date(start.getTime() - 14 * 86400000).toISOString();
+    const gc: Array<{ owner_key: string }> = await sb(`gate_clients?select=owner_key&seen_at=gte.${enc(since)}`);
+    for (const r of gc) if (r.owner_key) keys.add(r.owner_key);
+  } catch (_e) { /* best-effort */ }
+  for (const k of Object.keys(names)) keys.add(k);
+  try {
+    const ran: Array<{ owner_key: string }> = await sb(`activity_log?select=owner_key&action=eq.sync_log&at=gte.${enc(start.toISOString())}&at=lt.${enc(end.toISOString())}`);
+    for (const r of ran) if (r.owner_key) keys.add(r.owner_key);
+  } catch (_e) { /* best-effort */ }
+  const out: OwnerDay[] = [];
+  for (const k of keys) {
+    let s: any;
+    try { s = k === primary ? primaryStats : await statsFn(k, start, end); } catch (_e) { continue; }
+    const n = +s.new_targets || 0;
+    const before = Math.round((+s.avg7 || 0) * 7) - n;          // first-seen in the 7 days before
+    const collected = collectedOn(s);
+    if (k !== primary && !collected && before <= 0) continue;    // never collects: not part of the fleet
+    out.push({ owner_key: k, label: names[k] || k, runs: +s.runs || 0, newTargets: n, written: +s.saved || 0, collected });
+  }
+  return out.sort((a, b) => (a.owner_key === primary ? -1 : b.owner_key === primary ? 1 : b.newTargets - a.newTargets || b.written - a.written));
+}
+function silentText(o: OwnerDay): string {
+  return `${o.label} (${o.runs === 0 ? 'did not run' : `ran ${o.runs}×, saved 0`})`;
+}
+
+// v9 (b): HTTP 429 (rate limited) / 401 (signed out) entries in the owner's log for the day.
+const HTTP_RE = { '429': /(status\W{0,4}|HTTP\s?)429\b/i, '401': /(status\W{0,4}|HTTP\s?)401\b/i };
+type HttpCounts = { c429: number; c401: number };
+function httpFromProblems(problems: string[]): HttpCounts {
+  return { c429: problems.filter(p => HTTP_RE['429'].test(p)).length, c401: problems.filter(p => HTTP_RE['401'].test(p)).length };
+}
+async function httpErrors(ownerKey: string, start: Date, end: Date, problems: string[]): Promise<HttpCounts> {
+  try {
+    const rows: Array<{ log: any[] }> = await sb(`activity_log?select=log:detail->log&owner_key=eq.${enc(ownerKey)}&action=eq.sync_log&at=gte.${enc(start.toISOString())}&at=lt.${enc(end.toISOString())}`);
+    const out = { c429: 0, c401: 0 };
+    for (const r of rows) for (const e of (Array.isArray(r.log) ? r.log : [])) {
+      if (e?.level !== 'error' && e?.level !== 'warn') continue;
+      const t = JSON.stringify(e);
+      if (HTTP_RE['429'].test(t)) out.c429++;
+      if (HTTP_RE['401'].test(t)) out.c401++;
+    }
+    return out;
+  } catch (_e) {
+    return httpFromProblems(problems);   // distinct log lines - a lower bound
+  }
+}
+function healthIssues(s: any, http: HttpCounts): string[] {
+  const out: string[] = [];
+  const dead = +s.bridges_never_scraped || 0;
+  if (dead > 0) out.push(`${dead} dead bridge${dead === 1 ? '' : 's'} — active but never produced a single prospect`);
+  if (http.c429 > 0) out.push(`HTTP 429 (rate limited by LinkedIn) logged ${http.c429}×`);
+  if (http.c401 > 0) out.push(`HTTP 401 (signed out / not authorised) logged ${http.c401}×`);
+  return out;
+}
+
 async function configMap(ownerKey: string): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   try {
@@ -205,7 +284,15 @@ async function loadRecipients(): Promise<Array<{ owner_key: string; email: strin
 /* ---------- verdicts ---------- */
 type Verdict = { level: 'critical' | 'warn' | 'ok'; title: string; body: string };
 
-function jobVerdict(s: any): Verdict {
+function jobVerdict(s: any, fleet: OwnerDay[] = [], issues: string[] = []): Verdict {
+  const v = jobVerdictBase(s, fleet);
+  // v9 (b): never green while there are dead bridges or 429/401s in the log.
+  if (v.level === 'ok' && issues.length) {
+    return { level: 'warn', title: v.title.replace('Radar did its job', 'Radar collected, but needs attention'), body: `${v.body} ${issues.map(i => `❌ ${i}.`).join(' ')}` };
+  }
+  return v;
+}
+function jobVerdictBase(s: any, fleet: OwnerDay[]): Verdict {
   // Judge the day on the BEST run, not the sum. A second, dead browser reporting 0/0 must never
   // turn a day the real browser worked into "COLLECTION FAILED".
   const runs = +s.runs || 0, done = +s.run_done || 0;
@@ -220,7 +307,20 @@ function jobVerdict(s: any): Verdict {
   const someoneCollected = (+s.best_saved || 0) > 0 || (+s.new_targets || 0) > 0;
 
   if (runs === 0) {
-    return { level: 'critical', title: 'Radar did NOT run yesterday', body: `No collection run was recorded at all. The Chrome extension is the only scheduler — this means Chrome was never opened, the extension is disabled or needs reloading, or it crashed before it could report in. Last run seen: ${agoText(s.last_run_at)}.` };
+    // v9 (c): only "did not run" when NO owner collected. Other owners collecting means Radar ran;
+    // this account's browser was the one that stayed silent.
+    const others = fleet.filter(o => o.collected);
+    if (others.length) {
+      const n = others.reduce((a, o) => a + o.newTargets, 0);
+      const w = others.reduce((a, o) => a + o.written, 0);
+      const silent = fleet.filter(o => !o.collected);
+      return {
+        level: 'warn',
+        title: `This account did not run yesterday — ${others.length} other account${others.length === 1 ? '' : 's'} collected`,
+        body: `Radar itself worked: ${others.map(o => o.label).join(', ')} brought in ${n} new prospect${n === 1 ? '' : 's'} (${w} record(s) written). Silent yesterday: ${silent.map(silentText).join(', ')}. For this account, open Chrome with the Radar extension; last run seen ${agoText(s.last_run_at)}.`,
+      };
+    }
+    return { level: 'critical', title: 'Radar did NOT run yesterday', body: `No account collected anything and no collection run was recorded here. The Chrome extension is the only scheduler — this means Chrome was never opened, the extension is disabled or needs reloading, or it crashed before it could report in. Last run seen: ${agoText(s.last_run_at)}.` };
   }
   if (done === 0 && !someoneCollected) {
     return { level: 'critical', title: 'The daily run started but never finished', body: `${runs} run(s) began yesterday and none reached completion. The run is dying mid-way — check the extension log for the last step it reached.` };
@@ -235,12 +335,14 @@ function jobVerdict(s: any): Verdict {
     return { level: 'warn', title: 'Radar ran cleanly but found nothing new', body: 'No errors — the bridges scraped yesterday simply returned no new people. Normal if those bridges were already harvested; worth a look if it repeats several days running.' };
   }
   if (newTargets === 0 && saved > 0) {
-    return { level: 'warn', title: 'Radar ran, but nobody new came out of it', body: `The extension saw ${found} profile(s) and wrote ${saved} record(s) — all of them people Radar already had. No net progress yesterday.` };
+    return { level: 'warn', title: 'Radar ran, but nobody new came out of it', body: `The extension wrote ${saved} record(s) — all of them people Radar already had. No one new to Radar yesterday.` };
   }
+  // v9 (a): "new to Radar" and "records written" are different counts and are stated side by side,
+  // never as "N of them" (a run that does not finish reports no written count, so new can exceed it).
   return {
     level: 'ok',
     title: `Radar did its job — ${newTargets} new prospect${newTargets === 1 ? '' : 's'}`,
-    body: `${runs} run(s)${saved > 0 ? `. The extension saw ${found} profile(s) and wrote ${saved} record(s); ${newTargets} of them were people Radar had never seen before` : ` produced ${newTargets} prospect(s) Radar had never seen before`}${listed > 0 ? `, and ${listed} were filed into your Sales Navigator list` : ''}.`,
+    body: `${newTargets} prospect${newTargets === 1 ? '' : 's'} new to Radar (first seen yesterday), from ${runs} run(s).${saved > 0 ? ` Separately, the extension reported ${saved} record(s) written in the ${done} run(s) that finished — that count includes people Radar already had.` : ''}${listed > 0 ? ` ${listed} were filed into your Sales Navigator list.` : ''}`,
   };
 }
 
@@ -379,14 +481,16 @@ function sectionTitle(t: string): string {
   return `<div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin:22px 0 8px;font-weight:700;">${esc(t)}</div>`;
 }
 
-function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verdict, browsers: Verdict | null, prevRef: PrevRef = null): string {
+function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verdict, browsers: Verdict | null, prevRef: PrevRef = null, fleet: OwnerDay[] = [], issues: string[] = [], primary = GLOBAL_OWNER_KEY): string {
   const newTargets = +s.new_targets || 0;
   const avg7 = +s.avg7 || 0;
   const byBridge: Array<{ bridge: string; n: number }> = Array.isArray(s.by_bridge) ? s.by_bridge : [];
   const problems: string[] = Array.isArray(s.problems) ? s.problems : [];
 
-  const attention: string[] = [];
-  if (+s.bridges_never_scraped > 0) attention.push(`${s.bridges_never_scraped} active bridge(s) have never produced a single prospect — their Sales Navigator search has never run successfully.`);
+  const attention: string[] = issues.map(i => `❌ ${i}.`);
+  const silent = fleet.filter(o => !o.collected);
+  if (silent.length && fleet.some(o => o.collected)) attention.push(`Silent yesterday: ${silent.map(silentText).join(', ')}.`);
+  if (+s.bridges_never_scraped > 0 && !issues.length) attention.push(`${s.bridges_never_scraped} active bridge(s) have never produced a single prospect — their Sales Navigator search has never run successfully.`);
   if (+s.total_no_url > 0) attention.push(`${s.total_no_url} of ${s.total_targets} prospects still have no public LinkedIn URL, so they cannot be pushed to Botdog.`);
   if (+s.bad_titles > 0) attention.push(`${s.bad_titles} prospect(s) collected yesterday have a corrupted job title ("Add … to selection") — the scraper is reading the checkbox label instead of the title.`);
   const verRows: VerRow[] = Array.isArray(s.by_version) ? s.by_version : [];
@@ -414,14 +518,15 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
 
     ${sectionTitle('Progress yesterday')}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      ${card('New prospects', newTargets, prevDeltaHtml(newTargets, prevRef, avg7))}
+      ${card('New to Radar (first seen)', newTargets, prevDeltaHtml(newTargets, prevRef, avg7))}
       ${card('7-day average', avg7, delta(newTargets, avg7, '7-day avg'))}
       ${card('Total collected', s.total_targets ?? 0, `<span style=\"color:#94a3b8;\">all time</span>`)}
     </tr></table>
 
     ${sectionTitle('The pipeline')}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-      ${row('Prospects collected yesterday', String(newTargets))}
+      ${row('New to Radar yesterday (first seen)', String(newTargets))}
+      ${row('Records written by the extension', `${+s.saved || 0} <span style=\"font-weight:400;color:#94a3b8;\">(new + already known; ${+s.run_done || 0} of ${+s.runs || 0} runs finished and reported)</span>`)}
       ${row('… of those, with a usable LinkedIn URL', String(s.new_targets_with_url ?? 0))}
       ${row('Filed into the Sales Navigator list', String(s.salesnav_listed ?? 0))}
       ${row('Pushed to Botdog outreach', String(s.botdog_pushed ?? 0))}
@@ -439,6 +544,17 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
         `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">` +
         rows.map(r => row(`Extension v${r.version}`,
           `${r.saved} saved &middot; ${r.runs} run(s) &middot; <span style="color:${(+r.errors) > 0 ? '#dc2626' : '#94a3b8'};">${r.errors} error(s)</span>`)).join('') +
+        `</table>`;
+    })()}
+
+    ${(() => {
+      if (fleet.length < 2) return '';
+      return sectionTitle('All accounts yesterday') +
+        `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">` +
+        fleet.map(o => row(`${o.label}${o.owner_key === primary ? ' (this account)' : ''}`,
+          o.collected
+            ? `${o.newTargets} new &middot; ${o.written} written &middot; ${o.runs} run(s)`
+            : `<span style="color:#b45309;">silent &#8212; ${o.runs === 0 ? 'did not run' : `${o.runs} run(s), saved 0`}</span>`)).join('') +
         `</table>`;
     })()}
 
@@ -496,6 +612,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const skipped: Array<{ email: string; reason: string }> = [];
   const errors: Array<{ email: string; error: string }> = [];
   let preview: string | null = null;
+  let previewSubject = '';
 
   for (const r of recipients) {
     try {
@@ -510,22 +627,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const cfg = await configMap(r.owner_key);
       const latestExt = (cfg.latest_ext_version || FALLBACK_LATEST_EXT).trim();
       const s = await stats(r.owner_key, start, end);
-      const job = jobVerdict(s);
+      const names: Record<string, string> = {};
+      for (const u of recipients) if (u.owner_key) names[u.owner_key] = u.display_name || u.owner_key;
+      const fleet = await fleetDay(start, end, names, r.owner_key, s);
+      const problems: string[] = Array.isArray(s.problems) ? s.problems : [];
+      const issues = healthIssues(s, await httpErrors(r.owner_key, start, end, problems));
+      const job = jobVerdict(s, fleet, issues);
       const ext = extVerdict(s, latestExt);
       const browsers = browsersVerdict(s, latestExt);
       let prevRef: PrevRef = null;
       try { prevRef = await lastRunDay(r.owner_key, dayYmd); } catch (_e) { prevRef = null; /* falls back to the 7-day average */ }
-      const html = buildHtml(r.display_name || '', s, dayYmd, job, ext, browsers, prevRef);
+      const html = buildHtml(r.display_name || '', s, dayYmd, job, ext, browsers, prevRef, fleet, issues, r.owner_key);
 
       const tag = (browsers && browsers.level === 'critical' && job.level !== 'critical')
         ? ' — ⚠️ OUTDATED BROWSER'
         : job.level === 'critical'
         ? ((+s.runs || 0) === 0 ? ' — ⚠️ DID NOT RUN' : ' — ⚠️ COLLECTION FAILED')
-        : ((+s.new_targets || 0) > 0 ? ` — +${s.new_targets} prospects` : ' — no new prospects');
+        : (+s.runs || 0) === 0 && fleet.some(o => o.collected)
+        ? ` — this account did not run (other accounts +${fleet.reduce((a, o) => a + o.newTargets, 0)} new)`
+        : ((+s.new_targets || 0) > 0 ? ` — +${s.new_targets} new prospects${issues.length ? ' · needs attention' : ''}` : ' — no new prospects');
       const subject = `Radar Report — ${shortDate(dayYmd)}${tag}`;
 
       const to = toOverride || cfg.report_email || r.email;
-      if (dry) { preview = html; sent.push(`${to} (dry)`); continue; }
+      if (dry) { preview = html; previewSubject = subject; sent.push(`${to} (dry)`); continue; }
 
       const key = await loadResendKey(cfg);
       if (!key) { errors.push({ email: to, error: 'no resend key' }); continue; }
@@ -537,6 +661,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
-  if (dry && preview) return new Response(preview, { headers: { ...CORS, 'Content-Type': 'text/html; charset=utf-8' } });
+  if (dry && preview) return new Response(preview, { headers: { ...CORS, 'Content-Type': 'text/html; charset=utf-8', 'X-Report-Subject': encodeURIComponent(previewSubject) } });
   return json({ ok: true, day: dayYmd, window: [start.toISOString(), end.toISOString()], sent: sent.length, recipients: sent, skipped, errors });
 });
