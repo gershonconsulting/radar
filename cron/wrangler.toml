@@ -1,0 +1,17 @@
+# Cloudflare Worker "gershon-radar-eod-cron" — Radar EOD report (replaces Claude scheduled task #22).
+# Deployed by .github/workflows/deploy-eod-cron.yml on push to main (paths cron/**).
+name = "gershon-radar-eod-cron"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+[triggers]
+# 22:05 UTC daily = 6:05pm New York (EDT) / 5:05pm New York (EST). Cloudflare crons are UTC only.
+crons = ["5 22 * * *"]
+
+[observability]
+enabled = true
+
+# Secrets (not in git), set by the deploy workflow from GitHub Actions secrets:
+#   RADAR_HUB_SECRET  — the Radar hub secret (same value the Pages app uses for the hub)
+#   RESEND_API_KEY    — Resend key allowed to send from gershon.ai

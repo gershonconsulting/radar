@@ -1,0 +1,49 @@
+name: Deploy Radar EOD cron Worker
+
+# Deploys cron/ as the Cloudflare Worker "gershon-radar-eod-cron" (Radar EOD report, #22).
+# Pull requests only run the offline checks; deploy runs on main only.
+on:
+  pull_request:
+    branches: [main]
+    paths: ["cron/**", ".github/workflows/deploy-eod-cron.yml"]
+  push:
+    branches: [main]
+    paths: ["cron/**", ".github/workflows/deploy-eod-cron.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: radar-eod-cron
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax + offline checks
+        run: |
+          node --check cron/worker.js
+          node cron/worker.test.mjs
+
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Worker and set its secrets
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: cron
+          command: deploy
+          secrets: |
+            RADAR_HUB_SECRET
+            RESEND_API_KEY
+        env:
+          RADAR_HUB_SECRET: ${{ secrets.RADAR_HUB_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
