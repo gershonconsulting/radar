@@ -1,3 +1,16 @@
+2026-11-07 nightly (PR #23, branch nightly/2026-11-07-radar-email, based on #21's branch): daily-report v9.
+  (a) "new" = first seen (RPC new_targets, first_seen_at after #21). "written" = the extension's run:done saved
+      count, which includes people Radar already had and only covers finished runs. Each has its own label
+      and the email never says "N of them".
+  (b) ok -> amber when bridges_never_scraped > 0 or the day's log has HTTP 429/401. Entries are counted from
+      activity_log detail->log, falling back to the distinct problems lines.
+  (c) Fleet: owners from gate_clients (seen in the last 14 days), users, and that day's sync_log; an owner
+      belongs to the fleet if it collected that day or in the 7 days before. "DID NOT RUN" only when no
+      owner collected; otherwise the silent owners are listed. This adds one radar_daily_stats call per
+      fleet owner (about 10).
+  ✅ Verified with real 11-04 and 11-05 data (bun harness, first_seen emulated with #21's backfill formula).
+  ❌ Deploy daily-report only AFTER #21's migration (before it, "new" still counts collected_date: 628 on 11-05).
+
 2026-11-06 nightly: daily "new prospects" counts were not stable (Nov 2 email +154 -> 47 today, Nov 3 email +37 -> 0)
   because the hub ingest upsert rewrote targets.collected_date = now() on every re-collect and
   radar_daily_stats counts on it (2,791 targets pushed to Botdog / 7,718 Sales-Nav-listed BEFORE their own
