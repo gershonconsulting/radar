@@ -2089,139 +2089,60 @@ function obPaint(html, quiet){
 function renderOnboarding(){
   const wrap = document.getElementById('onboardingWrap') || document.getElementById('onboardingWrapHome');
   if (!wrap) return;
-  // Source count is read LIVE (not from a snapshot taken at boot) so the tick appears as soon
-  // as the first source lands, whatever order loadSources()/loadIcpTemplate() finished in.
   const srcCount = (typeof STORED_SOURCES !== 'undefined' && STORED_SOURCES) ? STORED_SOURCES.length : (window.__srcCount || 0);
-  const done = {
-    signin  : true,
-    salesnav: obFlag(OB_KEYS.salesnav),
-    ext     : obFlag(OB_KEYS.ext),
-    icp     : !!window.__hasIcp,
-    list    : !!window.__hasList,
-    source  : srcCount > 0,
-    // Hub truth first (window.__botdogOk, from keyStatus); the local flag is only a fallback
-    // for the moment before that request lands. OPTIONAL — never counted toward completion.
-    botdog  : (window.__botdogOk === true) || obFlag(OB_KEYS.botdog)
-  };
-  // Botdog is deliberately NOT in REQUIRED: Radar collects and files prospects on its own;
-  // Botdog only adds the outreach layer. Setup is "complete" without it.
-  // A viewing computer is never asked to install the extension or hold a Sales Nav session —
-  // those two steps belong to the collecting machine, and leaving them in REQUIRED would keep
-  // the checklist permanently open (and permanently wrong) on every viewer.
+  const bridgeCount = (typeof BRIDGES !== 'undefined' && BRIDGES) ? BRIDGES.filter(function(b){ return b && b.active !== false; }).length : (window.__bridgeCount || 0);
   const collecting = isCollectingComputer();
-  const REQUIRED = collecting ? ['signin','salesnav','ext','icp','list','source'] : ['signin','icp','list','source'];
-  const total = REQUIRED.length;
-  const count = REQUIRED.filter(k => done[k]).length;
-  const all = count === total;
-  const onboarded = obFlag('radar_onboarded');
-
-  // Fully set up and dismissed → just a small "Setup" reopen link.
+  const done = {
+    salesnav: obFlag(OB_KEYS.salesnav),
+    ext: obFlag(OB_KEYS.ext),
+    icp: !!window.__hasIcp,
+    lists: !!window.__hasList && !!window.__hasBridgesList,
+    network: srcCount > 0 && bridgeCount > 0,
+    botdog: (window.__botdogOk === true) || obFlag(OB_KEYS.botdog)
+  };
+  const required = collecting ? ['salesnav','network','icp','lists','ext'] : ['network','icp','lists'];
+  const count = required.filter(function(k){ return done[k]; }).length;
+  const total = required.length, all = count === total, onboarded = obFlag('radar_onboarded');
   if (all && onboarded) {
     obPaint('<div class="onboard-reopen"><a onclick="obReopen()">&#9881; Setup</a> &nbsp;&middot;&nbsp; <a onclick="openTour(0)">How Radar works</a></div>', '');
     return;
   }
-  // Everything required is done but not yet dismissed → collapsed "all set" line.
   if (all) {
-    obPaint(
-      '<div class="onboard-done">' +
-        '<div class="ob-dot done">&#10003;</div>' +
-        '<span class="ok-txt">You\'re all set &mdash; Radar is fully configured.' +
-          (done.botdog ? '' : ' <span style="font-weight:500;color:#64748b">Botdog is optional &mdash; <a onclick="obReopen()" style="cursor:pointer;color:#64748b;text-decoration:underline">add it</a> when you want Radar to run the outreach too.</span>') +
-        '</span>' +
-        '<button class="dismiss" onclick="obDismiss()">dismiss</button>' +
-      '</div>');
+    obPaint('<div class="onboard-done"><div class="ob-dot done">&#10003;</div><span class="ok-txt">You\'re all set &mdash; your Sources, Bridges, ICP search and two Sales Navigator lists are ready.' +
+      (done.botdog ? '' : ' <span style="font-weight:500;color:#64748b">Botdog is optional; connect it when you want Radar to run outreach.</span>') +
+      '</span><button class="dismiss" onclick="obDismiss()">dismiss</button></div>');
     return;
   }
-
-  const steps = [];
-  // 1) Signed in
-  steps.push(
-    '<div class="ob-step">' + obDot(true) +
-      '<div class="ob-body"><div class="ob-title done">Signed in with LinkedIn</div></div>' +
-    '</div>');
-  // 2) Sales Navigator connected — best-effort auto-detected via the extension.
-  if (collecting) steps.push(
-    '<div class="ob-step">' + obDot(done.salesnav) +
-      '<div class="ob-body"><div class="ob-title' + (done.salesnav?' done':'') + '">Sales Navigator connected</div>' +
-        (done.salesnav ?
-        '<div class="ob-note">Sales Navigator detected</div>' :
-        '<div class="ob-actions">' +
-          '<a class="ob-link" href="https://www.linkedin.com/sales/" target="_blank" rel="noopener">Open Sales Navigator &#8599;</a>' +
-          '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
-        '</div>' +
-        '<div class="ob-note">Detection is best-effort. <a onclick="obMark(\'' + OB_KEYS.salesnav + '\')">I\'ve connected it</a></div>') +
-      '</div>' +
-    '</div>');
-  // 3) Chrome extension installed — auto-detected via the content script.
-  var extVer = '';
-  try { extVer = localStorage.getItem('radar_ext_ver') || ''; } catch(e) {}
-  if (collecting) steps.push(
-    '<div class="ob-step">' + obDot(done.ext) +
-      '<div class="ob-body"><div class="ob-title' + (done.ext?' done':'') + '">' +
-        (done.ext ? 'Extension installed' + (extVer ? ' (v' + extVer + ')' : '') : 'Install the Chrome extension') + '</div>' +
-        (done.ext ?
-        '<div class="ob-note">detected automatically</div>' :
-        '<div class="ob-note" style="margin-bottom:6px">Download it, then in <code>chrome://extensions</code> enable <strong>Developer mode</strong> &rarr; <strong>Load unpacked</strong> &rarr; pick the unzipped folder.</div>' +
-        '<div class="ob-actions">' +
-          '<a class="ob-link" href="' + EXT_ZIP_URL + '" download>Download the extension &#8595;</a>' +
-          '<button class="ob-btn" onclick="detectExtension(); try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button>' +
-        '</div>') +
-      '</div>' +
-    '</div>');
-  // 4) Your ICP search link — defines who counts as a prospect for this user.
-  steps.push(
-    '<div class="ob-step">' + obDot(done.icp) +
-      '<div class="ob-body"><div class="ob-title' + (done.icp?' done':'') + '">Set your ICP search</div>' +
-        (done.icp ? '<div class="ob-note">Your Sales Navigator search is saved. <a href="#" onclick="showView(\'settings\');return false">Change it</a></div>' :
-        '<div class="ob-note">Build your ideal prospect search in Sales Navigator (all your filters, <strong>no &ldquo;Connection of&rdquo;</strong>) and paste the URL in <a href="#" onclick="showView(\'settings\');return false">Settings &rarr; Your ICP search</a>.</div>') +
-      '</div>' +
-    '</div>');
-  // 5) Sales Navigator list — where every new prospect gets filed.
-  steps.push(
-    '<div class="ob-step">' + obDot(done.list) +
-      '<div class="ob-body"><div class="ob-title' + (done.list?' done':'') + '">Choose your Sales Navigator list</div>' +
-        (done.list ? '<div class="ob-note">New prospects are filed into your list.' + (window.__hasBridgesList ? ' Bridges you are not connected to go to your bridges list.' : ' Add a <strong>Bridges</strong> list too, for the bridges you are not connected to yet.') + ' <a href="#" onclick="showView(\'settings\');return false">Change it</a></div>' :
-        '<div class="ob-note">Create two dedicated lists in Sales Navigator &mdash; one for <strong>prospects</strong>, one for <strong>bridges</strong> &mdash; and paste their URLs in <a href="#" onclick="showView(\'settings\');return false">Settings &rarr; Sales Navigator lists</a>.</div>') +
-      '</div>' +
-    '</div>');
-  // 6) First Source — an organization whose network holds this user's prospects.
-  steps.push(
-    '<div class="ob-step">' + obDot(done.source) +
-      '<div class="ob-body"><div class="ob-title' + (done.source?' done':'') + '">Add your first Source</div>' +
-        (done.source ? '<div class="ob-note">You have ' + srcCount + ' source(s).</div>' :
-        '<div class="ob-note">Add an organization whose network holds your prospects &mdash; paste its LinkedIn company URL in <a href="#" onclick="showView(\'sources\');return false">Sources</a>.</div>') +
-      '</div>' +
-    '</div>');
-  // Optional) Connect Botdog — outreach only. Not required, not counted.
-  steps.push(
-    '<div class="ob-step optional">' + (done.botdog ? obDot(true) : '<div class="ob-dot skip">&#9675;</div>') +
-      '<div class="ob-body"><div class="ob-title' + (done.botdog?' done':'') + '">Connect Botdog<span class="ob-tag">optional</span></div>' +
-        (done.botdog ? '' :
-        '<div class="ob-note" style="margin-top:2px">Radar collects and files your prospects without it. Add Botdog only if you want Radar to send the connection requests and follow-ups too.</div>' +
-        '<div class="ob-field">' +
-          '<input type="password" id="obBotdogKey" placeholder="paste your Botdog API key&hellip;">' +
-          '<button class="ob-btn ghost" id="obBotdogBtn" onclick="obSaveBotdog()">Test &amp; Save</button>' +
-        '</div>' +
-        '<div class="ob-status" id="obBotdogStatus"></div>') +
-        '<div class="ob-note">Don\'t have Botdog? <a href="https://tolt.link/gershonAI" target="_blank" rel="noopener">Create your Botdog account &rarr;</a></div>' +
-      '</div>' +
-    '</div>');
-
-  const pct = Math.round((count/total)*100);
-  obPaint(
-    '<div class="onboard">' +
-      '<div class="ob-head">' +
-        '<h3>Get set up</h3>' +
-        '<div class="ob-progress">' +
-          '<a class="ob-link" onclick="openTour(0)" style="cursor:pointer">How Radar works</a>' +
-          '<span class="ob-count">' + count + ' of ' + total + ' done</span>' +
-          '<span class="ob-bar"><i style="width:' + pct + '%"></i></span>' +
-        '</div>' +
-      '</div>' +
-      steps.join('') +
-    '</div>');
+  function step(isDone,title,body,actions,optional){
+    return '<div class="ob-step'+(optional?' optional':'')+'">'+obDot(isDone)+'<div class="ob-body"><div class="ob-title'+(isDone?' done':'')+'">'+title+'</div><div class="ob-note">'+body+'</div>'+(actions||'')+'</div></div>';
+  }
+  const steps=[];
+  if (collecting) {
+    steps.push(step(done.salesnav,'1. Check Sales Navigator access',
+      done.salesnav?'Sales Navigator access is confirmed for this collecting browser.':'Radar needs an active Sales Navigator session to read saved searches and collect people. Open Sales Navigator, sign in, then confirm here.',
+      done.salesnav?'':'<div class="ob-actions"><a class="ob-link" href="https://www.linkedin.com/sales/" target="_blank" rel="noopener">Open Sales Navigator &#8599;</a><button class="ob-btn" onclick="detectExtension();try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Recheck</button><button class="ob-btn ghost" onclick="obMark(\''+OB_KEYS.salesnav+'\')">I have access</button></div>'));
+  }
+  steps.push(step(done.network,'2. Choose your first Sources and Bridges',
+    'Aim for about <strong>10 Sources</strong> (organizations where your buyers gather) and <strong>10 Bridges</strong> (well-connected people inside them). Review the <strong>Suggested by Gershon</strong> recommendations when available; you can start with fewer. Current: '+srcCount+' Sources and '+bridgeCount+' active Bridges.',
+    '<div class="ob-actions"><a class="ob-link" href="#" onclick="showView(\'sources\');return false">Review Sources &#8599;</a><a class="ob-link" href="#" onclick="showView(\'bridges\');return false">Review Bridges &#8599;</a></div>'));
+  steps.push(step(done.icp,'3. Turn your saved search into your ICP link',
+    done.icp?'Your Sales Navigator search link is saved. Radar uses its filters as your ideal customer profile.':'In Sales Navigator, open the saved people search that best matches your ideal customers and copy its URL. Radar checks it is a people search, then saves it as your ICP link. Do not include a “Connection of” filter; Radar adds each Bridge itself.',
+    done.icp?'<div class="ob-actions"><a class="ob-link" href="#" onclick="showView(\'settings\');return false">Review ICP link</a></div>':'<div class="ob-actions"><a class="ob-link" href="https://www.linkedin.com/sales/" target="_blank" rel="noopener">Find saved search &#8599;</a><a class="ob-link" href="#" onclick="showView(\'settings\');return false">Paste and save ICP link</a></div>'));
+  steps.push(step(done.lists,'4. Create the two Radar lead lists',
+    done.lists?'Both destinations are saved: Radar Prospects and Radar Bridges.':'Create two separate lead lists in Sales Navigator: <strong>Radar Prospects</strong> for people found through your Bridges and <strong>Radar Bridges</strong> for people you need to connect with first. Then save each list URL in Settings. Radar can file leads into the lists once they exist.',
+    '<div class="ob-actions"><a class="ob-link" href="https://www.linkedin.com/sales/" target="_blank" rel="noopener">Open Sales Navigator &#8599;</a><a class="ob-link" href="#" onclick="showView(\'settings\');return false">Save list URLs</a></div>'));
+  if (collecting) {
+    var extVer=''; try{extVer=localStorage.getItem('radar_ext_ver')||'';}catch(e){}
+    steps.push(step(done.ext,'5. Install and connect the Radar extension',
+      done.ext?'Extension detected'+(extVer?' (v'+extVer+')':'')+' in this browser.':'Install the extension in the same Chrome profile where you are signed in to Sales Navigator. Radar uses that browser session to collect.',
+      done.ext?'':'<div class="ob-actions"><a class="ob-link" href="'+EXT_ZIP_URL+'" download>Download extension &#8595;</a><button class="ob-btn" onclick="detectExtension();try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Check installation</button></div>'));
+  }
+  steps.push('<div class="ob-step optional">'+(done.botdog?obDot(true):'<div class="ob-dot skip">&#9675;</div>')+'<div class="ob-body"><div class="ob-title'+(done.botdog?' done':'')+'">Connect Botdog <span class="ob-tag">optional</span></div>'+
+    (done.botdog?'<div class="ob-note">Botdog is connected.</div>':'<div class="ob-note">Radar collects and files leads without Botdog. Add it only if you want Radar to automate outreach.</div><div class="ob-field"><input type="password" id="obBotdogKey" placeholder="paste your Botdog API key&hellip;"><button class="ob-btn ghost" id="obBotdogBtn" onclick="obSaveBotdog()">Test &amp; Save</button></div><div class="ob-status" id="obBotdogStatus"></div>')+
+    '<div class="ob-note">Don\'t have Botdog? <a href="https://tolt.link/gershonAI" target="_blank" rel="noopener">Create your Botdog account &rarr;</a></div></div></div>');
+  const pct=Math.round((count/total)*100);
+  obPaint('<div class="onboard"><div class="ob-head"><h3>Set up Radar in order</h3><div class="ob-progress"><a class="ob-link" onclick="openTour(0)" style="cursor:pointer">How Radar works</a><span class="ob-count">'+count+' of '+total+' done</span><span class="ob-bar"><i style="width:'+pct+'%"></i></span></div></div><div class="ob-note" style="margin:0 0 12px">Sales Navigator access &rarr; recommended Sources and Bridges &rarr; your ICP search &rarr; two lead lists &rarr; collection.</div>'+steps.join('')+'</div>');
 }
-
 // ===== Render orchestration =====
 function renderAll(){
   renderOnboarding();
