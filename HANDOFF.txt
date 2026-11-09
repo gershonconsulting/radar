@@ -46,6 +46,20 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-11-07 nightly (PR #22, branch nightly/2026-11-07-radar-bridges-icp, app v1.19.0) - replaces #16
+  Per-account bridge ICP ranking on the Bridges page, rebuilt on current main (#16 conflicted after
+  #20 rewrote the middleware loader block).
+  ✅ app/bridge-icp.js and functions/api/bridge-icp.js come from #16 unchanged. functions/_middleware.js
+     gets item 7 (BRIDGE_ICP_SRC + loader) and APP_VERSION 1.18.6 -> 1.19.0 by hand. Comment left on #16.
+  ✅ Locally: the middleware run against the real app.html injects bridge-icp.js once and stamps the sidebar
+     v1.19.0. The suggestions and wording scripts are still injected.
+  ✅ Preview builds and loads: https://nightly-2026-11-07-radar-bri.gershon-radar.pages.dev/app
+     (200, serves bridge-icp.js?v=1.19.0, sidebar v1.19.0; /bridge-icp.js 200).
+  ❌ On the preview, /api/bridge-icp returns "not configured" (500) and /api/health says "database
+     unreachable": preview builds have no SUPABASE_SERVICE_KEY / SESSION_SECRET. So the panel's live data
+     can only be checked after merge, or after Ariel adds those env vars to the Preview environment.
+  ❌ Merge pending (Olivier's call); then close #16.
+
 - 2026-11-04 nightly (branch nightly/2026-11-04-radar-prospects-combined, app v1.18.6)
   Combines PRs #5, #7, #8 rebuilt on current main (they conflicted).
   * #5 / #7 (Targets -> Prospects wording, colour leftovers): already on
