@@ -46,6 +46,17 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-11-04 nightly (branch nightly/2026-11-04-radar-prospects-combined, app v1.18.6)
+  Combines PRs #5, #7, #8 rebuilt on current main (they conflicted).
+  * #5 / #7 (Targets -> Prospects wording, colour leftovers): already on
+    main via PR #15 (v1.18.4 / v1.18.5) - nothing left to re-apply.
+  * #8 (extension v1.17.1 source): salesnav-radar-extension/ taken from
+    #8 as-is (main had not touched it since); help page app/extension.html
+    gets #8's wording and links the current released build v1.17.0.
+  ❌ v1.17.1 zip still not built/uploaded to radar-releases; when it is,
+     set LATEST_EXT = '1.17.1' in functions/_middleware.js and point
+     app/extension.html at radar-extension-v1.17.1.zip.
+
 - 2026-10-21 nightly (branch nightly/2026-10-21-unified-design, app v1.15.0)
   Unified Gershon design (decision 2026-10-13): Radar now looks like
   Linalysis, the master design, in the Gershon.ai red #CC3333.
