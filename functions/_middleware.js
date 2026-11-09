@@ -46,8 +46,8 @@
 const LATEST_EXT = '1.17.0';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
-//    v1.18.7 (2026-11-09): /app colours off indigo/blue to Gershon red (PR #19, rebuilt on main).
-const APP_VERSION = '1.18.7';
+//    v1.18.8 (2026-11-09): /app colours off indigo/blue to Gershon red (PR #19, rebuilt on main).
+const APP_VERSION = '1.18.8';
 const WORDING_SRC = '/prospects-wording.js?v=' + APP_VERSION;
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
