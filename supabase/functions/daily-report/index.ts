@@ -8,7 +8,7 @@
 //
 // 2026-10-22 (repo copy of deployed v7): sender display name "Radar" -> "GC Radar Report"
 // (Olivier's GC-prefix rule, see FROM below). Address, reply-to, recipients and subject unchanged.
-// 2026-10-27: house style for report emails - white header (dark #12211d text, Gershon red #CC3333
+// 2026-10-27: house style for report emails - white header (dark #12211d text, Gershon red #FE1B04
 // accent rule) instead of white-on-navy; white page, max-width 680px; links/button #1f6f5c, no light-on-dark.
 //
 // v8 (2026-10-28) — three fixes after the 2026-10-26 email:
@@ -506,7 +506,7 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
   return `<!doctype html><html><body style="margin:0;padding:0;background:#ffffff;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:24px 12px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:680px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#12211d;">
-  <tr><td style="background:#ffffff;border-top:4px solid #CC3333;border-bottom:1px solid #e2e8f0;padding:20px 22px 16px;">
+  <tr><td style="background:#ffffff;border-top:4px solid #FE1B04;border-bottom:1px solid #e2e8f0;padding:20px 22px 16px;">
     <div style="color:#12211d;font-size:22px;font-weight:700;">Radar &#8212; Daily Report</div>
     <div style="color:#4a5a55;font-size:14px;margin-top:4px;">${esc(longDate(dayYmd))}</div>
   </td></tr>
