@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.17.2 — 2026-11-09 — hard LinkedIn limits (after David's and Amos's accounts were locked)
+**What happened.** On 2026-11-04 both accounts read one 625-person bridge 25 pages deep, looked up
+~400 profiles per pass, were stopped mid-bridge by the hourly gate and started the same bridge from
+page 1 again an hour later — three times. ~1,000 Sales API profile lookups in ~3 hours -> 401 ->
+LinkedIn locked both accounts. The "daily lead target = 10" setting was never read by the extension.
+
+**Now (limits.js, values from the account's Radar config, these are the defaults):**
+- New prospects / day: 10 (`daily_lead_target`, now a hard stop). New people found over the cap
+  wait locally and are taken first the next day — their page is never read twice.
+- Profile lookups: 25 / day, 8 / hour, one at a time 20–60 s apart, ONLY for new prospects (the
+  URL backlog gets whatever is left). Location lead-page opens, bridge URL lookups and hand-added
+  bridge lookups all count as lookups. Each lookup is also checked with the LinkedIn gate
+  (`profile_view`). Was: 400 per run, 0.4–0.8 s apart, not metered.
+- Search pages: 20 / day, 5 / hour, 30–90 s apart (bridge discovery counts too). Was 120 / day.
+- Max 3 pages per bridge per day; the bridge resumes where it stopped the next day; a fully read
+  bridge rests 14 days, then starts over from page 1.
+- Sales Nav list saves: 25 / day for both lists together. Was 200 + 100 per run.
+- Weekly cap = 5 × daily for each; unused budget never carries over.
+- ANY LinkedIn warning (401 / 403 / 429 on a lookup, search or list call, or a check page) stops
+  ALL LinkedIn activity for 48 h (was 24 h for check pages only, 6 h list cooldown, nothing for
+  lookups) — manual "Sync now" included — and is pushed to the hub immediately.
+- `limits_pause_until` / `limits_half_until` in config pause an account or halve its limits.
+  A fresh install runs at half limits for 14 days.
+- Every run logs `limits:loaded` (limits + what was used today / this week); `run:done` adds
+  `limits`, `usedToday`, `prospectsFull`.
+
 ## 1.17.1 — 2026-10-23 — wording + Gershon red
 - Notifications say "prospects" instead of "targets" ("New prospects", "Sync complete — N new
   prospects saved"), matching the app's Sources > Bridges > Prospects wording (app v1.16.0).
