@@ -8,6 +8,13 @@
 // No auth: a signed-out desk must still be able to tell "down" from
 // "not signed in". Nothing here is user data — only counts and timestamps.
 
+import { APP_VERSION } from '../_lib/version.js';
+
+// Same project the rest of the app uses (me.js, auth/linkedin/callback.js hard-code it). health.js used to
+// require env.SUPABASE_URL, which is not a binding on this Pages project -> fetch('undefined/rest/v1/...')
+// threw -> 'unreachable'. The env var is now only an optional override.
+const DEFAULT_SUPABASE_URL = 'https://pkzeeqehwmtnqxdpdesl.supabase.co';
+
 const OK_HOURS = 24;    // collection is expected daily
 const WARN_HOURS = 48;
 
@@ -23,33 +30,47 @@ const worst = (a, b) => {
   return rank[a] >= rank[b] ? a : b;
 };
 
+async function latest(base, headers, path, col) {
+  const r = await fetch(`${base}/rest/v1/${path}`, { headers });
+  if (!r.ok) return { ok: false, at: null };
+  const rows = await r.json();
+  return { ok: true, at: rows && rows[0] ? rows[0][col] : null };
+}
+
 export async function onRequestGet({ env }) {
   const checks = [];
   let lastSyncAt = null;
   let dbUp = false;
+  let dbDetail = 'unreachable';
 
-  try {
-    const url = `${env.SUPABASE_URL}/rest/v1/activity_log`
-      + `?action=eq.sync_log&select=at&order=at.desc&limit=1`;
-    const r = await fetch(url, {
-      headers: {
-        apikey: env.SUPABASE_SERVICE_KEY,
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-      },
-    });
-    dbUp = r.ok;
-    if (r.ok) {
-      const rows = await r.json();
-      lastSyncAt = rows && rows[0] ? rows[0].at : null;
+  const base = String(env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/+$/, '');
+  const key = env.SUPABASE_SERVICE_KEY;
+  if (!key) {
+    // Never echo the value; only say which binding is absent.
+    dbDetail = 'SUPABASE_SERVICE_KEY binding missing';
+  } else {
+    const headers = { apikey: key, Authorization: `Bearer ${key}` };
+    try {
+      // Read-only. Latest collection = newest of the extension's sync_log (activity_log, written by the hub
+      // on every run) and the newest prospect row (targets.collected_date).
+      const [log, tgt] = await Promise.all([
+        latest(base, headers, 'activity_log?action=eq.sync_log&select=at&order=at.desc&limit=1', 'at'),
+        latest(base, headers, 'targets?select=collected_date&order=collected_date.desc.nullslast&limit=1', 'collected_date')
+          .catch(() => ({ ok: false, at: null })),
+      ]);
+      dbUp = log.ok || tgt.ok;
+      if (dbUp) dbDetail = 'connected';
+      const times = [log.at, tgt.at].filter(Boolean).map(t => new Date(t).getTime()).filter(Number.isFinite);
+      lastSyncAt = times.length ? new Date(Math.max(...times)).toISOString() : null;
+    } catch (_) {
+      dbUp = false;
     }
-  } catch (_) {
-    dbUp = false;
   }
 
   checks.push({
     key: 'database',
     status: dbUp ? 'green' : 'red',
-    detail: dbUp ? 'connected' : 'unreachable',
+    detail: dbUp ? 'connected' : dbDetail,
   });
 
   const hours = lastSyncAt
@@ -68,7 +89,7 @@ export async function onRequestGet({ env }) {
 
   return new Response(JSON.stringify({
     platform: 'radar',
-    version: '1.11.0',
+    version: APP_VERSION,
     status,
     checked_at: new Date().toISOString(),
     checks,
