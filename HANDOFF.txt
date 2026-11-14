@@ -46,6 +46,8 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- ✅ 2026-11-14 nightly: #28 (v1.18.9) and #26 (brand red) merged; v1.18.10. Then v1.18.11: app/app.html visible
+  labels Target(s) -> Prospect(s) in the file itself (ids/classes/view names/API fields untouched). See STATUS.md.
 - ✅ 2026-11-13 nightly (branch nightly/2026-11-13-radar-version-health, base main) - app v1.18.9: ONE version source,
   functions/_lib/version.js (APP_VERSION). Footer, the app JS VERSION constant (was 1.17.2) and /api/health (was 1.11.0) all read it.
   /api/health said "unreachable" because it needed env.SUPABASE_URL, which is not a binding here (me.js hard-codes the project URL);
