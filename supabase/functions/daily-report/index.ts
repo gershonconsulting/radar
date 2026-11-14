@@ -1,4 +1,4 @@
-// Radar — daily-report edge function (v8)
+// Radar — daily-report edge function (v9.1)
 // ONE email per day, per user, describing YESTERDAY (America/New_York day).
 // Triggered by pg_cron: POST { secret } (or GET ?secret=). verify_jwt=false.
 // Optional overrides for testing: ?date=YYYY-MM-DD (the ET day to report on), ?to=email, ?dry=1
@@ -37,7 +37,12 @@
 //     collected (10-30, 11-04). The report now looks at every owner: DID NOT RUN only when NO owner
 //     collected; otherwise the silent owners are listed (with "did not run" / "ran, saved 0").
 
-const REPORT_VERSION = 'v9';
+// v9.1 (2026-11-11): brand red. Button = white with brand-red #FE1B04 border and brand-dark #d11200
+// text (house style: never light text on a dark fill); header rule #FE1B04. Sender stays
+// "GC Radar <radar@gershon.ai>". Recipients, schedule and subject unchanged.
+// NOTE: repo copy only - the deployed function must be redeployed by hand (see supabase/HANDOFF.txt).
+
+const REPORT_VERSION = 'v9.1';
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
@@ -567,7 +572,7 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
       : `<div style=\"color:#16a34a;font-size:14px;\">All clear &#8212; nothing needs attention.</div>`}
 
     <div style="text-align:center;margin:28px 4px 10px;">
-      <a href="${APP_URL}" style="display:inline-block;background:#ffffff;color:#1f6f5c;border:2px solid #1f6f5c;text-decoration:none;font-size:15px;font-weight:700;padding:10px 26px;border-radius:9px;">Open Radar</a>
+      <a href="${APP_URL}" style="display:inline-block;background:#ffffff;color:#d11200;border:2px solid #FE1B04;text-decoration:none;font-size:15px;font-weight:700;padding:10px 26px;border-radius:9px;">Open Radar</a>
     </div>
   </td></tr>
   <tr><td style="padding:16px 24px 22px;border-top:1px solid #e2e8f0;">

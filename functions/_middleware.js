@@ -48,8 +48,10 @@ const LATEST_EXT = '1.17.2';
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
 //    v1.18.8 (2026-11-09): /app colours off indigo/blue to Gershon red (PR #19, rebuilt on main).
-//    v1.18.9 (2026-11-10): brand red #CC3333 -> #FE1B04 (logo and website red, Olivier Nov 10).
-const APP_VERSION = '1.18.9';
+//    v1.18.9 (2026-11-13): APP_VERSION now lives in functions/_lib/version.js (shared with /api/health) and
+//    ALSO stamps the app's JS `VERSION` constant; before, three places disagreed (footer 1.18.8, JS 1.17.2, health 1.11.0).
+//    v1.18.10 (2026-11-14): brand red #CC3333 -> #FE1B04 (logo and website red, PR #26).
+import { APP_VERSION } from './_lib/version.js';
 const WORDING_SRC = '/prospects-wording.js?v=' + APP_VERSION;
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
@@ -156,6 +158,9 @@ export async function onRequest(ctx) {
       const at = out.lastIndexOf('</body>');
       out = out.slice(0, at) + '<script src="' + WORDING_SRC + '"></script>\n' + out.slice(at);
     }
+    // the app's own JS VERSION constant (not LATEST_EXT_VERSION: the lookbehind excludes it)
+    out = out.replace(/((?<![A-Za-z0-9_$])VERSION\s*=\s*')(\d+\.\d+\.\d+)(')/g, (all, a, v, b) =>
+      cmpVer(v, APP_VERSION) < 0 ? a + APP_VERSION + b : all);
     out = out.replace(/(id="(?:sideVer|siteVer)">)v(\d+\.\d+\.\d+)(<)/g, (all, a, v, b) =>
       cmpVer(v, APP_VERSION) < 0 ? a + 'v' + APP_VERSION + b : all);
     if (out === html) return res;

@@ -46,6 +46,17 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- ✅ 2026-11-13 nightly (branch nightly/2026-11-13-radar-version-health, base main) - app v1.18.9: ONE version source,
+  functions/_lib/version.js (APP_VERSION). Footer, the app JS VERSION constant (was 1.17.2) and /api/health (was 1.11.0) all read it.
+  /api/health said "unreachable" because it needed env.SUPABASE_URL, which is not a binding here (me.js hard-codes the project URL);
+  now defaults to project pkzeeqehwmtnqxdpdesl, reads latest of activity_log sync_log + targets.collected_date. Read-only, no secrets in output.
+  ❌ After deploy, Charles checks that Pages binding SUPABASE_SERVICE_KEY exists (Production env); if /api/health says "SUPABASE_SERVICE_KEY binding missing" it does not.
+  Bump the version in functions/_lib/version.js ONLY (extension version stays LATEST_EXT in _middleware.js).
+- ✅ 2026-11-11 nightly (branch nightly/2026-11-11-radar-email-gc-sender, base main) - daily-report v9 -> v9.1:
+  sender stays "GC Radar <radar@gershon.ai>" (already in repo main; the 11-10/11-11 audit saw the OLD DEPLOYED
+  function: "Radar" + slate header + blue button, so the live function must be redeployed by Ariel, verify_jwt OFF).
+  Button now white with brand-red #FE1B04 border and #d11200 text, header rule #FE1B04. Recipients, schedule, subject unchanged.
+  Overlaps PR #26 on one identical header-rule line (clean merge). No number tag is defined for this email in the app.
 - 2026-11-07 nightly (PR #23, branch nightly/2026-11-07-radar-email, stacked on #21) - daily-report v9
   Fixes three bugs seen in the 11-05 email:
   ✅ (a) "+633 new" next to "wrote 603 records". These are two different counts and now have two labels.
@@ -91,9 +102,9 @@ Default branch: main
   ❌ Merge pending: stacked on the 2026-10-20 PR - merge that one first,
      then this PR (it retargets to main).
   ✅ Charts red too (middleware item 4b rewrites the exact colour
-     literals in the served app.html): Dashboard trend line + 'targets
-     per bridge' bars, Home trend line + 'top bridges' bars. Growth
-     charts keep the stage colours; ICP-grade and per-source colours
+     literals in the served app.html): Dashboard trend line + 'targets per
+     bridge' bars, Home trend line + 'top bridges' bars. Growth charts
+     keep the stage colours; ICP-grade and per-source colours
      unchanged. Fold these literals into app.html next time it is edited
      (the rewrite then finds nothing and does nothing).
 
