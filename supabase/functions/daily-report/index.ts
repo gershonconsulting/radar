@@ -8,7 +8,7 @@
 //
 // 2026-10-22 (repo copy of deployed v7): sender display name "Radar" -> "GC Radar Report"
 // (Olivier's GC-prefix rule, see FROM below). Address, reply-to, recipients and subject unchanged.
-// 2026-10-27: house style for report emails - white header (dark #12211d text, Gershon red #CC3333
+// 2026-10-27: house style for report emails - white header (dark #12211d text, Gershon red #FE1B04
 // accent rule) instead of white-on-navy; white page, max-width 680px; links/button #1f6f5c, no light-on-dark.
 //
 // v8 (2026-10-28) — three fixes after the 2026-10-26 email:

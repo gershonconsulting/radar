@@ -1,7 +1,7 @@
 /* =====================================================================
    Radar - unified Gershon design (v1.15.0, 2026-10-21)
    Decision 2026-10-13: every Gershon app looks like Linalysis (the master
-   design) and the main colour everywhere is the Gershon.ai red #CC3333.
+   design) and the main colour everywhere is the Gershon.ai red #FE1B04.
    This file re-skins Radar without touching the 260 KB app.html: it is
    linked into the page by functions/_middleware.js (item 4).
    - The Source / Bridge / Target / Lead stage colours are KEPT on purpose.
@@ -13,7 +13,7 @@
 
 /* ---------- Tokens (shared; html:root beats the page's own :root) ---------- */
 html:root{
-  --gx-red:#CC3333; --gx-red-dark:#a8281f; --gx-red-light:#fdf2f2; --gx-red-line:#f3caca;
+  --gx-red:#FE1B04; --gx-red-dark:#d11200; --gx-red-light:#fff5f5; --gx-red-line:#f3caca;
   --gx-text:#1d1d1f; --gx-muted:#6e6e73; --gx-border:#e5e7eb; --gx-bg:#fafafa; --gx-radius:12px;
 
   /* app.html tokens */
@@ -25,7 +25,7 @@ html:root{
 
   /* landing-page tokens (index.html) */
   --brand2:#f08a8a;
-  --grad:linear-gradient(120deg,#CC3333 0%,#a8281f 100%);
+  --grad:linear-gradient(120deg,#FE1B04 0%,#d11200 100%);
   --soft:var(--gx-bg);
   --shadow:0 18px 50px rgba(29,29,31,.08);
 }
@@ -114,7 +114,7 @@ html body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvet
 #appShell .hc-kpi .l{ color:var(--gx-muted); font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
 #appShell .stat .sub, #appShell .hc-kpi .s{ color:var(--gx-muted); }
 #appShell .stat.clk:hover,
-#appShell .hc-kpi:hover{ border-color:var(--gx-red-line); box-shadow:0 4px 14px rgba(204,51,51,.10); }
+#appShell .hc-kpi:hover{ border-color:var(--gx-red-line); box-shadow:0 4px 14px rgba(254,27,4,.10); }
 #appShell .panel h3{ color:var(--gx-text); font-weight:700; }
 #appShell .onboard{ border-top-color:var(--gx-red); }
 
@@ -152,7 +152,7 @@ html body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvet
 
 /* ---------- Inputs ---------- */
 #appShell input:focus, #appShell select:focus, #appShell textarea:focus{
-  outline:none; border-color:var(--gx-red); box-shadow:0 0 0 3px rgba(204,51,51,.15); }
+  outline:none; border-color:var(--gx-red); box-shadow:0 0 0 3px rgba(254,27,4,.15); }
 #appShell .sel-box{ accent-color:var(--gx-red); }
 #appShell .switch input:checked + .track{ background:var(--gx-red); }
 
@@ -176,10 +176,10 @@ html body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvet
 #appShell .flow-node:hover{ border-color:var(--gx-red); background:var(--gx-red-light); }
 #appShell .flow-node.active{ background:var(--gx-red); border-color:var(--gx-red); color:#fff; }
 #appShell .rmode-opt.sel{ border-color:var(--gx-red); background:var(--gx-red-light); }
-#appShell .ob-field input:focus{ box-shadow:0 0 0 3px rgba(204,51,51,.15); }
+#appShell .ob-field input:focus{ box-shadow:0 0 0 3px rgba(254,27,4,.15); }
 
 /* ---------- Tour ---------- */
-#appShell .tour-chain .n.on{ border-color:var(--gx-red); box-shadow:0 0 0 3px rgba(204,51,51,.10); }
+#appShell .tour-chain .n.on{ border-color:var(--gx-red); box-shadow:0 0 0 3px rgba(254,27,4,.10); }
 
 /* ---------- Mobile (sidebar becomes a top strip of pills) ---------- */
 @media (max-width:880px){
@@ -200,7 +200,7 @@ body > header .nav-links a.link:hover{ color:var(--gx-red); }
 body > header .btn-primary,
 section .btn-primary{ background:var(--gx-red); box-shadow:none; color:#fff; border-radius:999px; }
 body > header .btn-primary:hover,
-section .btn-primary:hover{ background:var(--gx-red-dark); box-shadow:0 8px 22px rgba(204,51,51,.28); }
+section .btn-primary:hover{ background:var(--gx-red-dark); box-shadow:0 8px 22px rgba(254,27,4,.28); }
 
 section.hero{ background:linear-gradient(180deg,#ffffff 0%,var(--gx-bg) 60%,var(--gx-red-light) 100%); color:var(--gx-text); }
 section.hero h1{ color:var(--gx-text); }
@@ -212,8 +212,8 @@ section.hero .trust a{ color:var(--gx-red) !important; }
 section.hero .btn-lite{ background:#fff; border-color:var(--gx-border); color:var(--gx-text); border-radius:999px; }
 section.hero .btn-lite:hover{ border-color:var(--gx-red); color:var(--gx-red); background:#fff; }
 section.hero .rings{ opacity:.35; }
-section.hero .rings span{ border-color:rgba(204,51,51,.22); }
-section.hero .sweep{ background:conic-gradient(from 0deg,rgba(204,51,51,.16),transparent 30%); }
+section.hero .rings span{ border-color:rgba(254,27,4,.22); }
+section.hero .sweep{ background:conic-gradient(from 0deg,rgba(254,27,4,.16),transparent 30%); }
 section.hero .mock{ background:#fff; border-color:var(--gx-border); box-shadow:0 30px 80px rgba(29,29,31,.10); }
 section.hero .mock .bar{ background:var(--gx-bg); border-bottom-color:var(--gx-border); }
 section.hero .mock .bar i{ background:#d9d9de; }

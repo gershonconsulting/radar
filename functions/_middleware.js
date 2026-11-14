@@ -15,7 +15,7 @@
 // 4) (2026-10-21, app v1.15.0) Unified Gershon design: links app/unified-theme.css (served at
 //    /unified-theme.css) into the app page AND the landing page, so Radar looks like Linalysis
 //    (the master design: white sidebar, solid-red active pill, white 12px cards) in the Gershon.ai
-//    red #CC3333 - again without re-uploading app.html. Inserted once, before </head>, and only if
+//    red #FE1B04 - again without re-uploading app.html. Inserted once, before </head>, and only if
 //    the page does not already reference unified-theme.css (so it switches itself off once the
 //    theme is folded into the HTML). The sidebar version stamp is raised to APP_VERSION here too.
 //    4b) Chart colours: the charts' colours live in app.html's JavaScript, so CSS cannot reach them.
@@ -36,8 +36,8 @@
 //    person names; "Daily lead target" is a goal and keeps its wording); CHART_WORDS renames the chart
 //    legends, which are drawn on a canvas the script cannot reach. Inserted once before </body>, only
 //    if the page does not already load the script. The landing page, admin page and sources-list.js
-//    are re-worded at the source. v1.18.5: PR #7's colour leftovers (indigo -> Gershon red #CC3333,
-//    dark #a8281f, tint #fdf2f2) fixed at the source in admin / extension / landing pages, favicon
+//    are re-worded at the source. v1.18.5: PR #7's colour leftovers (indigo -> Gershon red #FE1B04,
+//    dark #d11200, tint #fff5f5) fixed at the source in admin / extension / landing pages, favicon
 //    and manifest; the literals inside app.html are rewritten when served (APP_RED).
 //    Stage colours (Sources green, Bridges orange, Prospects blue, Leads red) and grades are untouched.
 //    The landing footer version (id="siteVer") is stamped like the sidebar's.
@@ -50,6 +50,7 @@ const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app',
 //    v1.18.8 (2026-11-09): /app colours off indigo/blue to Gershon red (PR #19, rebuilt on main).
 //    v1.18.9 (2026-11-13): APP_VERSION now lives in functions/_lib/version.js (shared with /api/health) and
 //    ALSO stamps the app's JS `VERSION` constant; before, three places disagreed (footer 1.18.8, JS 1.17.2, health 1.11.0).
+//    v1.18.10 (2026-11-14): brand red #CC3333 -> #FE1B04 (logo and website red, PR #26).
 import { APP_VERSION } from './_lib/version.js';
 const WORDING_SRC = '/prospects-wording.js?v=' + APP_VERSION;
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
@@ -58,28 +59,28 @@ const SUGGESTIONS_SRC = '/suggestions.js?v=' + APP_VERSION;
 const THEME_HREF = '/unified-theme.css?v=' + APP_VERSION;
 const CHART_RED = [
   // Dashboard (renderCharts): trend line colour + 'targets per bridge' bar colour
-  ["const PRIMARY='#1e40af', ACCENT='#3b82f6';", "const PRIMARY='#a8281f', ACCENT='#CC3333';"],
-  ["backgroundColor:'rgba(59,130,246,0.12)'", "backgroundColor:'rgba(204,51,51,0.12)'"],
+  ["const PRIMARY='#1e40af', ACCENT='#3b82f6';", "const PRIMARY='#d11200', ACCENT='#FE1B04';"],
+  ["backgroundColor:'rgba(59,130,246,0.12)'", "backgroundColor:'rgba(254,27,4,0.12)'"],
   // Home: 'new prospects' trend line
-  ["data:counts, borderColor:'#2563eb',", "data:counts, borderColor:'#CC3333',"],
-  ["backgroundColor:'rgba(37,99,235,.12)'", "backgroundColor:'rgba(204,51,51,.12)'"],
-  ["pointBackgroundColor:'#2563eb'", "pointBackgroundColor:'#CC3333'"],
+  ["data:counts, borderColor:'#2563eb',", "data:counts, borderColor:'#FE1B04',"],
+  ["backgroundColor:'rgba(37,99,235,.12)'", "backgroundColor:'rgba(254,27,4,.12)'"],
+  ["pointBackgroundColor:'#2563eb'", "pointBackgroundColor:'#FE1B04'"],
   // Home: 'top bridges' leaderboard bars
-  ["lbRows(topBrg, (()=> '#6366f1')", "lbRows(topBrg, (()=> '#CC3333')"]
+  ["lbRows(topBrg, (()=> '#6366f1')", "lbRows(topBrg, (()=> '#FE1B04')"]
 ];
 // Leftover indigo / old-red literals still inside app.html (v1.18.5, PR #7 colour leftovers). The
 // unified theme already overrides the tokens; these are the hard-coded ones it cannot reach.
 const APP_RED = [
-  ['<meta name="theme-color" content="#E01000"', '<meta name="theme-color" content="#CC3333"'],
-  ['--brand:#6366f1; --brand-ink:#4f46e5; --brand-soft:#eef0fe;', '--brand:#CC3333; --brand-ink:#a8281f; --brand-soft:#fdf2f2;'],
-  ['.signin-box .logo{ color:#6366f1;', '.signin-box .logo{ color:#CC3333;'],
-  ['.signin-box .sub{ color:#6366f1;', '.signin-box .sub{ color:#CC3333;'],
-  ['border-radius:50%; background:#6366f1;', 'border-radius:50%; background:#CC3333;'],
-  ['box-shadow:0 4px 14px rgba(99,102,241,0.14); border-color:#c7cbf5;', 'box-shadow:0 4px 14px rgba(204,51,51,0.14); border-color:#f3c4c4;'],
+  ['<meta name="theme-color" content="#E01000"', '<meta name="theme-color" content="#FE1B04"'],
+  ['--brand:#6366f1; --brand-ink:#4f46e5; --brand-soft:#eef0fe;', '--brand:#FE1B04; --brand-ink:#d11200; --brand-soft:#fff5f5;'],
+  ['.signin-box .logo{ color:#6366f1;', '.signin-box .logo{ color:#FE1B04;'],
+  ['.signin-box .sub{ color:#6366f1;', '.signin-box .sub{ color:#FE1B04;'],
+  ['border-radius:50%; background:#6366f1;', 'border-radius:50%; background:#FE1B04;'],
+  ['box-shadow:0 4px 14px rgba(99,102,241,0.14); border-color:#c7cbf5;', 'box-shadow:0 4px 14px rgba(254,27,4,0.14); border-color:#f3c4c4;'],
   ["const SOURCE_PALETTE = ['#6366f1',", "const SOURCE_PALETTE = ['#64748b',"],
-  ["var(--brand,#4f46e5)", "var(--brand,#CC3333)"],
-  ["var(--brand-ink,#4f46e5)", "var(--brand-ink,#a8281f)"],
-  ["var(--brand-soft,#eef0fe)", "var(--brand-soft,#fdf2f2)"]
+  ["var(--brand,#4f46e5)", "var(--brand,#FE1B04)"],
+  ["var(--brand-ink,#4f46e5)", "var(--brand-ink,#d11200)"],
+  ["var(--brand-soft,#eef0fe)", "var(--brand-soft,#fff5f5)"]
 ];
 const CHART_WORDS = [
   ["label:'Targets'", "label:'Prospects'"],
