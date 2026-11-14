@@ -51,6 +51,7 @@ const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app',
 //    v1.18.9 (2026-11-13): APP_VERSION now lives in functions/_lib/version.js (shared with /api/health) and
 //    ALSO stamps the app's JS `VERSION` constant; before, three places disagreed (footer 1.18.8, JS 1.17.2, health 1.11.0).
 //    v1.18.10 (2026-11-14): brand red #CC3333 -> #FE1B04 (logo and website red, PR #26).
+//    v1.18.11 (2026-11-14): app.html itself says Prospects (was Target/Targets); prospects-wording.js now finds nothing.
 import { APP_VERSION } from './_lib/version.js';
 const WORDING_SRC = '/prospects-wording.js?v=' + APP_VERSION;
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
