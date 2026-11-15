@@ -44,7 +44,7 @@
 //    v1.18.6 (2026-11-04): PR #8 rebuilt on main - extension source v1.17.1 (not yet released:
 //    LATEST_EXT stays 1.17.0 until the 1.17.1 zip is in radar-releases), help page links 1.17.0.
 //    v1.18.7 (2026-11-09): extension 1.17.2 (hard LinkedIn limits) - zip committed in app/.
-const LATEST_EXT = '1.17.2';
+//    v1.18.12 (2026-11-15): LATEST_EXT now lives in functions/_lib/version.js (also served by /api/health).
 const RELEASES = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/storage/v1/object/public/radar-releases/';
 const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app', '/app/app.html']);
 //    v1.18.8 (2026-11-09): /app colours off indigo/blue to Gershon red (PR #19, rebuilt on main).
@@ -52,7 +52,7 @@ const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app',
 //    ALSO stamps the app's JS `VERSION` constant; before, three places disagreed (footer 1.18.8, JS 1.17.2, health 1.11.0).
 //    v1.18.10 (2026-11-14): brand red #CC3333 -> #FE1B04 (logo and website red, PR #26).
 //    v1.18.11 (2026-11-14): app.html itself says Prospects (was Target/Targets); prospects-wording.js now finds nothing.
-import { APP_VERSION } from './_lib/version.js';
+import { APP_VERSION, LATEST_EXT } from './_lib/version.js';
 const WORDING_SRC = '/prospects-wording.js?v=' + APP_VERSION;
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
 const SOURCES_LIST_SRC = '/sources-list.js?v=' + APP_VERSION;
