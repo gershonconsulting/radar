@@ -9,6 +9,8 @@
 // The extension posts here with the shared INGEST_SECRET; the function maps that to the owner.
 const WEBAPP_URL    = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/functions/v1/hub';
 const INGEST_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
+// 1.17.2: hard LinkedIn action limits (pages, profile lookups, list saves, new prospects) - see limits.js.
+try { importScripts('limits.js'); } catch (e) { console.error('[Radar] limits.js failed to load', e); }
 // ===== LinkedIn gate (1.13.0) =====
 // Radar asks the shared LinkedIn gate BEFORE every Sales Navigator search page, every bridge
 // discovery search and every lead-page open, and STOPS when the gate says no. Up to 1.12.0 Radar
@@ -28,8 +30,9 @@ const MAX_PAGES     = 25;
 // results are read from Sales Nav's own search API responses (capture.js), so nothing has to be
 // visible. If that read ever fails, the window is shown (unfocused) for that page only.
 const DAY_PAGE_CAP        = 120;          // Sales Nav search pages per local day, all sessions
-const SESSION_PAGES_MIN   = 25;           // pages per session (random in [min,max])
-const SESSION_PAGES_MAX   = 40;
+// 1.17.2: sessions are short (the hourly limit is 5 pages); the day total comes from limits.js.
+const SESSION_PAGES_MIN   = 3;            // pages per session (random in [min,max])
+const SESSION_PAGES_MAX   = 5;
 const SESSION_BREAK_MIN_M = 45;           // break between sessions, minutes
 const SESSION_BREAK_MAX_M = 110;
 const WORK_DAYS           = [1, 2, 3, 4, 5];   // automatic runs Mon-Fri only (local time)
@@ -78,11 +81,96 @@ async function scheduleResumeAt(when, reason) {
   await log('info', 'run:resume-scheduled', { at: new Date(Date.now() + ms).toISOString(), reason: reason });
 }
 async function humanPageGap() {
-  let s = randInt(18, 55);
+  let s = randInt(30, 90);
   if (Math.random() < 0.15) s += randInt(60, 180);
   await sleepKeepAlive(s * 1000);
 }
 async function humanBridgeGap() { await sleepKeepAlive(randInt(40, 120) * 1000); }
+// ===== Hard LinkedIn limits (1.17.2) - glue between limits.js and chrome.storage =====
+const LEDGER_KEY    = 'radar_li_ledger';      // what this browser already did today / this week / last hour
+const CURSOR_KEY    = 'radar_bridge_cursor';  // per-bridge reading position (resume next day)
+const OVERFLOW_KEY  = 'radar_new_overflow';   // new prospects found over today's cap, taken first tomorrow
+const FIRST_RUN_KEY = 'radar_first_run_at';   // set on a FRESH install only -> half limits for 14 days
+let LIM = null;              // effectiveLimits() result for this run
+let KNOWN_IDS = new Set();   // lead_ids this account already has (from the hub) + taken this run
+let NEW_THIS_RUN = new Set();// lead_ids accepted as NEW today (the only ones we spend lookups on)
+let PROSPECTS_FULL = false;  // today's new-prospect cap is reached -> stop reading search pages
+function limitsNow() { return (LIM && LIM.limits) || LIMIT_DEFAULTS; }
+async function loadLedger() { try { return freshLedger((await chrome.storage.local.get(LEDGER_KEY))[LEDGER_KEY] || null, Date.now()); } catch (e) { return freshLedger(null, Date.now()); } }
+async function saveLedger(st) { try { await chrome.storage.local.set({ [LEDGER_KEY]: st }); } catch (e) {} }
+async function limitLeft(kind) { return limitRoom(await loadLedger(), limitsNow(), kind, Date.now()); }
+async function limitUse(kind, n) { const st = limitSpend(await loadLedger(), kind, n || 1, Date.now()); await saveLedger(st); return st; }
+// Hard check: when the limit is reached the run is HELD (stops all LinkedIn work) until it frees up.
+// Soft check (soft=true): just answers no - used for lookups, so running out of lookups never
+// stops the cheap work that does not need them.
+async function limitTake(kind, context, soft) {
+  const r = await limitLeft(kind);
+  if (r.left > 0) return true;
+  if (soft) { await log('info', 'limits:reached', { kind: kind, reason: r.reason, context: context || '' }); return false; }
+  let secs;
+  if (/hour_cap$/.test(r.reason)) secs = Math.ceil(r.retryMs / 1000) + randInt(120, 900);
+  else secs = Math.max(300, Math.round((nextWorkWindowStart(new Date()).getTime() - Date.now()) / 1000) + randInt(0, 2400));
+  GATE_HELD = { action: 'limits', reason: r.reason, retry_after_seconds: secs, context: context || '' };
+  await log('info', 'limits:held', { kind: kind, reason: r.reason, resumeInMinutes: Math.round(secs / 60), limits: limitsNow() });
+  return false;
+}
+async function loadLimits() {
+  let cfg = {};
+  try { cfg = await fetchHubJsonp('getConfig') || {}; } catch (e) { await log('warn', 'limits:config-unreachable', { error: String(e), using: 'defaults' }); }
+  let first = null;
+  try { first = (await chrome.storage.local.get(FIRST_RUN_KEY))[FIRST_RUN_KEY] || null; } catch (e) {}
+  LIM = effectiveLimits(cfg, Date.now(), first);
+  const led = await loadLedger();
+  await log('info', 'limits:loaded', { why: LIM.why, scale: LIM.scale, limits: LIM.limits, today: led.dayCounts, week: led.weekCounts });
+  return LIM;
+}
+// Everything this account already has, so a re-read page never counts as new and never costs a lookup.
+async function loadKnownIds() {
+  KNOWN_IDS = new Set(); NEW_THIS_RUN = new Set(); PROSPECTS_FULL = false;
+  try {
+    const d = await fetchHubJsonp('');
+    ((d && d.rows) || []).forEach(r => { if (r && r.lead_id) KNOWN_IDS.add(String(r.lead_id)); });
+  } catch (e) { await log('warn', 'limits:known-unreachable', { error: String(e) }); }
+  return KNOWN_IDS.size;
+}
+async function getCursors() { try { return (await chrome.storage.local.get(CURSOR_KEY))[CURSOR_KEY] || {}; } catch (e) { return {}; } }
+async function saveCursor(urn, c) { const all = await getCursors(); all[urn] = c; try { await chrome.storage.local.set({ [CURSOR_KEY]: all }); } catch (e) {} }
+async function addOverflow(leads) {
+  if (!leads || !leads.length) return;
+  try {
+    const cur = (await chrome.storage.local.get(OVERFLOW_KEY))[OVERFLOW_KEY] || [];
+    const seen = new Set(cur.map(l => l && l.lead_id));
+    leads.forEach(l => { if (l && l.lead_id && !seen.has(l.lead_id)) { cur.push(l); seen.add(l.lead_id); } });
+    await chrome.storage.local.set({ [OVERFLOW_KEY]: cur.slice(-1000) });
+  } catch (e) {}
+}
+// New prospects found yesterday over the cap are taken FIRST today - they cost no page load.
+async function drainOverflow() {
+  let cur = [];
+  try { cur = (await chrome.storage.local.get(OVERFLOW_KEY))[OVERFLOW_KEY] || []; } catch (e) { return []; }
+  cur = cur.filter(l => l && l.lead_id && !KNOWN_IDS.has(String(l.lead_id)));
+  if (!cur.length) { try { await chrome.storage.local.remove(OVERFLOW_KEY); } catch (e) {} return []; }
+  const room = (await limitLeft('prospects')).left;
+  const take = cur.slice(0, room), keep = cur.slice(room);
+  try { await chrome.storage.local.set({ [OVERFLOW_KEY]: keep }); } catch (e) {}
+  if (take.length) {
+    take.forEach(l => { KNOWN_IDS.add(String(l.lead_id)); NEW_THIS_RUN.add(String(l.lead_id)); l.collected_date = new Date().toISOString(); });
+    await limitUse('prospects', take.length);
+  }
+  if ((await limitLeft('prospects')).left <= 0) PROSPECTS_FULL = true;
+  await log('info', 'limits:overflow', { taken: take.length, stillQueued: keep.length });
+  return take;
+}
+// ANY LinkedIn warning (401/403/429, a check page) stops everything for warning_hold_hours (48h),
+// and is pushed to the hub at once so the alert goes out (activity_log trigger -> email).
+async function onLinkedInWarning(where, status) {
+  const hours = limitsNow().warning_hold_hours || 48;
+  await setLiHold(hours * HOUR_MS, 'LinkedIn warning (' + (status || 'check page') + ') on ' + where);
+  GATE_HELD = { action: 'linkedin', reason: 'linkedin_warning', retry_after_seconds: 12 * 3600, context: where, status: status || '' };
+  await log('error', 'linkedin:warning', { where: where, status: status || 'check page', holdHours: hours, note: 'Radar stopped ALL LinkedIn activity on this account for ' + hours + 'h to protect it.' });
+  notify('Radar paused ' + hours + 'h', 'LinkedIn sent a warning (' + (status || 'check page') + '). Radar stopped all collection for ' + hours + ' hours to protect the account.', 'error');
+  try { await pushLog(); } catch (e) {}
+}
 function isChallengeUrl(u) { return /linkedin\.com\/(checkpoint|authwall|uas\/login|login)|captcha|challenge/i.test(String(u || '')); }
 const MAX_RESOLVE_PER_RUN = 400;  // API lookups now, not page loads - so this can be far higher
 // How many of the STANDING backlog of URL-less prospects to drain per run. See
@@ -245,7 +333,11 @@ async function maybeAutoRun(trigger) {
   try { await pushLog(); } catch (e) {}
   return r;
 }
-chrome.runtime.onInstalled.addListener(async () => { await applySchedule(await getSchedule()); await log('info', 'Extension installed, schedule set'); });
+chrome.runtime.onInstalled.addListener(async (details) => {
+  // 1.17.2: a FRESH install runs at half limits for 14 days. An update keeps full limits.
+  if (details && details.reason === 'install') { try { await chrome.storage.local.set({ [FIRST_RUN_KEY]: new Date().toISOString() }); } catch (e) {} }
+  await applySchedule(await getSchedule()); await log('info', 'Extension installed, schedule set', { reason: details && details.reason });
+});
 // PRIMARY trigger: the first time Chrome opens each day (gated to once/day by maybeAutoRun).
 chrome.runtime.onStartup.addListener(async () => { await applySchedule(await getSchedule()); await maybeAutoRun('startup'); });
 // BACKUP: if Chrome stays open for many hours, the daily alarm still fires it (also gated).
@@ -403,6 +495,21 @@ async function scheduleGateResume() {
 async function runSync(opts) {
   opts = opts || {};
   if (SYNC_RUNNING) { await log('warn', 'run:already-running'); return { status: 'already-running' }; }
+  // 1.17.2: limits first. A Radar pause or a LinkedIn warning hold stops EVERY run, manual
+  // "Sync now" included - protecting the account beats one more batch of prospects.
+  try { await loadLimits(); } catch (e) { LIM = effectiveLimits({}, Date.now(), null); }
+  if (LIM.paused) {
+    await log('warn', 'limits:paused', { until: LIM.pauseUntil, why: LIM.why });
+    await scheduleResumeAt(new Date(new Date(LIM.pauseUntil).getTime() + randInt(10, 90) * 60000), 'radar_pause');
+    try { await pushLog(); } catch (e) {}
+    return { status: 'paused', until: LIM.pauseUntil };
+  }
+  const holdMs = await liHoldLeft();
+  if (holdMs > 0) {
+    await log('warn', 'linkedin:hold-active', { hoursLeft: Math.round(holdMs / 360000) / 10 });
+    await scheduleResumeAt(new Date(Date.now() + holdMs + randInt(5, 40) * 60000), 'linkedin_hold');
+    return { status: 'held', hoursLeft: Math.round(holdMs / 3600000) };
+  }
   SYNC_RUNNING = true;
   // Stamp the run time up front so a near-simultaneous trigger (e.g. the +1min alarm) is gated out.
   const DAY = await getDayState();
@@ -412,7 +519,9 @@ async function runSync(opts) {
   await saveDayState(DAY);
   await clearLog();
   GATE_HELD = null;
-  await log('info', 'run:start', { version: EXT_VERSION, session: DAY.sessions, dayPages: DAY.pages, dayCap: DAY_PAGE_CAP, resume: !!opts.resume });
+  await log('info', 'run:start', { version: EXT_VERSION, session: DAY.sessions, dayPages: DAY.pages, dayCap: limitsNow().pages_per_day, resume: !!opts.resume });
+  try { const nk = await loadKnownIds(); await log('info', 'limits:known', { prospectsOnFile: nk }); } catch (e) {}
+  if ((await limitLeft('prospects')).left <= 0) PROSPECTS_FULL = true;
   try { await ensureCaptureScript(); } catch (e) {}
   // (No desktop "Sync started" popup — collection runs quietly; see notify() level gating.)
   const loggedIn = await checkLogin();
@@ -531,7 +640,11 @@ async function runSync(opts) {
     // throttled. (2026-08-25: one uncapped run ran 7h and ended in a 401.)
     // Cap AFTER filtering, so the per-run budget is never spent on bridges we skip anyway.
     const doneToday = new Set(DAY.done);
-    const bridges = eligible.filter(b => !doneToday.has(String(b.urn || ''))).slice(0, MAX_BRIDGES_PER_RUN);
+    // 1.17.2: drop bridges that are resting (fully read) or already had their pages today BEFORE
+    // taking the run's slice, so they never crowd out bridges that still have pages to read.
+    const cursorsNow = await getCursors();
+    const readable = b => bridgeAllowance(cursorsNow[String(b.urn || '')], limitsNow(), Date.now(), MAX_PAGES).pages > 0;
+    const bridges = eligible.filter(b => !doneToday.has(String(b.urn || '')) && readable(b)).slice(0, MAX_BRIDGES_PER_RUN);
     await log('info', 'scrape:bridges', {
       count: bridges.length,
       eligible: eligible.length,
@@ -552,9 +665,21 @@ async function runSync(opts) {
     // Shared URL-resolution budget for the whole run (resolving opens a tab per lead).
     const resolveState = { left: MAX_RESOLVE_PER_RUN };
     // Shared page-load budget: the hard ceiling on how much Sales Navigator this run touches.
-    const sessionPages = Math.max(0, Math.min(randInt(SESSION_PAGES_MIN, SESSION_PAGES_MAX), MAX_PAGES_PER_RUN, DAY_PAGE_CAP - DAY.pages));
+    // 1.17.2: the session can never take more than the hour / day / week page limits allow.
+    const pageRoom = await limitLeft('pages');
+    const sessionPages = Math.max(0, Math.min(randInt(SESSION_PAGES_MIN, SESSION_PAGES_MAX), MAX_PAGES_PER_RUN, pageRoom.left));
+    if (!pageRoom.left) await limitTake('pages', 'session start');
+    // New prospects found over yesterday's cap go in first - no page needs to be read for them.
+    try {
+      const over = await drainOverflow();
+      if (over.length) {
+        try { await resolvePublicUrls(over, resolveState); } catch (e) {}
+        try { const res = await postToHub(over); savedTotal += (res && (res.upserted != null ? res.upserted : res.written)) || 0; foundTotal += over.length; }
+        catch (err) { await bufferLeads(over); await log('error', 'ingest:overflow-error', { error: String(err) }); }
+      }
+    } catch (e) { await log('warn', 'limits:overflow-error', { error: String(e) }); }
     const pageBudget = { left: sessionPages };
-    await log('info', 'session:budget', { session: DAY.sessions, pages: sessionPages, dayPagesSoFar: DAY.pages, dayCap: DAY_PAGE_CAP, doneToday: DAY.done.length });
+    await log('info', 'session:budget', { session: DAY.sessions, pages: sessionPages, dayPagesSoFar: DAY.pages, dayCap: limitsNow().pages_per_day, doneToday: DAY.done.length });
     let bridgesDone = 0;
 
     // CRITICAL: write EACH bridge's leads to the hub as soon as they're scraped. Previously the
@@ -567,13 +692,17 @@ async function runSync(opts) {
         await log('warn', 'scrape:gate-held', { scraped: bridgesDone, skipped: bridges.length - bridgesDone, reason: GATE_HELD.reason });
         break;
       }
+      if (PROSPECTS_FULL) {
+        await log('info', 'limits:prospects-done', { cap: limitsNow().prospects_per_day, note: "Today's new prospects are in - no more search pages today." });
+        break;
+      }
       if (pageBudget.left <= 0) {
         // End of a SESSION, not of the day: take a long break and come back, unless today's cap is spent.
-        if (DAY.pages < DAY_PAGE_CAP) {
+        if ((await limitLeft('pages')).left > 0) {
           GATE_HELD = { action: 'session', reason: 'session_break', retry_after_seconds: randInt(SESSION_BREAK_MIN_M, SESSION_BREAK_MAX_M) * 60 };
           await log('info', 'session:break', { minutes: Math.round(GATE_HELD.retry_after_seconds / 60), remaining: bridges.length - bridgesDone });
         } else {
-          await log('info', 'session:day-cap-reached', { dayPages: DAY.pages, cap: DAY_PAGE_CAP });
+          await log('info', 'session:day-cap-reached', { dayPages: DAY.pages, cap: limitsNow().pages_per_day });
         }
         await log('warn', 'scrape:budget-reached', {
           cap: sessionPages,
@@ -647,13 +776,15 @@ async function runSync(opts) {
           listedTotal += (mid && mid.added) || 0;
         } catch (e) { await log('warn', 'salesnav-list:error', { error: String(e) }); }
       }
-      if (!GATE_HELD && pageBudget.left > 0) await humanBridgeGap();
+      if (!GATE_HELD && !PROSPECTS_FULL && pageBudget.left > 0 && !scrapeBridge.lastSkipped) await humanBridgeGap();
     }
     // More bridges still waiting today and budget left for the day -> come back after a break.
     if (!GATE_HELD) {
       const doneNow = new Set(DAY.done);
-      const waiting = eligible.filter(b => !doneNow.has(String(b.urn || '')) && /^ACwAA/.test(String(b.urn || ''))).length;
-      if (waiting > 0 && DAY.pages < DAY_PAGE_CAP) {
+      const curs2 = await getCursors();
+      const waiting = eligible.filter(b => !doneNow.has(String(b.urn || '')) && /^ACwAA/.test(String(b.urn || '')) &&
+        bridgeAllowance(curs2[String(b.urn || '')], limitsNow(), Date.now(), MAX_PAGES).pages > 0).length;
+      if (waiting > 0 && !PROSPECTS_FULL && (await limitLeft('pages')).left > 0) {
         GATE_HELD = { action: 'session', reason: 'session_break', retry_after_seconds: randInt(SESSION_BREAK_MIN_M, SESSION_BREAK_MAX_M) * 60 };
         await log('info', 'session:break', { minutes: Math.round(GATE_HELD.retry_after_seconds / 60), waitingBridges: waiting });
       }
@@ -681,13 +812,25 @@ async function runSync(opts) {
     // sync - a run that collects nothing still has yesterday's overflow to catch up on, and that
     // catching up is exactly what never happened before.
     let urlBackfill = { asked: 0, resolved: 0, remaining: 0 };
-    if (firstSessionToday) try { urlBackfill = await backfillTargetUrls(BACKFILL_URLS_PER_RUN); }
+    if (!GATE_HELD || GATE_HELD.reason === 'session_break') try { urlBackfill = await backfillTargetUrls(BACKFILL_URLS_PER_RUN); }
     catch (e) { await log('warn', 'backfill:error', { error: String(e) }); }
 
     // Give the invite campaign something to work with: resolve a few missing bridge URLs.
     let bridgeUrls = { attempted: 0, resolved: 0, remaining: 0 };
     if (firstSessionToday) try { bridgeUrls = await resolveBridgeUrls(BRIDGE_URL_RESOLVE_PER_RUN); }
     catch (e) { await log('warn', 'bridge-url:error', { error: String(e) }); }
+
+    // 1.17.2: profile links still waiting and only the HOURLY lookup limit stopped us -> come back
+    // when the hour frees up (spreads the 25 daily lookups over the day instead of one burst).
+    if (!GATE_HELD) {
+      try {
+        const lr = await limitLeft('lookups');
+        if (lr.reason === 'lookups_hour_cap' && (urlBackfill.remaining > 0 || NEW_THIS_RUN.size > 0)) {
+          GATE_HELD = { action: 'session', reason: 'session_break', retry_after_seconds: Math.ceil(lr.retryMs / 1000) + randInt(120, 1200) };
+          await log('info', 'limits:lookups-later', { resumeInMinutes: Math.round(GATE_HELD.retry_after_seconds / 60), waiting: urlBackfill.remaining });
+        }
+      } catch (e) {}
+    }
 
     // OPTIONAL phase. Botdog is an add-on, not a requirement: Radar is complete without it, and
     // a missing key is an info-level skip, never an error (best-effort; never blocks the run).
@@ -716,7 +859,8 @@ async function runSync(opts) {
       bridgesInvited: (bridgePush && (bridgePush.sent || 0)) || 0,
       errors: RUN_ERRORS, listCooling: listCooling,
       gateHeld: GATE_HELD ? GATE_HELD.reason : null,
-      session: DAY.sessions, dayPages: DAY.pages, dayCap: DAY_PAGE_CAP, bridgesDoneToday: DAY.done.length,
+      session: DAY.sessions, dayPages: DAY.pages, dayCap: limitsNow().pages_per_day, bridgesDoneToday: DAY.done.length,
+      limits: limitsNow(), limitsWhy: LIM ? LIM.why : '', usedToday: (await loadLedger()).dayCounts, prospectsFull: PROSPECTS_FULL,
       status: status
     });
     notify('Sync complete', savedTotal + ' new prospects saved (' + foundTotal + ' found), ' + listedTotal + ' added to your Sales Nav list.', status === 'error' ? 'error' : undefined);
@@ -955,22 +1099,30 @@ async function markSalesNavListed(ids, kind) {
 async function fileIntoSalesNavList(kind) {
   const K   = SALESNAV_KINDS[kind] || SALESNAV_KINDS.prospects;
   const TAG = K.logTag;
+  // 1.17.2: after a LinkedIn warning nothing touches LinkedIn - not even the list API.
+  if ((await liHoldLeft()) > 0) { await log('info', TAG + ':linkedin-hold'); return { ok: true, added: 0, reason: 'linkedin_hold' }; }
   // Respect a cooldown set by an earlier 401/403 - retrying immediately just deepens the block.
   const cool = await salesNavCooldownLeft();
   if (cool > 0) {
     await log('info', TAG + ':cooldown', { minutes_left: Math.ceil(cool / 60000) });
     return { ok: true, added: 0, reason: 'cooldown' };
   }
+  // 1.17.2: list saves share one daily limit (prospects + bridges lists together).
+  const saveRoom = (await limitLeft('listSaves')).left;
+  if (saveRoom <= 0) {
+    await log('info', TAG + ':limit-reached', { cap: limitsNow().list_saves_per_day });
+    return { ok: true, added: 0, reason: 'limit' };
+  }
   let pending = null;
   try {
-    pending = await fetchHubJsonp(K.pendingAction, { cap: K.cap });
+    pending = await fetchHubJsonp(K.pendingAction, { cap: Math.min(K.cap, saveRoom) });
   } catch (err) {
     await log('warn', TAG + ':hub-error', { error: String(err) });
     return { ok: false, added: 0, reason: 'hub-error' };
   }
 
   const listId = (pending && pending.list_id) || '';
-  const ids    = (pending && pending[K.idsKey]) || [];
+  const ids    = ((pending && pending[K.idsKey]) || []).slice(0, saveRoom);
   const total  = (pending && pending.pending_total) || ids.length;
 
   if (!listId) {
@@ -1060,6 +1212,7 @@ async function fileIntoSalesNavList(kind) {
       if (res && res.ok) {
         // Stamp each chunk immediately, so an interrupted run never re-adds what already landed.
         try { await markSalesNavListed(batch, kind); } catch (err) { await log('warn', TAG + ':mark-failed', { error: String(err), n: batch.length }); }
+        await limitUse('listSaves', batch.length);
         added += batch.length;
         if (added === batch.length) { try { await clearSalesNavCooldown(); } catch (e) {} }
         await log('info', TAG + ':chunk', { added: batch.length, runningTotal: added });
@@ -1096,7 +1249,8 @@ async function fileIntoSalesNavList(kind) {
             cooldown_hours: SALESNAV_COOLDOWN_MS / 3600000,
             filed_before_abort: added
           });
-          notify('Sales Nav paused', 'LinkedIn refused the session after ' + added + ' filed. Radar will retry in ' + (SALESNAV_COOLDOWN_MS / 3600000) + 'h.', 'error');
+          if (!seatErr) await onLinkedInWarning('Sales Nav list', res.status || 'refused');
+          else notify('Sales Nav paused', 'LinkedIn refused the session after ' + added + ' filed. Radar will retry in ' + (SALESNAV_COOLDOWN_MS / 3600000) + 'h.', 'error');
           break;
         }
       }
@@ -1230,8 +1384,10 @@ async function enrichLocations(rows) {
     if (!r || !r.lead_id) continue;
     if (r.country) { if (!r.language) r.language = langFromCountry(r.country); continue; }
     if (GATE_HELD) break;
+    if (!(await limitTake('lookups', 'location', true))) break;
     if (!(await gateTake('profile_view', 'location'))) break;
     const loc = await fetchLeadLocation(r.lead_id);
+    await limitUse('lookups', 1);
     done++;
     if (!loc) continue;
     const segs = loc.split(',').map(s => s.trim()).filter(Boolean);
@@ -1239,7 +1395,7 @@ async function enrichLocations(rows) {
     r.city = segs[0] || '';
     r.country = segs[segs.length - 1] || '';
     r.language = langFromCountry(r.country);
-    await new Promise(res => setTimeout(res, 700));   // be gentle with LinkedIn
+    await sleepKeepAlive(randInt(20, 60) * 1000);   // 1.17.2: lookups are paced like a person (was 0.7s)
   }
   if (done) await log('info', 'location-enrich', { looked_up: done });
   return rows;
@@ -1280,8 +1436,8 @@ async function resolveBridgeUrls(cap) {
   let all = [];
   try { all = await getBridges(); } catch (e) { return { attempted: 0, resolved: 0, failed: 0, remaining: 0 }; }
   const missing = (all || []).filter(b => b && b.urn && !/linkedin\.com\/in\//i.test(String(b.linkedin_url || '')));
-  const todo = missing.slice(0, cap || BRIDGE_URL_RESOLVE_PER_RUN);
-  if (!todo.length) return { attempted: 0, resolved: 0, failed: 0, remaining: 0 };
+  const todo = missing.slice(0, Math.min(cap || BRIDGE_URL_RESOLVE_PER_RUN, (await limitLeft('lookups')).left));
+  if (!todo.length) return { attempted: 0, resolved: 0, failed: 0, remaining: missing.length };
   await log('info', 'bridge-url:start', { attempting: todo.length, missingTotal: missing.length });
   let resolved = 0, failed = 0;
   for (const b of todo) {
@@ -1293,7 +1449,7 @@ async function resolveBridgeUrls(cap) {
     } else {
       failed++;
     }
-    await sleep(1200);
+    if (GATE_HELD) break;
   }
   await log('info', 'bridge-url:done', {
     attempted: todo.length, resolved: resolved, unresolvable: failed,
@@ -1493,7 +1649,10 @@ async function resolveManualBridges(cap) {
   stats.pending = todo.length;
   if (!todo.length) return stats;
   if (GATE_HELD) { await log('info', 'manual-bridge:skip', { reason: 'gate held', pending: todo.length }); return stats; }
-  const batch = todo.slice(0, cap || MANUAL_BRIDGE_RESOLVE_PER_RUN);
+  // 1.17.2: each hand-added bridge costs 2 LinkedIn calls - count them as lookups.
+  const lookRoom = Math.floor((await limitLeft('lookups')).left / 2);
+  const batch = todo.slice(0, Math.min(cap || MANUAL_BRIDGE_RESOLVE_PER_RUN, lookRoom, 3));
+  if (!batch.length) { await log('info', 'manual-bridge:no-budget', { pending: todo.length }); return stats; }
   await log('info', 'manual-bridge:resolve-start', { count: batch.length, pending: todo.length, who: batch.map(b => b.name).slice(0, 10) });
   const tab = await openScrapeTab('https://www.linkedin.com/sales/homepage');
   if (!tab) { await log('warn', 'manual-bridge:no-tab', { wanted: batch.length }); return stats; }
@@ -1503,8 +1662,9 @@ async function resolveManualBridges(cap) {
     const res = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: resolveManualBridgesInPage, args: [batch] });
     const payload = (res && res[0]) ? res[0].result : null;
     if (payload && payload.error) await log('warn', 'manual-bridge:page-error', { error: payload.error });
+    await limitUse('lookups', 2 * ((payload && payload.out) || []).length);
     for (const row of ((payload && payload.out) || [])) {
-      if (row.stop) { await log('warn', 'manual-bridge:refused', { step: row.step, status: row.status }); break; }
+      if (row.stop) { await log('warn', 'manual-bridge:refused', { step: row.step, status: row.status }); await onLinkedInWarning('hand-added bridge', row.status); break; }
       if (!row.urn) {
         stats.unresolved++;
         await log('warn', 'manual-bridge:unresolved', { slug: row.slug, step: row.step, status: row.status });
@@ -1704,7 +1864,9 @@ async function discoverBridges(sourcesArg) {
     const orgId = (src.org_id || '').toString().trim();
     if (!orgId) { continue; }
     if (GATE_HELD) break;
+    if (!(await limitTake('pages', 'discovery ' + src.name))) break;
     if (!(await gateTake('bridge_discovery', src.name))) break;
+    await limitUse('pages', 1);
     processed.push(src.name);
     try {
       // Optional per-source role/function keyword (e.g. "Team France Export"). Essential for
@@ -1895,16 +2057,19 @@ async function loadSearchHidden(url) {
         const p = parseSearchProfiles([rf.text]);
         if (p.length) { profiles = p; via = 'api'; break; }
         refetchOk = false; lastErr = 'api-empty';
-      } else if (rf && rf.err && rf.err !== 'no-entry') { refetchOk = false; lastErr = rf.err; }
+      } else if (rf && rf.err && rf.err !== 'no-entry') {
+        refetchOk = false; lastErr = rf.err;
+        // 1.17.2: a refused search request is a LinkedIn warning too, not just a parsing miss.
+        if (/^status-(401|403|429|999)$/.test(rf.err)) return { profiles: null, challenged: true, tab: tab, status: rf.err };
+      }
     }
   }
   if (!profiles && lastErr) await log('warn', 'scrape:api-refetch-failed', { error: lastErr });
   return { profiles: profiles, challenged: false, tab: tab, via: via };
 }
 async function onChallenge(where) {
-  await setLiHold(LI_CHALLENGE_HOLD_MS, 'LinkedIn showed a check page on ' + where);
-  GATE_HELD = { action: 'linkedin', reason: 'linkedin_challenge', retry_after_seconds: 12 * 3600, context: where };
-  notify('Radar paused 24h', 'LinkedIn asked for a verification. Radar stopped all collection for 24 hours to protect the account.', 'error');
+  // 1.17.2: same 48h full stop as any other LinkedIn warning (was 24h).
+  await onLinkedInWarning(where, 'check page');
 }
 function closeTabLater(tab) { setTimeout(() => { try { chrome.tabs.remove(tab.id); } catch (e) {} }, 3500 + Math.floor(Math.random() * 5000)); }
 function runExtractor(tab, func, args) {
@@ -2219,16 +2384,44 @@ async function scrapeBridge(bridge, pageBudget) {
   const query = buildBridgeQuery(icp, urn, name);
   if (!scrapeBridge.__logged) { scrapeBridge.__logged = true; await log('info', 'icp:search', { source: icp.source, filters: icp.kept || [], dropped: icp.dropped || 0 }); }
   const baseUrl = 'https://www.linkedin.com/sales/search/people?query=' + encodeURIComponent(query);
-  for (let page = 1; page <= MAX_PAGES; page++) {
+  // 1.17.2: read at most pages_per_bridge_day pages of this bridge today, starting where the
+  // last session stopped. 2026-11-04: a 625-person bridge was read from page 1 three times in one
+  // afternoon because a hold mid-bridge threw the position away.
+  scrapeBridge.lastSkipped = false;
+  const cursorKey = String(urn || '');
+  const alw = bridgeAllowance((await getCursors())[cursorKey], limitsNow(), Date.now(), MAX_PAGES);
+  if (!alw.pages) {
+    scrapeBridge.lastSkipped = true;
+    await log('info', 'scrape:bridge-skip', { bridge: bridge.bridge, reason: alw.reason, nextPage: alw.cursor.next, restUntil: alw.cursor.restUntil });
+    return leads;
+  }
+  let cursor = alw.cursor;
+  const acceptedNew = [];
+  await log('info', 'scrape:bridge-window', { bridge: bridge.bridge, fromPage: alw.start, pagesToday: alw.pages });
+  for (let page = alw.start, n = 0; page <= MAX_PAGES && n < alw.pages; page++, n++) {
     if (budget.left <= 0) { await log('info', 'scrape:page-budget', { bridge: bridge.bridge, stoppedAtPage: page }); break; }
+    if (PROSPECTS_FULL) break;
+    if (!(await limitTake('pages', bridge.bridge + ' p' + page))) break;
     if (!(await gateTake('salesnav_search_page', bridge.bridge + ' p' + page))) break;
     budget.left--;
     const url = baseUrl + (page > 1 ? '&page=' + page : '');
     await log('info', 'scrape:page', { bridge: bridge.bridge, page });
     const pageLeads = await scrapePageInTab(url, bridge);
+    await limitUse('pages', 1);
+    cursor = bridgeAdvance(cursor, Date.now(), !!(pageLeads && pageLeads.length >= 25), MAX_PAGES);
+    await saveCursor(cursorKey, cursor);
     if (!pageLeads || pageLeads.length === 0) { await log('info', 'scrape:page-empty', { bridge: bridge.bridge, page }); break; }
-    leads.push(...pageLeads);
-    await log('info', 'scrape:page-done', { bridge: bridge.bridge, page, count: pageLeads.length });
+    // Known people refresh their row for free; NEW people count against today's cap; new people
+    // over the cap wait locally for tomorrow (never re-read, never looked up today).
+    const room = (await limitLeft('prospects')).left;
+    const split = splitNewProspects(pageLeads, KNOWN_IDS, room);
+    split.accepted.forEach(l => { KNOWN_IDS.add(String(l.lead_id)); NEW_THIS_RUN.add(String(l.lead_id)); });
+    if (split.accepted.length) await limitUse('prospects', split.accepted.length);
+    if (split.overflow.length) await addOverflow(split.overflow);
+    acceptedNew.push(...split.accepted);
+    leads.push(...split.known, ...split.accepted);
+    await log('info', 'scrape:page-done', { bridge: bridge.bridge, page, count: pageLeads.length, known: split.known.length, newTaken: split.accepted.length, newForTomorrow: split.overflow.length });
+    if ((await limitLeft('prospects')).left <= 0) { PROSPECTS_FULL = true; }
     // EARLY dropped-filter guard. Up to 1.8.1 this check only ran after the WHOLE bridge was
     // scraped, so a bridge whose CONNECTION_OF filter Sales Nav silently dropped still cost 25
     // page loads before its results were thrown away (2026-08-25: "Nicolas MILONAS" burned 25
@@ -2251,19 +2444,18 @@ async function scrapeBridge(bridge, pageBudget) {
       } catch (e) { await log('warn', 'filter-guard:error', { bridge: bridge.bridge, error: String(e) }); }
     }
     if (pageLeads.length < 25) break;
-    if (GATE_HELD) break;
-    await humanPageGap();
+    if (GATE_HELD || PROSPECTS_FULL) break;
+    if (n + 1 < alw.pages) await humanPageGap();
   }
-  // Search cards frequently omit location. For anyone still missing a country, open their
-  // lead page once to read it, then derive the language. Runs in the worker (not injected),
-  // caps its own lookups, and closes every tab it opens.
-  try { await enrichLocations(leads); } catch (e) { await log('warn', 'location-enrich:failed', { error: String(e) }); }
+  // Search cards frequently omit location. For NEW prospects still missing a country, open their
+  // lead page once to read it (counts as a lookup), then derive the language.
+  try { await enrichLocations(acceptedNew); } catch (e) { await log('warn', 'location-enrich:failed', { error: String(e) }); }
   return leads;
 }
 
 async function scrapePageInTab(url, bridge) {
   const r = await loadSearchHidden(url);
-  if (r.challenged) { await onChallenge('bridge ' + bridge.bridge); closeTabLater(r.tab); return []; }
+  if (r.challenged) { await onLinkedInWarning('bridge ' + bridge.bridge, r.status || 'check page'); closeTabLater(r.tab); return []; }
   if (r.profiles && r.profiles.length) {
     await noteCapture(true, 0);
     if (r.via) await log('info', 'scrape:data', { via: r.via, count: r.profiles.length, withTitle: r.profiles.filter(p => p.title).length });
@@ -2550,52 +2742,63 @@ async function resolveUrnsInPage(urns, decoration, paceMs) {
   return { out: out };
 }
 
-// Opens ONE Sales Nav tab and resolves every urn through it. Returns a Map urn -> {url, degree}.
-async function resolveUrnsViaApi(urns) {
+// Opens ONE Sales Nav tab and resolves urns through it. Returns a Map urn -> {url, degree}.
+// 1.17.2: ONE lookup at a time, 20-60s apart, each one checked against the lookup limits
+// (hour / day / week) and the LinkedIn gate, and any 401/403/429 is a LinkedIn warning: full stop
+// for 48h. Up to 1.17.1 this fired up to 400 lookups back to back, 0.4-0.8s apart (2026-11-04:
+// ~1,000 in 3 hours on David's and Amos's accounts -> 401 -> locked).
+async function resolveUrnsViaApi(urns, context) {
   const result = new Map();
   if (!urns || !urns.length) return result;
+  if ((await limitLeft('lookups')).left <= 0) { await log('info', 'resolve:no-budget', { wanted: urns.length, context: context || '' }); return result; }
   const tab = await openScrapeTab('https://www.linkedin.com/sales/homepage');
   if (!tab) {
     await log('warn', 'resolve:no-tab', { wanted: urns.length });
     return result;
   }
+  let asked = 0;
   try {
     await waitForTabComplete(tab.id, 45000);
     // Same lesson as the list phase: a cookie is not a loaded page. Give the SPA a moment.
     await sleep(3000);
-    let stopped = false;
-    for (let i = 0; i < urns.length && !stopped; i += 50) {
-      const batch = urns.slice(i, i + 50);
+    for (let i = 0; i < urns.length; i++) {
+      if (GATE_HELD) break;
+      if (!(await limitTake('lookups', context || 'lookup', true))) break;
+      if (!(await gateTake('profile_view', context || 'lookup'))) break;
       const res = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: resolveUrnsInPage,
-        args: [batch, RESOLVE_DECORATION, RESOLVE_PACE_MS]
+        args: [[urns[i]], RESOLVE_DECORATION, 0]
       });
+      await limitUse('lookups', 1);
+      asked++;
       const payload = (res && res[0]) ? res[0].result : null;
-      const rows = (payload && payload.out) || [];
-      for (const row of rows) {
-        if (row.stop) {
-          stopped = true;
-          await log('warn', 'resolve:refused', { status: row.status, resolved_so_far: result.size });
-          break;
-        }
-        if (row.url) result.set(row.urn, { url: row.url, degree: row.degree });
+      const row = ((payload && payload.out) || [])[0];
+      if (row && row.stop) {
+        await log('warn', 'resolve:refused', { status: row.status, resolved_so_far: result.size });
+        await onLinkedInWarning('profile lookup', row.status);
+        break;
       }
+      if (row && row.url) result.set(row.urn, { url: row.url, degree: row.degree });
+      if (i + 1 < urns.length) await sleepKeepAlive(randInt(20, 60) * 1000);
     }
   } catch (e) {
     await log('warn', 'resolve:error', { error: String(e) });
   } finally {
     try { chrome.tabs.remove(tab.id); } catch (e) {}
   }
+  await log('info', 'resolve:batch', { wanted: urns.length, asked: asked, resolved: result.size, context: context || '' });
   return result;
 }
 
 async function resolvePublicUrls(leads, budget) {
   const state = budget || { left: MAX_RESOLVE_PER_RUN };
-  const need = leads.filter(l => !l.linkedin_url && l.lead_id).slice(0, Math.max(0, state.left));
+  // 1.17.2: only people accepted as NEW today. Known people already have a row (and a URL, or a
+  // place in the backlog, which drains with whatever lookup budget is left).
+  const need = leads.filter(l => !l.linkedin_url && l.lead_id && NEW_THIS_RUN.has(String(l.lead_id)));
   if (!need.length) return leads;
-  state.left -= need.length;
-  const map = await resolveUrnsViaApi(need.map(l => l.lead_id));
+  const map = await resolveUrnsViaApi(need.map(l => l.lead_id), 'new prospects');
+  state.left = Math.max(0, state.left - map.size);
   let hit = 0;
   for (const lead of need) {
     const got = map.get(lead.lead_id);
@@ -2608,7 +2811,7 @@ async function resolvePublicUrls(leads, budget) {
       }
     }
   }
-  await log('info', 'resolve:urls', { asked: need.length, resolved: hit, budget_left: state.left });
+  await log('info', 'resolve:urls', { asked: need.length, resolved: hit, lookupsLeftToday: (await limitLeft('lookups')).left });
   return leads;
 }
 
@@ -2623,7 +2826,8 @@ async function resolvePublicUrls(leads, budget) {
 // ever asked it a second time. This phase is that second ask: it pulls the standing backlog from
 // the hub and drains a slice of it on EVERY run, including runs that collect nothing new.
 async function backfillTargetUrls(cap) {
-  const want = Math.max(0, cap || BACKFILL_URLS_PER_RUN);
+  // 1.17.2: only what is left of the lookup limit right now (was 500 per run).
+  const want = Math.max(0, Math.min(cap || BACKFILL_URLS_PER_RUN, (await limitLeft('lookups')).left));
   if (!want) return { asked: 0, resolved: 0, remaining: 0 };
   let data = null;
   try {
@@ -2637,7 +2841,7 @@ async function backfillTargetUrls(cap) {
   if (!ids.length) { await log('info', 'backfill:none', { pending_total: total }); return { asked: 0, resolved: 0, remaining: total }; }
 
   await log('info', 'backfill:start', { asked: ids.length, pending_total: total });
-  const map = await resolveUrnsViaApi(ids);
+  const map = await resolveUrnsViaApi(ids, 'url backlog');
   const urls = [];
   for (const id of ids) {
     const got = map.get(id);
@@ -2662,7 +2866,7 @@ async function backfillTargetUrls(cap) {
 // Single-urn convenience (bridges). Same API path, so it no longer opens a lead page for nothing.
 async function resolveUrn(urn) {
   if (!urn) return null;
-  const map = await resolveUrnsViaApi([urn]);
+  const map = await resolveUrnsViaApi([urn], 'bridge url');
   const got = map.get(urn);
   return (got && got.url) || null;
 }

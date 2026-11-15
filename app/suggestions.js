@@ -34,8 +34,8 @@
     '.sug-sw{display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;border-radius:14px;padding:2px 10px;font-size:.72rem;font-weight:700;cursor:pointer;background:#f1f5f9;color:#475569;white-space:nowrap}'+
     '.sug-sw.on{background:#ecfdf5;border-color:#a7f3d0;color:#047857}.sug-sw:disabled{opacity:.6;cursor:wait}'+
     '.sug-sw::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}'+
-    '#sugPanel .sug-toggle{float:right;font-size:.75rem;color:#CC3333;cursor:pointer;background:none;border:0}'+
-    '.sug-nm{color:inherit;text-decoration:none;border-bottom:1px dotted #CC3333}.sug-nm:hover{color:#CC3333}'+
+    '#sugPanel .sug-toggle{float:right;font-size:.75rem;color:#FE1B04;cursor:pointer;background:none;border:0}'+
+    '.sug-nm{color:inherit;text-decoration:none;border-bottom:1px dotted #FE1B04}.sug-nm:hover{color:#FE1B04}'+
     '#sugPanel .muted{color:#94a3b8}#sugPanel .sug-msg{font-size:.7rem;margin-left:6px}#sugPanel .sug-msg.err{color:#dc2626}';
   document.head.appendChild(css);
 

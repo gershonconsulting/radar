@@ -46,6 +46,37 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- ✅ 2026-11-15 nightly (branch nightly/2026-11-15-radar-email-count) - app v1.18.12 + daily-report v9.2: "+20 new prospects" 3 days running is REAL
+  (extension 1.17.2 daily cap, daily_lead_target) - email now says "daily cap reached"; "published" extension = max(config, /api/health latest_ext).
+  ❌ daily-report v9.2 not live until Ariel redeploys it (verify_jwt OFF). Optional: set Supabase config latest_ext_version to 1.17.2.
+- ✅ 2026-11-14 nightly: #28 (v1.18.9) and #26 (brand red) merged; v1.18.10. Then v1.18.11: app/app.html visible
+  labels Target(s) -> Prospect(s) in the file itself (ids/classes/view names/API fields untouched). See STATUS.md.
+- ✅ 2026-11-13 nightly (branch nightly/2026-11-13-radar-version-health, base main) - app v1.18.9: ONE version source,
+  functions/_lib/version.js (APP_VERSION). Footer, the app JS VERSION constant (was 1.17.2) and /api/health (was 1.11.0) all read it.
+  /api/health said "unreachable" because it needed env.SUPABASE_URL, which is not a binding here (me.js hard-codes the project URL);
+  now defaults to project pkzeeqehwmtnqxdpdesl, reads latest of activity_log sync_log + targets.collected_date. Read-only, no secrets in output.
+  ❌ After deploy, Charles checks that Pages binding SUPABASE_SERVICE_KEY exists (Production env); if /api/health says "SUPABASE_SERVICE_KEY binding missing" it does not.
+  Bump the version in functions/_lib/version.js ONLY (extension version stays LATEST_EXT in _middleware.js).
+- ✅ 2026-11-11 nightly (branch nightly/2026-11-11-radar-email-gc-sender, base main) - daily-report v9 -> v9.1:
+  sender stays "GC Radar <radar@gershon.ai>" (already in repo main; the 11-10/11-11 audit saw the OLD DEPLOYED
+  function: "Radar" + slate header + blue button, so the live function must be redeployed by Ariel, verify_jwt OFF).
+  Button now white with brand-red #FE1B04 border and #d11200 text, header rule #FE1B04. Recipients, schedule, subject unchanged.
+  Overlaps PR #26 on one identical header-rule line (clean merge). No number tag is defined for this email in the app.
+- 2026-11-07 nightly (PR #23, branch nightly/2026-11-07-radar-email, stacked on #21) - daily-report v9
+  Fixes three bugs seen in the 11-05 email:
+  ✅ (a) "+633 new" next to "wrote 603 records". These are two different counts and now have two labels.
+     "New to Radar (first seen)" comes from #21's first_seen_at. "Records written by the extension" counts
+     people Radar already had too, and only runs that finished report it. The email never says "N of them".
+  ✅ (b) The verdict is amber (with a ❌ line per issue) when there are dead bridges (active, never produced a
+     prospect) or any HTTP 429/401 in the day's log. It no longer shows a green "did its job".
+  ✅ (c) "DID NOT RUN" now appears only when NO owner collected. When some owners are silent, the email lists
+     them by name and adds an "All accounts yesterday" table.
+  ✅ Replayed on real data (SELECT-only). 11-05 subject: "+47 new prospects · needs attention", 47 new / 603
+     written (4 of 11 runs finished), ❌ 114 dead bridges, ❌ 429 ×8, 2 accounts silent.
+     11-04 subject: "this account did not run (other accounts +19 new)", amber instead of DID NOT RUN.
+     A rendered preview is linked in the 2026-11-07 nightly report (Claude artifact).
+  ❌ Not live. Order for Ariel: merge #21 -> run its migration -> merge this PR -> deploy daily-report
+     (verify_jwt OFF). Run a dry test first: ?dry=1&date=2026-11-05 (returns the HTML plus an X-Report-Subject header).
 - 2026-11-07 nightly (PR #22, branch nightly/2026-11-07-radar-bridges-icp, app v1.19.0) - replaces #16
   Per-account bridge ICP ranking on the Bridges page, rebuilt on current main (#16 conflicted after
   #20 rewrote the middleware loader block).
@@ -71,6 +102,28 @@ Default branch: main
      set LATEST_EXT = '1.17.1' in functions/_middleware.js and point
      app/extension.html at radar-extension-v1.17.1.zip.
 
+- 2026-10-26 nightly (branch nightly/2026-10-26-radar-eod-cron)
+  Claude scheduled task #22 "Radar EOD report" moved INTO the repo as a
+  standalone Cloudflare cron Worker (cron/, Worker gershon-radar-eod-cron).
+  ✅ cron/worker.js: daily 22:05 UTC -> POST hub runDaily, GET hub rows,
+     today's New York date: new targets total + by bridge (desc), with
+     LinkedIn URL vs unresolved, pushed to Botdog, grand total; warning
+     when 0 of today's targets have a linkedin_url (enricherPro).
+     Emails report@gershonconsulting.com from "GC Radar <reports@gershon.ai>",
+     subject "[22] Radar EOD — <N> new targets — <YYYY-MM-DD>".
+  ✅ Offline checks cron/worker.test.mjs pass; parsing validated against
+     the live hub GET (225 rows).
+  ✅ .github/workflows/deploy-eod-cron.yml: checks on PR, deploy on main only.
+  ❌ Merge pending Olivier's OK (PR "Radar EOD report (#22) as a cron Worker").
+  ❌ GitHub Actions secrets needed before the first deploy (Charles,
+     GitHub > radar > Settings > Secrets > Actions): CLOUDFLARE_API_TOKEN,
+     CLOUDFLARE_ACCOUNT_ID, RADAR_HUB_SECRET, RESEND_API_KEY.
+  ❌ After the first good email, retire Claude scheduled task #22
+     (not touched by this PR).
+  ❌ The un-authenticated hub GET currently returns 225 rows, newest
+     collected 2026-07-13 - check the email shows real daily numbers;
+     if it stays at 0, the hub GET needs secret/owner params.
+
 - 2026-10-21 nightly (branch nightly/2026-10-21-unified-design, app v1.15.0)
   Unified Gershon design (decision 2026-10-13): Radar now looks like
   Linalysis, the master design, in the Gershon.ai red #CC3333.
@@ -89,9 +142,9 @@ Default branch: main
   ❌ Merge pending: stacked on the 2026-10-20 PR - merge that one first,
      then this PR (it retargets to main).
   ✅ Charts red too (middleware item 4b rewrites the exact colour
-     literals in the served app.html): Dashboard trend line + 'targets
-     per bridge' bars, Home trend line + 'top bridges' bars. Growth
-     charts keep the stage colours; ICP-grade and per-source colours
+     literals in the served app.html): Dashboard trend line + 'targets per
+     bridge' bars, Home trend line + 'top bridges' bars. Growth charts
+     keep the stage colours; ICP-grade and per-source colours
      unchanged. Fold these literals into app.html next time it is edited
      (the rewrite then finds nothing and does nothing).
 
@@ -138,6 +191,8 @@ Default branch: main
 
 4. PENDING  [TODO]
 ----------------------------------------------------------------
+- ❌ Radar EOD cron Worker (#22, cron/) - merge pending Olivier's OK,
+  then the 4 Actions secrets (see section 3, 2026-10-26).
 - ❌ Unified design (v1.15.0) is on a PREVIEW branch only - live once
   the PR 'Nightly 2026-10-21: Radar in the unified Gershon design' is
   merged (after the 2026-10-20 PR).
