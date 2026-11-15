@@ -46,6 +46,9 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- ✅ 2026-11-15 nightly (branch nightly/2026-11-15-radar-email-count) - app v1.18.12 + daily-report v9.2: "+20 new prospects" 3 days running is REAL
+  (extension 1.17.2 daily cap, daily_lead_target) - email now says "daily cap reached"; "published" extension = max(config, /api/health latest_ext).
+  ❌ daily-report v9.2 not live until Ariel redeploys it (verify_jwt OFF). Optional: set Supabase config latest_ext_version to 1.17.2.
 - ✅ 2026-11-14 nightly: #28 (v1.18.9) and #26 (brand red) merged; v1.18.10. Then v1.18.11: app/app.html visible
   labels Target(s) -> Prospect(s) in the file itself (ids/classes/view names/API fields untouched). See STATUS.md.
 - ✅ 2026-11-13 nightly (branch nightly/2026-11-13-radar-version-health, base main) - app v1.18.9: ONE version source,

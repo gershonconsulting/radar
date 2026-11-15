@@ -8,7 +8,7 @@
 // No auth: a signed-out desk must still be able to tell "down" from
 // "not signed in". Nothing here is user data — only counts and timestamps.
 
-import { APP_VERSION } from '../_lib/version.js';
+import { APP_VERSION, LATEST_EXT } from '../_lib/version.js';
 
 // Same project the rest of the app uses (me.js, auth/linkedin/callback.js hard-code it). health.js used to
 // require env.SUPABASE_URL, which is not a binding on this Pages project -> fetch('undefined/rest/v1/...')
@@ -90,6 +90,7 @@ export async function onRequestGet({ env }) {
   return new Response(JSON.stringify({
     platform: 'radar',
     version: APP_VERSION,
+    latest_ext: LATEST_EXT,   // published Chrome extension build (read by the daily-report email)
     status,
     checked_at: new Date().toISOString(),
     checks,

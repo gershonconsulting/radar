@@ -1,3 +1,16 @@
+2026-11-15 nightly (branch nightly/2026-11-15-radar-email-count): daily-report v9.2.
+  (a) "+20 new prospects" on the 11-11, 11-12 and 11-13 emails is the real first-seen count (checked: 20 / 20 / 20 for
+      owner xTVW0K1qKi, different bridges each day, total 5364 -> 5384). It is extension 1.17.2's hard cap on NEW
+      prospects per day (config daily_lead_target, limits.js). When the count reaches the cap the verdict says so and
+      the subject reads "+20 new prospects (daily cap reached)". Only for ext_version >= 1.17.2.
+  (b) "v1.17.2 ahead of the published v1.17.0": "published" was config latest_ext_version only (never bumped). Now the
+      highest of config, https://radar.gershoncrm.com/api/health `latest_ext` (= LATEST_EXT in functions/_lib/version.js)
+      and the fallback. Site unreachable -> config, as before.
+  (c) 11-08 "DID NOT RUN" was sent by the OLD deployed function (sender "Radar", navy header) and was accurate for this
+      account: no run, last capture 11-06 (health-check said the same at 06:00 on 11-09). No change.
+  ✅ tests/daily-report.test.mjs (node --experimental-strip-types): stubs Deno + fetch, runs the handler with ?dry=1.
+  ❌ Deploy daily-report v9.2 by hand (verify_jwt OFF) AFTER the Pages deploy of this branch (so /api/health has latest_ext).
+
 2026-11-07 nightly (PR #23, branch nightly/2026-11-07-radar-email, based on #21's branch): daily-report v9.
   (a) "new" = first seen (RPC new_targets, first_seen_at after #21). "written" = the extension's run:done saved
       count, which includes people Radar already had and only covers finished runs. Each has its own label

@@ -1,4 +1,4 @@
-// Radar — daily-report edge function (v9.1)
+// Radar — daily-report edge function (v9.2)
 // ONE email per day, per user, describing YESTERDAY (America/New_York day).
 // Triggered by pg_cron: POST { secret } (or GET ?secret=). verify_jwt=false.
 // Optional overrides for testing: ?date=YYYY-MM-DD (the ET day to report on), ?to=email, ?dry=1
@@ -42,14 +42,27 @@
 // "GC Radar <radar@gershon.ai>". Recipients, schedule and subject unchanged.
 // NOTE: repo copy only - the deployed function must be redeployed by hand (see supabase/HANDOFF.txt).
 
-const REPORT_VERSION = 'v9.1';
+// v9.2 (2026-11-15) — two fixes after the 11-12 / 11-13 / 11-14 emails:
+//  a. "+20 new prospects" three days running looked like a LIMIT 20 / page size. It is not: the count
+//     is the RPC's count of people first seen that ET day (checked against the data: 20 on 11-11, 11-12
+//     and 11-13, from different bridges each day; total 5364 -> 5384). It is the extension's hard cap
+//     since v1.17.2 - at most `daily_lead_target` NEW prospects a day (limits.js). The email now says
+//     so when the cap is reached, so an identical number reads as "cap hit", not as a bug.
+//  b. "Chrome extension v1.17.2 (ahead of the published v1.17.0)" while 1.17.2 had been published on
+//     11-10. "Published" came only from Supabase config `latest_ext_version`, which nobody bumped; the
+//     site serves LATEST_EXT (functions/_lib/version.js), now exposed as /api/health `latest_ext`.
+//     Published = the HIGHEST of config, the site's latest_ext and the fallback - a stale copy can no
+//     longer make the running build look "ahead".
+
+const REPORT_VERSION = 'v9.2';
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 const GLOBAL_OWNER_KEY = 'xTVW0K1qKi';
 const TZ = 'America/New_York';
 const APP_URL = 'https://radar.gershoncrm.com/app.html';
-const FALLBACK_LATEST_EXT = '1.7.3';
+const FALLBACK_LATEST_EXT = '1.7.3';   // also "the first build that reports its version" (extVerdict)
+const SITE_HEALTH_URL = 'https://radar.gershoncrm.com/api/health';   // { latest_ext } = the build the site serves
 const SENT_KEY = 'daily_report_sent_for';
 const FROM = 'GC Radar <radar@gershon.ai>';
 
@@ -137,6 +150,46 @@ function cmpVer(a: string, b: string): number {
     if (d) return d < 0 ? -1 : 1;
   }
   return 0;
+}
+
+// v9.2 (b): the published extension = the highest valid x.y.z among the sources we have.
+const SEMVER_RE = /^\d+\.\d+\.\d+$/;
+export function publishedExtVersion(...candidates: Array<string | null | undefined>): string {
+  let best: string | null = null;
+  for (const c of candidates) {
+    const v = String(c ?? '').trim().replace(/^v/i, '');
+    if (!SEMVER_RE.test(v)) continue;
+    if (best === null || cmpVer(v, best) > 0) best = v;
+  }
+  return best || FALLBACK_LATEST_EXT;
+}
+async function siteLatestExt(): Promise<string | null> {
+  try {
+    const r = await fetch(SITE_HEALTH_URL, { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && typeof j.latest_ext === 'string' ? j.latest_ext : null;
+  } catch (_e) {
+    return null;   // site unreachable: fall back to config
+  }
+}
+
+// v9.2 (a): the extension's daily cap on NEW prospects (salesnav-radar-extension/limits.js):
+// config daily_lead_target (default 10, ceiling 100), halved while limits_half_until is in the future,
+// 0 while limits_pause_until is. Returns null when it cannot tell.
+export function dailyCap(cfg: Record<string, string>, at: Date): number | null {
+  const raw = cfg.daily_lead_target;
+  const n = raw === undefined || raw === null || String(raw).trim() === '' ? 10 : Number(raw);
+  if (!isFinite(n) || n < 0) return null;
+  let cap = Math.min(Math.floor(n), 100);
+  const t = (k: string) => { const v = cfg[k] ? new Date(cfg[k]).getTime() : NaN; return isFinite(v) ? v : 0; };
+  if (t('limits_pause_until') > at.getTime()) return 0;
+  if (t('limits_half_until') > at.getTime()) cap = Math.max(1, Math.floor(cap * 0.5));
+  return cap;
+}
+const CAP_SINCE_EXT = '1.17.2';
+export function capReached(newTargets: number, cap: number | null): boolean {
+  return cap !== null && cap > 0 && newTargets >= cap;
 }
 
 /* ---------- data ---------- */
@@ -289,15 +342,15 @@ async function loadRecipients(): Promise<Array<{ owner_key: string; email: strin
 /* ---------- verdicts ---------- */
 type Verdict = { level: 'critical' | 'warn' | 'ok'; title: string; body: string };
 
-function jobVerdict(s: any, fleet: OwnerDay[] = [], issues: string[] = []): Verdict {
-  const v = jobVerdictBase(s, fleet);
+function jobVerdict(s: any, fleet: OwnerDay[] = [], issues: string[] = [], cap: number | null = null): Verdict {
+  const v = jobVerdictBase(s, fleet, cap);
   // v9 (b): never green while there are dead bridges or 429/401s in the log.
   if (v.level === 'ok' && issues.length) {
     return { level: 'warn', title: v.title.replace('Radar did its job', 'Radar collected, but needs attention'), body: `${v.body} ${issues.map(i => `❌ ${i}.`).join(' ')}` };
   }
   return v;
 }
-function jobVerdictBase(s: any, fleet: OwnerDay[]): Verdict {
+function jobVerdictBase(s: any, fleet: OwnerDay[], cap: number | null = null): Verdict {
   // Judge the day on the BEST run, not the sum. A second, dead browser reporting 0/0 must never
   // turn a day the real browser worked into "COLLECTION FAILED".
   const runs = +s.runs || 0, done = +s.run_done || 0;
@@ -347,7 +400,7 @@ function jobVerdictBase(s: any, fleet: OwnerDay[]): Verdict {
   return {
     level: 'ok',
     title: `Radar did its job — ${newTargets} new prospect${newTargets === 1 ? '' : 's'}`,
-    body: `${newTargets} prospect${newTargets === 1 ? '' : 's'} new to Radar (first seen yesterday), from ${runs} run(s).${saved > 0 ? ` Separately, the extension reported ${saved} record(s) written in the ${done} run(s) that finished — that count includes people Radar already had.` : ''}${listed > 0 ? ` ${listed} were filed into your Sales Navigator list.` : ''}`,
+    body: `${newTargets} prospect${newTargets === 1 ? '' : 's'} new to Radar (first seen yesterday), from ${runs} run(s).${capReached(newTargets, cap) ? ` That is the daily cap: the extension takes at most ${cap} new prospects a day (Radar setting "daily lead target"), so the same number several days running is expected.` : ''}${saved > 0 ? ` Separately, the extension reported ${saved} record(s) written in the ${done} run(s) that finished — that count includes people Radar already had.` : ''}${listed > 0 ? ` ${listed} were filed into your Sales Navigator list.` : ''}`,
   };
 }
 
@@ -618,6 +671,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const errors: Array<{ email: string; error: string }> = [];
   let preview: string | null = null;
   let previewSubject = '';
+  const siteExt = await siteLatestExt();   // once per invocation
 
   for (const r of recipients) {
     try {
@@ -630,14 +684,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
 
       const cfg = await configMap(r.owner_key);
-      const latestExt = (cfg.latest_ext_version || FALLBACK_LATEST_EXT).trim();
+      const latestExt = publishedExtVersion(cfg.latest_ext_version, siteExt, FALLBACK_LATEST_EXT);
       const s = await stats(r.owner_key, start, end);
+      // The cap exists from extension 1.17.2 on (limits.js); older builds collect without one.
+      const cap = s.ext_version && cmpVer(String(s.ext_version), CAP_SINCE_EXT) >= 0 ? dailyCap(cfg, start) : null;
       const names: Record<string, string> = {};
       for (const u of recipients) if (u.owner_key) names[u.owner_key] = u.display_name || u.owner_key;
       const fleet = await fleetDay(start, end, names, r.owner_key, s);
       const problems: string[] = Array.isArray(s.problems) ? s.problems : [];
       const issues = healthIssues(s, await httpErrors(r.owner_key, start, end, problems));
-      const job = jobVerdict(s, fleet, issues);
+      const job = jobVerdict(s, fleet, issues, cap);
       const ext = extVerdict(s, latestExt);
       const browsers = browsersVerdict(s, latestExt);
       let prevRef: PrevRef = null;
@@ -650,7 +706,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ? ((+s.runs || 0) === 0 ? ' — ⚠️ DID NOT RUN' : ' — ⚠️ COLLECTION FAILED')
         : (+s.runs || 0) === 0 && fleet.some(o => o.collected)
         ? ` — this account did not run (other accounts +${fleet.reduce((a, o) => a + o.newTargets, 0)} new)`
-        : ((+s.new_targets || 0) > 0 ? ` — +${s.new_targets} new prospects${issues.length ? ' · needs attention' : ''}` : ' — no new prospects');
+        : ((+s.new_targets || 0) > 0 ? ` — +${s.new_targets} new prospects${capReached(+s.new_targets || 0, cap) ? ' (daily cap reached)' : ''}${issues.length ? ' · needs attention' : ''}` : ' — no new prospects');
       const subject = `Radar Report — ${shortDate(dayYmd)}${tag}`;
 
       const to = toOverride || cfg.report_email || r.email;
@@ -669,3 +725,4 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (dry && preview) return new Response(preview, { headers: { ...CORS, 'Content-Type': 'text/html; charset=utf-8', 'X-Report-Subject': encodeURIComponent(previewSubject) } });
   return json({ ok: true, day: dayYmd, window: [start.toISOString(), end.toISOString()], sent: sent.length, recipients: sent, skipped, errors });
 });
+
