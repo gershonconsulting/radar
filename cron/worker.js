@@ -15,7 +15,10 @@
  *
  * Secrets (Worker secrets, never in git): RADAR_HUB_SECRET, RESEND_API_KEY.
  * Resend Idempotency-Key "radar-eod-<date>" means a retry on the same day never double-sends.
+ * 2026-11-16: transient Resend failures (network/429/5xx) are retried 3x with that same key (./resend.js).
  */
+import { sendResend } from "./resend.js";
+
 export const HUB =
   "https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec";
 export const APP_URL = "https://radar.gershoncrm.com";
@@ -163,19 +166,15 @@ async function readHub() {
 }
 
 async function sendEmail(env, s, rd) {
-  const r = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-      "Idempotency-Key": `radar-eod-${s.date}`,
-    },
-    body: JSON.stringify({ from: FROM, to: [TO], subject: subject(s), html: renderHtml(s, rd), text: renderText(s, rd) }),
-  });
-  const body = await r.text();
-  console.log("resend", r.status, body.slice(0, 300));
-  if (!r.ok) throw new Error(`Resend HTTP ${r.status}: ${body.slice(0, 200)}`);
-  return body;
+  // 2026-11-16: retries 429/5xx/network 3x (1s/4s/10s) with the same Idempotency-Key (./resend.js).
+  const r = await sendResend(
+    env.RESEND_API_KEY,
+    { from: FROM, to: [TO], subject: subject(s), html: renderHtml(s, rd), text: renderText(s, rd) },
+    { idempotencyKey: `radar-eod-${s.date}`, label: "radar-eod" },
+  );
+  console.log("resend", r.status, r.attempts, (r.text || r.error || "").slice(0, 300));
+  if (!r.ok) throw new Error(`Resend HTTP ${r.status || "network"} after ${r.attempts} attempt(s): ${(r.error || "").slice(0, 200)}`);
+  return r.text;
 }
 
 export async function run(env, now = new Date()) {
