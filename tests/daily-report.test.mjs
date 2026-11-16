@@ -1,4 +1,4 @@
-// tests/daily-report.test.mjs - checks daily-report v9.2 (Supabase edge function) and the Pages pieces it reads.
+// tests/daily-report.test.mjs - checks daily-report v9.3 (Supabase edge function) and the Pages pieces it reads.
 // Run: node --experimental-strip-types tests/daily-report.test.mjs   (Node 22+; no network, no Supabase, no email)
 // Deno and fetch are stubbed; the handler is called with ?dry=1, which returns the HTML + X-Report-Subject.
 import assert from 'node:assert/strict';
@@ -86,7 +86,7 @@ assert.equal(r.subject, 'Radar Report — November 13, 2026 — +20 new prospect
 assert.match(r.html, /That is the daily cap: the extension takes at most 20 new prospects a day/);
 assert.match(r.html, /Chrome extension up to date \(v1\.17\.2\)/);
 assert.doesNotMatch(r.html, /ahead of the published/);
-assert.match(r.html, /daily-report v9\.2/);
+assert.match(r.html, /daily-report v9\.3/);
 assert.match(r.html, /New to Radar \(first seen\)/);
 console.log('case 1:', r.subject);
 
@@ -129,4 +129,4 @@ const out = await (await mw.onRequest({
 assert.match(out, new RegExp(`LATEST_EXT_VERSION = '${ver.LATEST_EXT.replace(/\./g, '\\.')}'`));
 assert.ok(out.includes(`/radar-extension-v${ver.LATEST_EXT}.zip`));
 
-console.log('daily-report v9.2 + /api/health latest_ext: all assertions passed');
+console.log('daily-report v9.3 + /api/health latest_ext: all assertions passed');
