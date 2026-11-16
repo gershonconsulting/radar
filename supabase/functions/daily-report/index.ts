@@ -1,4 +1,4 @@
-// Radar — daily-report edge function (v9.2)
+// Radar — daily-report edge function (v9.3)
 // ONE email per day, per user, describing YESTERDAY (America/New_York day).
 // Triggered by pg_cron: POST { secret } (or GET ?secret=). verify_jwt=false.
 // Optional overrides for testing: ?date=YYYY-MM-DD (the ET day to report on), ?to=email, ?dry=1
@@ -54,7 +54,15 @@
 //     Published = the HIGHEST of config, the site's latest_ext and the fallback - a stale copy can no
 //     longer make the running build look "ahead".
 
-const REPORT_VERSION = 'v9.2';
+// v9.3 (2026-11-16) — Resend retry. On 2026-11-13 18:20-21:54 UTC Resend failed transiently and
+//  the report was never retried (one attempt, then an error row). sendEmail now goes through
+//  ../_shared/resend.ts: network/429/5xx retried 3x after 1s/4s/10s with the SAME Idempotency-Key on
+//  every attempt of one email (one key per email, per run), so a retry cannot double-send; other 4xx are
+//  not retried; the final failure is logged and lands in `errors` as before.
+//  Needs a function redeploy (Supabase, verify_jwt OFF) - merging the repo does not deploy it.
+import { sendResend } from '../_shared/resend.ts';
+
+const REPORT_VERSION = 'v9.3';
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
@@ -635,12 +643,9 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
 }
 
 async function sendEmail(key: string, to: string, subject: string, html: string): Promise<void> {
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM, to: [to], reply_to: 'support@gershonconsulting.com', subject, html }),
-  });
-  if (!res.ok) throw new Error(`resend ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  // v9.3: retries 429/5xx/network 3x with one Idempotency-Key per email (../_shared/resend.ts).
+  const r = await sendResend(key, { from: FROM, to: [to], reply_to: 'support@gershonconsulting.com', subject, html }, { label: 'radar-daily' });
+  if (!r.ok) throw new Error(`resend ${r.status || 'network'} after ${r.attempts} attempt(s): ${(r.error || '').slice(0, 200)}`);
 }
 
 /* ---------- entry ---------- */
