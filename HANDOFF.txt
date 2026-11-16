@@ -46,6 +46,16 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-11-16 nightly (branch nightly/2026-11-16-radar-resend-retry) - app v1.19.1 + daily-report v9.3: Resend retry.
+  Why: 2026-11-13 18:20-21:54 UTC Resend failed and report emails were never retried (one attempt each).
+  ✅ supabase/functions/_shared/resend.ts (daily-report) and cron/resend.js (EOD Worker, deploys cron/ alone): network/429/5xx
+  (+409 concurrent_idempotent_requests) retried 3x after 1s/4s/10s with the SAME Idempotency-Key (daily: one key per email;
+  EOD: radar-eod-<date> as before) - no double send; other 4xx not retried; final failure logged "[resend] ... FINAL FAILURE".
+  ✅ tests/resend-retry.test.mjs 8/8 (both helpers: 429->200 one send same key; 400 no retry; network+503 keeps key; 4x500 final failure);
+  daily-report test (v9.3), cron/worker.test.mjs and limits test pass. No sender / recipient / secret change.
+  ❌ daily-report v9.3 is live only after Ariel redeploys the function (verify_jwt OFF); the EOD Worker redeploys on merge (deploy-eod-cron.yml).
+  ❌ Left as is: monthly-report already retries 429 (3 tries, 1.5 s, no Idempotency-Key, no 5xx/network); health-check alert function and
+  google-apps-script/Code.gs still send once.
 - ✅ 2026-11-15 nightly (branch nightly/2026-11-15-radar-email-count) - app v1.18.12 + daily-report v9.2: "+20 new prospects" 3 days running is REAL
   (extension 1.17.2 daily cap, daily_lead_target) - email now says "daily cap reached"; "published" extension = max(config, /api/health latest_ext).
   ❌ daily-report v9.2 not live until Ariel redeploys it (verify_jwt OFF). Optional: set Supabase config latest_ext_version to 1.17.2.
