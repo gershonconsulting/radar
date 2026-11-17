@@ -1,4 +1,4 @@
-// Radar — daily-report edge function (v9.3)
+// Radar — daily-report edge function (v9.4)
 // ONE email per day, per user, describing YESTERDAY (America/New_York day).
 // Triggered by pg_cron: POST { secret } (or GET ?secret=). verify_jwt=false.
 // Optional overrides for testing: ?date=YYYY-MM-DD (the ET day to report on), ?to=email, ?dry=1
@@ -60,9 +60,19 @@
 //  every attempt of one email (one key per email, per run), so a retry cannot double-send; other 4xx are
 //  not retried; the final failure is logged and lands in `errors` as before.
 //  Needs a function redeploy (Supabase, verify_jwt OFF) - merging the repo does not deploy it.
+
+// v9.4 (2026-11-17) — weekends. The 11-14 (Sat) and 11-15 (Sun) emails said "⚠️ DID NOT RUN" in red.
+//  The data says Radar was fine: no owner logged a run or first-saw a prospect on either day, every
+//  weekday around them had runs from 6-8 owners, and the extension only runs automatically Mon-Fri
+//  08:30-19:00 local time (salesnav-radar-extension/sync-core.js WORK_DAYS = [1..5]). So a Saturday /
+//  Sunday with no run is the schedule, not an outage: the verdict is now a neutral "Weekend — no
+//  collection scheduled", the subject says "weekend, no run (by design)", silent accounts read
+//  "weekend — not scheduled", and the "New" card no longer counts weekend days as "days without a
+//  run" (Monday compares with Friday as "the last working day"). A weekend day on which someone DID run
+//  (manual Sync Now) is reported exactly as any other day. Weekdays are unchanged.
 import { sendResend } from '../_shared/resend.ts';
 
-const REPORT_VERSION = 'v9.3';
+const REPORT_VERSION = 'v9.4';
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
@@ -128,6 +138,12 @@ function shortDate(ymd: string): string {
   const [y, m, d] = ymd.split('-').map(Number);
   return new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric' })
     .format(new Date(Date.UTC(y, m - 1, d, 12)));
+}
+// v9.4: the extension's automatic schedule is Mon-Fri (sync-core.js WORK_DAYS). True for Sat/Sun.
+export function isWeekend(ymd: string): boolean {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const wd = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay();
+  return wd === 0 || wd === 6;
 }
 // The ET day before `ymd`.
 function prevYmd(ymd: string): string {
@@ -209,25 +225,32 @@ async function stats(ownerKey: string, start: Date, end: Date): Promise<any> {
 // ran that day (a run was recorded, or prospects landed). Otherwise walk back to the last day
 // that ran; after LOOKBACK_DAYS with no run, fall back to the 7-day average.
 const LOOKBACK_DAYS = 7;
-type PrevRef = { ymd: string; n: number; gap: number } | null;   // gap = days without a run in between
+type PrevRef = { ymd: string; n: number; gap: number; workGap?: number } | null;   // gap = days without a run in between; workGap = of those, weekdays
 function dayRan(ps: any): boolean {
   return (+ps?.runs || 0) > 0 || (+ps?.new_targets || 0) > 0;
 }
 async function lastRunDay(ownerKey: string, dayYmd: string, statsFn = stats): Promise<PrevRef> {
   let ymd = dayYmd;
+  let workGap = 0;
   for (let i = 0; i < LOOKBACK_DAYS; i++) {
     const p = prevYmd(ymd);
     const ps = await statsFn(ownerKey, etMidnightUtc(p), etMidnightUtc(ymd));
-    if (dayRan(ps)) return { ymd: p, n: +ps.new_targets || 0, gap: i };
+    if (dayRan(ps)) return { ymd: p, n: +ps.new_targets || 0, gap: i, workGap };
+    if (!isWeekend(p)) workGap++;
     ymd = p;
   }
   return null;
 }
 // Returns the card's sub-line for "New prospects".
-function prevDeltaHtml(cur: number, ref: PrevRef, avg7: number): string {
+export function prevDeltaHtml(cur: number, ref: PrevRef, avg7: number, weekendIdle = false): string {
+  // v9.4: a weekend day with no run is the schedule - no red "-20 since Fri".
+  if (weekendIdle) return `<span style="color:#94a3b8;">weekend &#8212; no run scheduled</span>`;
   if (!ref) return delta(cur, avg7, `7-day avg (no run in the ${LOOKBACK_DAYS} days before)`);
   if (ref.gap === 0) return delta(cur, ref.n, 'the day before');
-  return delta(cur, ref.n, `${dayLabel(ref.ymd)} — ${ref.gap} day${ref.gap === 1 ? '' : 's'} without a run`, 'since');
+  // v9.4: only weekdays count as "without a run" (Mon-Fri schedule); Monday vs Friday = last working day.
+  const wg = ref.workGap ?? ref.gap;
+  if (wg === 0) return delta(cur, ref.n, `${dayLabel(ref.ymd)} (last working day)`);
+  return delta(cur, ref.n, `${dayLabel(ref.ymd)} — ${wg} working day${wg === 1 ? '' : 's'} without a run`, 'since');
 }
 
 // v9 (c): every owner that collects. Candidates = extension clients seen in the last 14 days,
@@ -261,8 +284,8 @@ async function fleetDay(start: Date, end: Date, names: Record<string, string>, p
   }
   return out.sort((a, b) => (a.owner_key === primary ? -1 : b.owner_key === primary ? 1 : b.newTargets - a.newTargets || b.written - a.written));
 }
-function silentText(o: OwnerDay): string {
-  return `${o.label} (${o.runs === 0 ? 'did not run' : `ran ${o.runs}×, saved 0`})`;
+function silentText(o: OwnerDay, weekend = false): string {
+  return `${o.label} (${o.runs === 0 ? (weekend ? 'weekend — not scheduled' : 'did not run') : `ran ${o.runs}×, saved 0`})`;
 }
 
 // v9 (b): HTTP 429 (rate limited) / 401 (signed out) entries in the owner's log for the day.
@@ -350,15 +373,16 @@ async function loadRecipients(): Promise<Array<{ owner_key: string; email: strin
 /* ---------- verdicts ---------- */
 type Verdict = { level: 'critical' | 'warn' | 'ok'; title: string; body: string };
 
-function jobVerdict(s: any, fleet: OwnerDay[] = [], issues: string[] = [], cap: number | null = null): Verdict {
-  const v = jobVerdictBase(s, fleet, cap);
+function jobVerdict(s: any, fleet: OwnerDay[] = [], issues: string[] = [], cap: number | null = null, weekend = false): Verdict {
+  const v = jobVerdictBase(s, fleet, cap, weekend);
+  if (v.title.startsWith('Weekend')) return v;   // v9.4: dead bridges still listed under "Needs attention"
   // v9 (b): never green while there are dead bridges or 429/401s in the log.
   if (v.level === 'ok' && issues.length) {
     return { level: 'warn', title: v.title.replace('Radar did its job', 'Radar collected, but needs attention'), body: `${v.body} ${issues.map(i => `❌ ${i}.`).join(' ')}` };
   }
   return v;
 }
-function jobVerdictBase(s: any, fleet: OwnerDay[], cap: number | null = null): Verdict {
+function jobVerdictBase(s: any, fleet: OwnerDay[], cap: number | null = null, weekend = false): Verdict {
   // Judge the day on the BEST run, not the sum. A second, dead browser reporting 0/0 must never
   // turn a day the real browser worked into "COLLECTION FAILED".
   const runs = +s.runs || 0, done = +s.run_done || 0;
@@ -383,8 +407,12 @@ function jobVerdictBase(s: any, fleet: OwnerDay[], cap: number | null = null): V
       return {
         level: 'warn',
         title: `This account did not run yesterday — ${others.length} other account${others.length === 1 ? '' : 's'} collected`,
-        body: `Radar itself worked: ${others.map(o => o.label).join(', ')} brought in ${n} new prospect${n === 1 ? '' : 's'} (${w} record(s) written). Silent yesterday: ${silent.map(silentText).join(', ')}. For this account, open Chrome with the Radar extension; last run seen ${agoText(s.last_run_at)}.`,
+        body: `Radar itself worked: ${others.map(o => o.label).join(', ')} brought in ${n} new prospect${n === 1 ? '' : 's'} (${w} record(s) written). Silent yesterday: ${silent.map(o => silentText(o, weekend)).join(', ')}. For this account, open Chrome with the Radar extension; last run seen ${agoText(s.last_run_at)}.`,
       };
+    }
+    if (weekend) {
+      // v9.4: Sat/Sun with no run anywhere = the extension's Mon-Fri schedule, not an outage.
+      return { level: 'ok', title: 'Weekend — no collection scheduled', body: `Nothing to fix: the Radar extension collects automatically Monday to Friday, 08:30–19:00 local time, so no account ran yesterday. Last run seen: ${agoText(s.last_run_at)}. Collection resumes on Monday morning; if Monday's report shows no run, that one is real.` };
     }
     return { level: 'critical', title: 'Radar did NOT run yesterday', body: `No account collected anything and no collection run was recorded here. The Chrome extension is the only scheduler — this means Chrome was never opened, the extension is disabled or needs reloading, or it crashed before it could report in. Last run seen: ${agoText(s.last_run_at)}.` };
   }
@@ -555,7 +583,9 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
 
   const attention: string[] = issues.map(i => `❌ ${i}.`);
   const silent = fleet.filter(o => !o.collected);
-  if (silent.length && fleet.some(o => o.collected)) attention.push(`Silent yesterday: ${silent.map(silentText).join(', ')}.`);
+  const weekend = isWeekend(dayYmd);
+  const weekendIdle = weekend && (+s.runs || 0) === 0 && !fleet.some(o => o.collected) && newTargets === 0;
+  if (silent.length && fleet.some(o => o.collected)) attention.push(`Silent yesterday: ${silent.map(o => silentText(o, weekend)).join(', ')}.`);
   if (+s.bridges_never_scraped > 0 && !issues.length) attention.push(`${s.bridges_never_scraped} active bridge(s) have never produced a single prospect — their Sales Navigator search has never run successfully.`);
   if (+s.total_no_url > 0) attention.push(`${s.total_no_url} of ${s.total_targets} prospects still have no public LinkedIn URL, so they cannot be pushed to Botdog.`);
   if (+s.bad_titles > 0) attention.push(`${s.bad_titles} prospect(s) collected yesterday have a corrupted job title ("Add … to selection") — the scraper is reading the checkbox label instead of the title.`);
@@ -584,7 +614,7 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
 
     ${sectionTitle('Progress yesterday')}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      ${card('New to Radar (first seen)', newTargets, prevDeltaHtml(newTargets, prevRef, avg7))}
+      ${card('New to Radar (first seen)', newTargets, prevDeltaHtml(newTargets, prevRef, avg7, weekendIdle))}
       ${card('7-day average', avg7, delta(newTargets, avg7, '7-day avg'))}
       ${card('Total collected', s.total_targets ?? 0, `<span style=\"color:#94a3b8;\">all time</span>`)}
     </tr></table>
@@ -620,6 +650,8 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
         fleet.map(o => row(`${o.label}${o.owner_key === primary ? ' (this account)' : ''}`,
           o.collected
             ? `${o.newTargets} new &middot; ${o.written} written &middot; ${o.runs} run(s)`
+            : o.runs === 0 && weekend
+            ? `<span style="color:#94a3b8;">weekend &#8212; not scheduled</span>`
             : `<span style="color:#b45309;">silent &#8212; ${o.runs === 0 ? 'did not run' : `${o.runs} run(s), saved 0`}</span>`)).join('') +
         `</table>`;
     })()}
@@ -698,7 +730,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const fleet = await fleetDay(start, end, names, r.owner_key, s);
       const problems: string[] = Array.isArray(s.problems) ? s.problems : [];
       const issues = healthIssues(s, await httpErrors(r.owner_key, start, end, problems));
-      const job = jobVerdict(s, fleet, issues, cap);
+      const weekend = isWeekend(dayYmd);
+      const job = jobVerdict(s, fleet, issues, cap, weekend);
       const ext = extVerdict(s, latestExt);
       const browsers = browsersVerdict(s, latestExt);
       let prevRef: PrevRef = null;
@@ -709,6 +742,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ? ' — ⚠️ OUTDATED BROWSER'
         : job.level === 'critical'
         ? ((+s.runs || 0) === 0 ? ' — ⚠️ DID NOT RUN' : ' — ⚠️ COLLECTION FAILED')
+        : weekend && (+s.runs || 0) === 0 && !fleet.some(o => o.collected) && (+s.new_targets || 0) === 0
+        ? ' — weekend, no run (by design)'
         : (+s.runs || 0) === 0 && fleet.some(o => o.collected)
         ? ` — this account did not run (other accounts +${fleet.reduce((a, o) => a + o.newTargets, 0)} new)`
         : ((+s.new_targets || 0) > 0 ? ` — +${s.new_targets} new prospects${capReached(+s.new_targets || 0, cap) ? ' (daily cap reached)' : ''}${issues.length ? ' · needs attention' : ''}` : ' — no new prospects');
@@ -730,4 +765,3 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (dry && preview) return new Response(preview, { headers: { ...CORS, 'Content-Type': 'text/html; charset=utf-8', 'X-Report-Subject': encodeURIComponent(previewSubject) } });
   return json({ ok: true, day: dayYmd, window: [start.toISOString(), end.toISOString()], sent: sent.length, recipients: sent, skipped, errors });
 });
-
