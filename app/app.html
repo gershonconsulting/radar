@@ -63,6 +63,9 @@
 .dash-sec .stats{ margin-bottom:14px; }
 .panel h3 .hint{ font-weight:400; color:#94a3b8; font-size:0.78rem; }
 /* "invite" checkbox on non-connected bridges */
+body.no-botdog .bd-only{ display:none !important; }
+.bd-toggle{ display:flex; align-items:center; gap:10px; font-weight:600; cursor:pointer; }
+.bd-toggle input{ width:18px; height:18px; cursor:pointer; }
 .invite-chk{ display:inline-flex; align-items:center; gap:5px; background:var(--brg-bg); color:var(--brg-ink); border:1px solid var(--brg-line);
   font-size:0.72rem; font-weight:600; padding:2px 8px; border-radius:999px; cursor:pointer; user-select:none; }
 .invite-chk input{ margin:0; cursor:pointer; }
@@ -689,7 +692,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
           <div class="stat clk s-tgt" onclick="statGo('targets','today')" title="Collected today"><div class="num" id="statToday">0</div><div class="label">New today</div></div>
           <div class="stat clk s-tgt" onclick="statGo('targets','week')" title="Collected in the last 7 days"><div class="num" id="statWeek">0</div><div class="label">Added this week</div></div>
           <div class="stat clk s-tgt" onclick="statGo('targets','nolink')" title="Prospects still missing a LinkedIn URL — they can't be contacted"><div class="num" id="statLinkedPct">0%</div><div class="label">Have LinkedIn link</div><div class="sub" id="statLinkedSub">0 of 0</div></div>
-          <div class="stat clk s-tgt" onclick="statGo('targets','pushed')" title="Prospects pushed to your outreach campaign"><div class="num" id="statPushedPct">0%</div><div class="label">On Botdog</div><div class="sub" id="statPushedSub">0 of 0</div></div>
+          <div class="stat clk s-tgt bd-only" onclick="statGo('targets','pushed')" title="Prospects pushed to your outreach campaign"><div class="num" id="statPushedPct">0%</div><div class="label">On Botdog</div><div class="sub" id="statPushedSub">0 of 0</div></div>
           <div class="stat clk s-tgt" onclick="statGo('targets','');var g=document.getElementById('tGrade');if(g){g.value='A+,A';renderTargets();}" title="A+ and A graded prospects — your best fits"><div class="num" id="statTopGrade">0</div><div class="label">A+ / A grade</div><div class="sub" id="statTopGradeSub">best fits</div></div>
         </div>
         <div class="grid-2">
@@ -707,7 +710,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
 
     <!-- ===== Setup ===== -->
     <section id="view-setup" class="view">
-      <div class="page-head"><h2>Setup</h2><p>Connect Radar to LinkedIn Sales Navigator to start collecting prospects. Botdog is optional &mdash; add it whenever you want Radar to run the outreach too.</p></div>
+      <div class="page-head"><h2>Setup</h2><p>Connect Radar to LinkedIn Sales Navigator to start collecting prospects. <span class="bd-only">Botdog is optional &mdash; add it whenever you want Radar to run the outreach too.</span></p></div>
       <div id="onboardingWrap"></div>
       <div class="settings-card" style="max-width:620px">
         <h2>Radar extension version</h2>
@@ -786,7 +789,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <select id="tGrade" onchange="renderTargets()" title="ICP grade">
           <option value="">All grades</option><option value="A+">A+ only</option><option value="A+,A">A+ and A</option><option value="A+,A,B">B and above</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
         </select>
-        <select id="tBotdog" onchange="renderTargets()" title="Botdog status">
+        <select id="tBotdog" class="bd-only" onchange="renderTargets()" title="Botdog status">
           <option value="">Botdog: any</option><option value="yes">On Botdog</option><option value="no">Not on Botdog</option>
         </select>
         <select id="tLink" onchange="renderTargets()" title="LinkedIn link">
@@ -804,7 +807,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="table-wrap">
         <table>
           <thead><tr id="tHead">
-            <th title="Selected prospects go to Botdog. Uncheck to exclude permanently.">✓</th>
+            <th title="Uncheck to exclude a prospect permanently.">✓</th>
             <th class="sortable" data-key="grade" title="ICP fit: A+ (brings foreign companies into the US) → D">Grade <span class="arrow"></span></th>
             <th class="sortable" data-key="name">Name <span class="arrow"></span></th>
             <th class="sortable" data-key="title">Title <span class="arrow"></span></th>
@@ -815,7 +818,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
             <th class="sortable" data-key="source">Source <span class="arrow"></span></th>
             <th class="sortable" data-key="date">Date <span class="arrow"></span></th>
             <th>LinkedIn</th>
-            <th class="sortable" data-key="botdog">Botdog <span class="arrow"></span></th>
+            <th class="sortable bd-only" data-key="botdog">Botdog <span class="arrow"></span></th>
           </tr></thead>
           <tbody id="targetsBody"><tr><td colspan="11" class="empty">No prospects yet</td></tr></tbody>
         </table>
@@ -831,7 +834,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
           <button class="sync-btn" id="listBridgesBtn" onclick="triggerBridgeList()" title="Add every bridge you are not connected to into your Sales Navigator Bridges list">📋 Send to Sales Nav list</button>
           <button class="sync-btn" onclick="downloadBridgesCsv()" title="Export bridges as CSV">⬇ Download CSV</button>
-          <button class="sync-btn" id="inviteBridgesBtn" onclick="triggerBridgePush()" title="Invite the bridges you're not connected to into your Botdog bridges campaign">📨 Invite to Botdog</button>
+          <button class="sync-btn bd-only" id="inviteBridgesBtn" onclick="triggerBridgePush()" title="Invite the bridges you're not connected to into your Botdog bridges campaign">📨 Invite to Botdog</button>
         </div>
       </div>
       <div id="bridgePushStatus" class="sync-status" style="display:none"></div>
@@ -971,7 +974,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
       <div class="settings-card">
         <h2>API Keys <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(all optional)</span></h2>
         <p>Saved to the backend, and remembered here in your browser so you can see them.</p>
-        <div class="field">
+        <div class="field bd-only">
           <label>Botdog API Key <span style="color:#94a3b8;font-weight:400">(optional — outreach only)</span></label>
           <input type="password" id="inputBotdog" placeholder="paste key…">
         </div>
@@ -988,6 +991,12 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
         <div id="saveStatus" style="margin-top:8px;font-size:0.85rem"></div>
       </div>
       <div class="settings-card">
+        <h2>Botdog outreach <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">optional</span></h2>
+        <label class="bd-toggle"><input type="checkbox" id="botdogEnabled" onchange="onBotdogToggle(this)"> Use Botdog for outreach</label>
+        <p style="margin-top:6px">When this is off, Radar sends nothing to Botdog and hides every Botdog column, filter, counter and button. Your Sales Navigator lists work the same either way.</p>
+        <div id="botdogToggleStatus" style="margin-top:6px;font-size:0.85rem"></div>
+      </div>
+      <div class="settings-card bd-only">
         <h2>Outreach Campaigns (Botdog) <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">optional</span></h2>
         <p>Two separate campaigns: one to invite &amp; follow up with <strong>bridges</strong> you're not connected to, one for <strong>prospects</strong>. Pick from your campaigns or paste an ID.</p>
         <div class="field">
@@ -1569,7 +1578,7 @@ const TOUR = [
       chain(2) +
       '<p>For every active bridge, Radar walks their network and keeps only the people who match <strong>your ICP search</strong> &mdash; the Sales Navigator filters you define once in Settings.</p>' +
       '<p>Each prospect is graded <strong>A+ down to D</strong> on title fit, deduplicated against everything you have ever collected, and checked against your own connections so you never chase someone you already know. Unselect anyone you don&rsquo;t want and they never come back.</p>' +
-      '<p>Every prospect is filed into your <strong>Sales Navigator list</strong>, so the whole crop sits in one place inside LinkedIn. If you connect <strong>Botdog</strong> (optional), the best ones are also pushed there and it runs the connection requests and follow-ups for you.</p>' },
+      '<p>Every prospect is filed into your <strong>Sales Navigator list</strong>, so the whole crop sits in one place inside LinkedIn. <span class="bd-only">If you connect <strong>Botdog</strong> (optional), the best ones are also pushed there and it runs the connection requests and follow-ups for you.</span></p>' },
   { eyebrow:'How it runs',
     title:'Set it up once, then it works on its own',
     html:
@@ -1581,7 +1590,7 @@ const TOUR = [
         '<li><span class="num">4</span><span><b>Your Sales Navigator list</b> &mdash; where every prospect Radar finds gets filed.</span></li>' +
         '<li><span class="num">5</span><span><b>Your first Source</b> &mdash; one organization to start. You can add more any time.</span></li>' +
       '</ul>' +
-      '<p>The checklist on your dashboard tracks those five and ticks them off as it detects them. <strong>Botdog is optional</strong> &mdash; add it whenever you want Radar to run the outreach too.</p>' }
+      '<p>The checklist on your dashboard tracks those five and ticks them off as it detects them. <span class="bd-only"><strong>Botdog is optional</strong> &mdash; add it whenever you want Radar to run the outreach too.</span></p>' }
 ];
 let TOUR_I = 0;
 function tourSeen(){ try { return localStorage.getItem(TOUR_KEY) === '1'; } catch(e){ return false; } }
@@ -2109,7 +2118,7 @@ function renderOnboarding(){
   }
   if (all) {
     obPaint('<div class="onboard-done"><div class="ob-dot done">&#10003;</div><span class="ok-txt">You\'re all set &mdash; your Sources, Bridges, ICP search and two Sales Navigator lists are ready.' +
-      (done.botdog ? '' : ' <span style="font-weight:500;color:#64748b">Botdog is optional; connect it when you want Radar to run outreach.</span>') +
+      ((done.botdog || !window.__botdogOn) ? '' : ' <span style="font-weight:500;color:#64748b">Botdog is optional; connect it when you want Radar to run outreach.</span>') +
       '</span><button class="dismiss" onclick="obDismiss()">dismiss</button></div>');
     return;
   }
@@ -2137,7 +2146,7 @@ function renderOnboarding(){
       done.ext?'Extension detected'+(extVer?' (v'+extVer+')':'')+' in this browser.':'Install the extension in the same Chrome profile where you are signed in to Sales Navigator. Radar uses that browser session to collect.',
       done.ext?'':'<div class="ob-actions"><a class="ob-link" href="'+EXT_ZIP_URL+'" download>Download extension &#8595;</a><button class="ob-btn" onclick="detectExtension();try{window.dispatchEvent(new Event(\'radar-ext-ping\'))}catch(e){}">Check installation</button></div>'));
   }
-  steps.push('<div class="ob-step optional">'+(done.botdog?obDot(true):'<div class="ob-dot skip">&#9675;</div>')+'<div class="ob-body"><div class="ob-title'+(done.botdog?' done':'')+'">Connect Botdog <span class="ob-tag">optional</span></div>'+
+  if (window.__botdogOn) steps.push('<div class="ob-step optional">'+(done.botdog?obDot(true):'<div class="ob-dot skip">&#9675;</div>')+'<div class="ob-body"><div class="ob-title'+(done.botdog?' done':'')+'">Connect Botdog <span class="ob-tag">optional</span></div>'+
     (done.botdog?'<div class="ob-note">Botdog is connected.</div>':'<div class="ob-note">Radar collects and files leads without Botdog. Add it only if you want Radar to automate outreach.</div><div class="ob-field"><input type="password" id="obBotdogKey" placeholder="paste your Botdog API key&hellip;"><button class="ob-btn ghost" id="obBotdogBtn" onclick="obSaveBotdog()">Test &amp; Save</button></div><div class="ob-status" id="obBotdogStatus"></div>')+
     '<div class="ob-note">Don\'t have Botdog? <a href="https://tolt.link/gershonAI" target="_blank" rel="noopener">Create your Botdog account &rarr;</a></div></div></div>');
   const pct=Math.round((count/total)*100);
@@ -2326,7 +2335,7 @@ function renderHome(){
     kpi(nT,'Prospects','+'+wk+' this week', "statGo('targets','')", '#2563eb') +
     kpi(topGrade,'A+ / A grade','best-fit prospects', "showView('targets')", '#059669') +
     kpi(pct(linked,nT),'Have LinkedIn', linked+' of '+nT, "statGo('targets','nolink')") +
-    kpi(pct(pushed,nT),'On Botdog', pushed+' pushed', "statGo('targets','pushed')");
+    (window.__botdogOn ? kpi(pct(pushed,nT),'On Botdog', pushed+' pushed', "statGo('targets','pushed')") : '');
 
   // ---- trend buckets ----
   let spanDays = HOME_RANGE;
@@ -2364,7 +2373,7 @@ function renderHome(){
   // ---- next best actions ----
   const acts = [];
   if (days!==null && days>2) acts.push(['#fef2f2','#dc2626','⚡','Collector idle <b>'+days+' days</b> — ' + (isCollectingComputer() ? 'reload the extension & Sync' : 'reload the extension on your collecting computer'),'showView(\'setup\')']);
-  if (readyPush>0)     acts.push(['#ecfdf5','#059669','🚀','<b>'+readyPush+'</b> A/A+ prospect'+(readyPush>1?'s':'')+' ready to push to Botdog','showView(\'targets\')']);
+  if (readyPush>0 && window.__botdogOn) acts.push(['#ecfdf5','#059669','🚀','<b>'+readyPush+'</b> A/A+ prospect'+(readyPush>1?'s':'')+' ready to push to Botdog','showView(\'targets\')']);
   if (idleSources.length>0) acts.push(['#fffbeb','#b45309','🏢','<b>'+idleSources.length+'</b> source'+(idleSources.length>1?'s':'')+' with no bridges yet — discover bridges','showView(\'sources\')']);
   if (noUrl>0)         acts.push(['#eff6ff','#2563eb','🔗','<b>'+noUrl+'</b> prospect'+(noUrl>1?'s':'')+' missing a LinkedIn URL','statGo(\'targets\',\'nolink\')']);
   if (inactiveBr>0)    acts.push(['#f5f3ff','#7c3aed','🌉','<b>'+inactiveBr+'</b> bridge'+(inactiveBr>1?'s':'')+' found but switched off','showView(\'bridges\')']);
@@ -2743,13 +2752,13 @@ function renderTargets(){
     const dupeTag = (x._dupes > 1) ? ' <span class="dupe-tag" title="Reached via ' + x._dupes + ' bridges">×' + x._dupes + '</span>' : '';
     return '<tr class="' + (excluded ? 'row-excluded' : '') + '">' +
       '<td style="text-align:center"><input type="checkbox" class="sel-box"' + (excluded ? '' : ' checked') +
-        ' onchange="toggleTargetSelect(' + lidArg + ', this)" title="' + (excluded ? 'Unselected — excluded from Botdog' : 'Selected — will go to Botdog') + '"></td>' +
+        ' onchange="toggleTargetSelect(' + lidArg + ', this)" title="' + (window.__botdogOn ? (excluded ? 'Unselected — excluded from Botdog' : 'Selected — will go to Botdog') : (excluded ? 'Unselected — excluded' : 'Selected')) + '"></td>' +
       '<td style="text-align:center">' + gradePill + '</td>' +
       '<td>' + esc(x.name) + dupeTag + '</td><td>' + esc(x.title) + '</td><td>' + esc(x.company) +
       '</td><td>' + esc(x.location) + '</td><td>' + esc(x.language) +
       '</td><td>' + esc(x.bridge) + '</td><td>' + esc(x.source) + '</td><td>' + fmtDate(r.collected_date) +
       '</td><td>' + (r.linkedin_url ? '<a href="' + esc(r.linkedin_url) + '" target="_blank">↗</a>' : '—') +
-      '</td><td style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
+      '</td><td class="bd-only" style="text-align:center">' + (r.botdog_pushed ? '<span class="check">✓</span>' : '') + '</td></tr>';
   }).join('') : '<tr><td colspan="12" class="empty">No prospects match</td></tr>';
   const _chip = STAT_FILTER ? '<span class="stat-chip" onclick="clearStatFilter()" title="Clear filter">' + esc(STAT_LABEL[STAT_FILTER]||STAT_FILTER) + ' <span class="x">✕</span></span>' : '';
   const _dupeNote = removedDupes > 0 ? ' <span style="color:#94a3b8">(' + removedDupes + ' duplicate' + (removedDupes===1?'':'s') + ' merged)</span>' : '';
@@ -2938,7 +2947,7 @@ function renderBridges(){
       // Not connected yet -> invited into the dedicated bridges campaign BY DEFAULT.
       // Untick to skip this person (opt-out, remembered).
       const willInvite = b.invite_queued !== false;
-      const hint = is1st ? ''
+      const hint = (is1st || !window.__botdogOn) ? ''
         : '<label class="invite-chk' + (willInvite ? '' : ' off') + '" title="Ticked = this bridge is sent a connection invite via the Botdog bridges campaign. Untick to skip them.">' +
             '<input type="checkbox"' + (willInvite ? ' checked' : '') +
             ' onchange="onBridgeInviteToggle(this,\'' + jsq(b.urn) + '\')"> ' + (willInvite ? 'invite' : 'skipped') +
@@ -3819,6 +3828,43 @@ function loadSavedKeys(){
   // Re-apply the show/hide state after fields repopulate.
   try { toggleKeyVisibility(); } catch(e) {}
 }
+
+// ----- Botdog ON/OFF switch (Settings) — 2026-11-17, app v1.20.0 -----
+// Olivier: "Botdog is an option on Settings; if it is clicked it is used, if not, no reason to show
+// data related to Botdog." Stored per account (config key botdog_enabled) via /api/botdog-setting.
+// OFF -> body.no-botdog hides every .bd-only element, and the JS-built parts (dashboard KPI, actions,
+// bridge invite chips, onboarding step) skip Botdog. Default when never set: ON only if a Botdog key exists.
+function applyBotdogMode(on){
+  window.__botdogOn = !!on;
+  document.body.classList.toggle('no-botdog', !on);
+  const t = document.getElementById('botdogEnabled'); if (t) t.checked = !!on;
+  try { localStorage.setItem('radar_botdog_on', on ? '1' : '0'); } catch(e) {}
+}
+function rerenderForBotdog(){
+  ['renderHome','renderTargets','renderBridges','renderOnboarding','renderStats'].forEach(fn => { try { if (typeof window[fn] === 'function') window[fn](); } catch(e) {} });
+}
+async function loadBotdogMode(){
+  try {
+    const r = await fetch('/api/botdog-setting', { credentials:'same-origin', cache:'no-store' });
+    const j = await r.json();
+    if (j && j.success) { applyBotdogMode(j.enabled); rerenderForBotdog(); return; }
+  } catch(e) {}
+}
+async function onBotdogToggle(el){
+  const want = !!el.checked, st = document.getElementById('botdogToggleStatus');
+  if (st) { st.style.color = '#64748b'; st.textContent = 'Saving…'; }
+  try {
+    const r = await fetch('/api/botdog-setting', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ enabled: want }) });
+    const j = await r.json();
+    if (!j || !j.success) throw new Error((j && j.error) || ('HTTP ' + r.status));
+    applyBotdogMode(j.enabled); rerenderForBotdog();
+    if (st) { st.style.color = '#059669'; st.textContent = j.enabled ? 'Botdog is ON — Radar uses it.' : 'Botdog is OFF — nothing goes to Botdog, and Botdog data is hidden.'; }
+  } catch(e) {
+    el.checked = !want;
+    if (st) { st.style.color = '#dc2626'; st.textContent = 'Could not save: ' + (e && e.message || e); }
+  }
+}
+(function(){ let on = false; try { on = localStorage.getItem('radar_botdog_on') === '1'; } catch(e) {} applyBotdogMode(on); loadBotdogMode(); })();
 
 // Ask the HUB whether this account has a working Botdog key, and cache it on window so the
 // dashboard checklist stops asking people to add a key they already have. Cheap, runs once on
