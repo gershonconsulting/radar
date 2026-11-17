@@ -46,6 +46,15 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-11-17 nightly (branch nightly/2026-11-17-radar-weekend) - daily-report v9.4: weekends are not outages.
+  Why: the 11-14 (Sat) and 11-15 (Sun) emails said "⚠️ DID NOT RUN". DB check (read-only): 0 sync_log runs and 0 prospects
+  first seen from ANY owner on 11-14 and 11-15 ET; 6-8 owners ran on 11-12, 11-13 and 11-16. The extension only runs
+  automatically Mon-Fri 08:30-19:00 local (sync-core.js WORK_DAYS) - so the report was wrong, not collection.
+  ✅ Sat/Sun with no run anywhere: neutral green "Weekend — no collection scheduled", subject "weekend, no run (by design)",
+  accounts "weekend — not scheduled", no red "-20 since Fri"; Monday compares with Friday "(last working day)"; weekday
+  "DID NOT RUN" unchanged; a weekend manual run is reported normally. tests/daily-report.test.mjs cases 7-10 (fail on v9.3).
+  ✅ Redeployed from merged main via Supabase MCP (verify_jwt OFF) - see STATUS / PR for the version number.
+  ❌ health-check ("Radar has stopped collecting", 36 h threshold) still fires on Monday 06:00 UTC after every weekend - not changed.
 - 2026-11-16 nightly (branch nightly/2026-11-16-radar-resend-retry) - app v1.19.1 + daily-report v9.3: Resend retry.
   Why: 2026-11-13 18:20-21:54 UTC Resend failed and report emails were never retried (one attempt each).
   ✅ supabase/functions/_shared/resend.ts (daily-report) and cron/resend.js (EOD Worker, deploys cron/ alone): network/429/5xx
