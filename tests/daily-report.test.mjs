@@ -1,4 +1,4 @@
-// tests/daily-report.test.mjs - checks daily-report v9.3 (Supabase edge function) and the Pages pieces it reads.
+// tests/daily-report.test.mjs - checks daily-report v9.4 (Supabase edge function) and the Pages pieces it reads.
 // Run: node --experimental-strip-types tests/daily-report.test.mjs   (Node 22+; no network, no Supabase, no email)
 // Deno and fetch are stubbed; the handler is called with ?dry=1, which returns the HTML + X-Report-Subject.
 import assert from 'node:assert/strict';
@@ -21,6 +21,8 @@ function scenario(over = {}) {
       by_bridge: [{ bridge: 'Veronique Denis-Pelliet', n: 11 }, { bridge: 'Bénédicte MAITRE', n: 9 }],
     },
     prev: { new_targets: 20, runs: 4 },
+    date: '2026-11-13',
+    byStart: {},                  // p_start ISO -> radar_daily_stats override (other days)
     ...over,
   };
 }
@@ -47,7 +49,8 @@ globalThis.fetch = async (url, opts = {}) => {
   if (p.startsWith('gate_clients?') || p.startsWith('activity_log?')) return ok([]);
   if (p === 'rpc/radar_daily_stats') {
     const b = JSON.parse(opts.body);
-    return ok(b.p_start === DAY_START ? S.day : S.prev);
+    if (b.p_start === (S.dayStart || DAY_START)) return ok(S.day);
+    return ok(S.byStart[b.p_start] || S.prev);
   }
   throw new Error('unhandled ' + p);
 };
@@ -57,7 +60,7 @@ assert.equal(typeof handler, 'function', 'Deno.serve handler registered');
 
 async function run(over) {
   S = scenario(over);
-  const res = await handler(new Request('https://fn.test/daily-report?secret=radar_7Kq3mZ9pX2vL8nT&dry=1&date=2026-11-13'));
+  const res = await handler(new Request(`https://fn.test/daily-report?secret=radar_7Kq3mZ9pX2vL8nT&dry=1&date=${S.date}`));
   assert.equal(res.status, 200);
   return { subject: decodeURIComponent(res.headers.get('X-Report-Subject') || ''), html: await res.text() };
 }
@@ -86,7 +89,7 @@ assert.equal(r.subject, 'Radar Report — November 13, 2026 — +20 new prospect
 assert.match(r.html, /That is the daily cap: the extension takes at most 20 new prospects a day/);
 assert.match(r.html, /Chrome extension up to date \(v1\.17\.2\)/);
 assert.doesNotMatch(r.html, /ahead of the published/);
-assert.match(r.html, /daily-report v9\.3/);
+assert.match(r.html, /daily-report v9\.4/);
 assert.match(r.html, /New to Radar \(first seen\)/);
 console.log('case 1:', r.subject);
 
@@ -114,6 +117,38 @@ assert.match(r.html, /Chrome extension v1\.17\.3 \(ahead of the published v1\.17
 r = await run({ day: { new_targets: 0, runs: 0, saved: 0, total_targets: 5300 } });
 assert.equal(r.subject, 'Radar Report — November 13, 2026 — ⚠️ DID NOT RUN');
 
+// ---- 7. v9.4 weekend: the real 11-14 (Sat) / 11-15 (Sun) data - no owner ran, no prospect first seen ----
+assert.equal(mod.isWeekend('2026-11-14'), true);
+assert.equal(mod.isWeekend('2026-11-15'), true);
+assert.equal(mod.isWeekend('2026-11-13'), false);
+assert.equal(mod.isWeekend('2026-11-16'), false);
+const idle = { new_targets: 0, runs: 0, saved: 0, total_targets: 5384, avg7: 12, bridges_never_scraped: 108, last_run_at: '2026-11-13T19:20:24Z' };
+for (const [date, start] of [['2026-11-14', '2026-11-14T05:00:00.000Z'], ['2026-11-15', '2026-11-15T05:00:00.000Z']]) {
+  r = await run({ date, dayStart: start, day: idle, byStart: { '2026-11-14T05:00:00.000Z': { runs: 0 } } });
+  assert.equal(r.subject, `Radar Report — ${date === '2026-11-14' ? 'November 14' : 'November 15'}, 2026 — weekend, no run (by design)`);
+  assert.doesNotMatch(r.subject + r.html, /DID NOT RUN|did NOT run/);
+  assert.match(r.html, /Weekend — no collection scheduled/);
+  assert.match(r.html, /weekend &#8212; no run scheduled/);
+  assert.doesNotMatch(r.html, /without a run/);
+  assert.match(r.html, /108 dead bridges/, 'dead bridges still listed');
+  console.log(`case 7 ${date}:`, r.subject);
+}
+
+// ---- 8. weekend on which someone ran by hand: reported like any other day ----
+r = await run({ date: '2026-11-14', dayStart: '2026-11-14T05:00:00.000Z', day: { ...scenario().day, new_targets: 7, by_bridge: [{ bridge: 'A', n: 7 }] } });
+assert.equal(r.subject, 'Radar Report — November 14, 2026 — +7 new prospects · needs attention');
+
+// ---- 9. Monday after a weekend: compares with Friday as the last working day, no "days without a run" ----
+r = await run({ date: '2026-11-16', dayStart: '2026-11-16T05:00:00.000Z',
+  day: { ...scenario().day, new_targets: 16, by_bridge: [{ bridge: 'A', n: 16 }] },
+  byStart: { '2026-11-15T05:00:00.000Z': { runs: 0 }, '2026-11-14T05:00:00.000Z': { runs: 0 }, '2026-11-13T05:00:00.000Z': { new_targets: 20, runs: 5 } } });
+assert.match(r.html, /vs Fri 11-13 \(last working day\)/);
+assert.doesNotMatch(r.html, /without a run/);
+
+// ---- 10. a WEEKDAY with no run anywhere is still red ----
+r = await run({ date: '2026-11-17', dayStart: '2026-11-17T05:00:00.000Z', day: idle });
+assert.equal(r.subject, 'Radar Report — November 17, 2026 — ⚠️ DID NOT RUN');
+
 // ---- Pages side: /api/health exposes latest_ext; the middleware still raises an old LATEST_EXT_VERSION ----
 const ver = await import(path.join(root, 'functions/_lib/version.js'));
 const health = await import(path.join(root, 'functions/api/health.js'));
@@ -129,4 +164,4 @@ const out = await (await mw.onRequest({
 assert.match(out, new RegExp(`LATEST_EXT_VERSION = '${ver.LATEST_EXT.replace(/\./g, '\\.')}'`));
 assert.ok(out.includes(`/radar-extension-v${ver.LATEST_EXT}.zip`));
 
-console.log('daily-report v9.3 + /api/health latest_ext: all assertions passed');
+console.log('daily-report v9.4 + /api/health latest_ext: all assertions passed');
