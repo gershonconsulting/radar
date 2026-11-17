@@ -46,6 +46,16 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-11-17 nightly (branch nightly/2026-11-17-radar-health-weekend) - health-check v4: weekends are not outages.
+  Why: "⚠️ Radar has stopped collecting" (36 h threshold) fired Mon 11-16 06:00 UTC after a normal weekend
+  (Friday capture -> Monday check = ~59 calendar hours). The extension only collects Mon-Fri (sync-core.js WORK_DAYS).
+  ✅ supabase/functions/health-check: the 36 h threshold now counts WORKING hours only - Sat/Sun in America/New_York are
+  excluded (DST-safe). Fri 18:00 ET -> Mon 06:00 UTC = 7 working h = healthy; Thu -> Tue 06:00 UTC = 61 = alert; a
+  weekday gap > 36 working h still alerts; never-collected still alerts. Alert text says "working days/hours".
+  ✅ New dry run: ?dry=1 (optionally &now=ISO) returns would_send without emailing or writing health_alert_at.
+  ✅ tests/health-check.test.mjs (node --experimental-strip-types). Alert recipient unchanged (config health_alert_email
+  = report@, internal). Repo copy also carries the 10-22/10-28 "GC Radar" sender + red house style (live was v3, older).
+  ✅ Redeployed from merged main via Supabase MCP (verify_jwt OFF, as before) - see STATUS / PR for the version number.
 - 2026-11-17 nightly (branch nightly/2026-11-17-radar-weekend) - daily-report v9.4: weekends are not outages.
   Why: the 11-14 (Sat) and 11-15 (Sun) emails said "⚠️ DID NOT RUN". DB check (read-only): 0 sync_log runs and 0 prospects
   first seen from ANY owner on 11-14 and 11-15 ET; 6-8 owners ran on 11-12, 11-13 and 11-16. The extension only runs
@@ -54,7 +64,7 @@ Default branch: main
   accounts "weekend — not scheduled", no red "-20 since Fri"; Monday compares with Friday "(last working day)"; weekday
   "DID NOT RUN" unchanged; a weekend manual run is reported normally. tests/daily-report.test.mjs cases 7-10 (fail on v9.3).
   ✅ Redeployed from merged main via Supabase MCP (verify_jwt OFF) - see STATUS / PR for the version number.
-  ❌ health-check ("Radar has stopped collecting", 36 h threshold) still fires on Monday 06:00 UTC after every weekend - not changed.
+  ✅ (fixed 2026-11-17, health-check v4 above) health-check no longer fires on Monday 06:00 UTC after a normal weekend.
 - 2026-11-16 nightly (branch nightly/2026-11-16-radar-resend-retry) - app v1.19.1 + daily-report v9.3: Resend retry.
   Why: 2026-11-13 18:20-21:54 UTC Resend failed and report emails were never retried (one attempt each).
   ✅ supabase/functions/_shared/resend.ts (daily-report) and cron/resend.js (EOD Worker, deploys cron/ alone): network/429/5xx
