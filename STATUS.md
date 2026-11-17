@@ -1,4 +1,4 @@
-# Radar - STATUS (updated 2026-11-16)
+# Radar - STATUS (updated 2026-11-17)
 
 App: https://radar.gershoncrm.com/app/  - health: https://radar.gershoncrm.com/api/health
 Version: 1.19.0 on main, 1.19.1 in PR (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
@@ -6,6 +6,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 (branch previews at <branch>.gershon-radar.pages.dev). Supabase edge functions deploy separately (Ariel).
 
 ## Done
+- ✅ health-check v4 (2026-11-17, branch nightly/2026-11-17-radar-health-weekend): 36 h "stopped collecting" threshold counts working hours only (Sat/Sun ET excluded) - no more Monday-morning false alert; ?dry=1 dry run; tests/health-check.test.mjs
 - ✅ v1.19.1 + daily-report v9.3 (PR #31, merged 2026-11-16; site v1.19.1 live; EOD Worker deploy fails - GitHub secret RADAR_HUB_SECRET missing; Supabase daily-report still v9.2 until redeployed): Resend sends retry 429/5xx/network 3x (1s/4s/10s) with the same Idempotency-Key - daily-report (_shared/resend.ts) and EOD Worker (cron/resend.js)
 - ✅ v1.19.0 (PR #22, merged 2026-11-15): bridge ICP ranking panel on the Bridges page (/api/bridge-icp, own bridges only); panel links now brand red #FE1B04
 - ✅ v1.18.9 (PR #28): one version source; /api/health no longer needs SUPABASE_URL binding
@@ -15,6 +16,6 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 ## Open
 - ❌ daily-report v9.3: needs a Supabase function redeploy (Ariel, verify_jwt OFF); monthly-report keeps its own 429-only retry; health-check function + Code.gs send once
 - ❌ /api/health needs the SUPABASE_SERVICE_KEY binding in Pages Production (Charles, Cloudflare dashboard)
-- ❌ daily-report / health-check Supabase functions: redeploy so the email shows the new red (Ariel, verify_jwt OFF)
+- ❌ daily-report Supabase function: redeploy so the email shows the new red (Ariel, verify_jwt OFF) - health-check done with v4
 - ❌ PR #10 (EOD cron Worker) awaits Olivier; PR #16 superseded by #22 (can be closed)
 - ❌ PR #1, #17 open (see HANDOFF.txt)
