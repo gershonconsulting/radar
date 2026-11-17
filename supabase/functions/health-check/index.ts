@@ -12,13 +12,36 @@
 // (Olivier's GC-prefix rule). Address, reply-to, recipients and subject unchanged.
 // 2026-10-27: house style - white header with red #FE1B04 title/rule instead of white-on-red; 680px; links #1f6f5c.
 // 2026-10-28: sender display name "GC Radar Report" -> "GC Radar" (GC-prefix rule, same as daily-report v8).
+// 2026-11-17 (v4): weekends are not outages. The extension only collects Mon-Fri (sync-core.js WORK_DAYS),
+//  so the 36 h threshold now counts WORKING hours only: time on Sat/Sun (America/New_York) is excluded.
+//  Friday-evening capture -> Monday 06:00 UTC check = ~7 working hours = healthy (it fired on 11-16).
+//  A weekday gap of more than 36 working hours still alerts. ?dry=1 (or {dry:true}) reports what it
+//  would send without sending email or writing health_alert_at; dry runs accept ?now=ISO to simulate a clock.
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 const GLOBAL_OWNER_KEY = 'xTVW0K1qKi';
 const FROM = 'GC Radar <radar@gershon.ai>';
-const STALE_HOURS = 36;      // no capture in this many hours (with bridges present) => alert
+const STALE_HOURS = 36;      // no capture in this many WORKING hours (Mon-Fri ET; with bridges present) => alert
 const REALERT_HOURS = 20;    // don't re-alert the same owner more often than this
+const TZ = 'America/New_York';
+const H = 3600000;
+// Offset (local - UTC, ms) of America/New_York at instant ms.
+function tzOffsetMs(ms:number){const p:Record<string,string>={};for(const x of new Intl.DateTimeFormat('en-US',{timeZone:TZ,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(new Date(ms)))p[x.type]=x.value;return Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second)-Math.floor(ms/1000)*1000;}
+// ET calendar day of ms as [y,m,d] plus weekday (0 = Sun).
+function etDay(ms:number){const l=new Date(ms+tzOffsetMs(ms));return{y:l.getUTCFullYear(),m:l.getUTCMonth(),d:l.getUTCDate(),wd:l.getUTCDay()};}
+// UTC instant of ET midnight starting day (y,m,d) - DST-safe.
+function etMidnight(y:number,m:number,d:number){const g=Date.UTC(y,m,d);let t=g-tzOffsetMs(g);t=g-tzOffsetMs(t);return t;}
+// Hours between fromMs and toMs that fall on Mon-Fri in America/New_York (Sat/Sun excluded).
+export function workingHoursBetween(fromMs:number,toMs:number):number{
+  if(!(toMs>fromMs))return 0;
+  if(toMs-fromMs>400*24*H)return Infinity; // far beyond any threshold
+  let t=fromMs,ms=0;
+  while(t<toMs){const e=etDay(t);const next=etMidnight(e.y,e.m,e.d+1);const end=Math.min(next>t?next:t+H,toMs);if(e.wd!==0&&e.wd!==6)ms+=end-t;t=end;}
+  return ms/H;
+}
+// The alert decision for one owner: stale only when the last capture is more than STALE_HOURS working hours ago.
+export function isStale(lastIso:string|null,nowMs:number,threshold=STALE_HOURS){if(!lastIso)return true;const l=new Date(lastIso).getTime();if(isNaN(l))return true;return workingHoursBetween(l,nowMs)>=threshold;}
 const CORS = { 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'authorization,apikey,content-type' };
 const enc = encodeURIComponent;
 function json(o:unknown,s=200){return new Response(JSON.stringify(o),{status:s,headers:{...CORS,'Content-Type':'application/json'}});}
@@ -34,12 +57,15 @@ async function send(key:string,to:string,subject:string,html:string){const r=awa
 Deno.serve(async (req)=>{
   if(req.method==='OPTIONS')return new Response('ok',{headers:CORS});
   let provided:string|null=null;
+  let dry=['1','true'].includes(new URL(req.url).searchParams.get('dry')||'');
   if(req.method==='GET')provided=new URL(req.url).searchParams.get('secret');
-  else if(req.method==='POST'){try{const b=await req.json();provided=b?.secret??null;}catch(_){provided=null;}if(!provided)provided=new URL(req.url).searchParams.get('secret');}
+  else if(req.method==='POST'){try{const b=await req.json();provided=b?.secret??null;if(b?.dry===true||b?.dry===1||b?.dry==='1')dry=true;}catch(_){provided=null;}if(!provided)provided=new URL(req.url).searchParams.get('secret');}
   if(provided!==CRON_SECRET)return json({ok:false,error:'unauthorized'},401);
-  const resendKey=await loadResendKey();if(!resendKey)return json({ok:false,error:'no resend key'},200);
+  const resendKey=dry?null:await loadResendKey();if(!dry&&!resendKey)return json({ok:false,error:'no resend key'},200);
   let users:any[];try{users=await sb(`users?select=owner_key,email,display_name,is_admin,status&email=not.is.null&or=(status.eq.active,is_admin.eq.true)`);}catch(e){return json({ok:false,error:'load users: '+String(e)},200);}
-  const now=Date.now();const sent:string[]=[];const skipped:string[]=[];const errors:any[]=[];
+  // Dry runs may simulate another clock (?now=ISO) to check e.g. the Monday 06:00 UTC run; never used when sending.
+  const nowParam=dry?new URL(req.url).searchParams.get('now'):null;
+  const now=nowParam&&!isNaN(Date.parse(nowParam))?Date.parse(nowParam):Date.now();const sent:string[]=[];const skipped:string[]=[];const errors:any[]=[];const would:any[]=[];
   for(const u of users){const own=u.owner_key;if(!own||!u.email)continue;
     // Only alert users who have set up collection (≥1 bridge or source).
     const bridges=await count('bridges',[`owner_key=eq.${enc(own)}`]);
@@ -48,15 +74,16 @@ Deno.serve(async (req)=>{
     // Last capture.
     let last:string|null=null;try{const rows=await sb(`targets?owner_key=eq.${enc(own)}&select=collected_date&order=collected_date.desc.nullslast&limit=1`);last=rows&&rows.length?rows[0].collected_date:null;}catch(_){}
     const lastMs=last?new Date(last).getTime():0;
-    const hrs=lastMs?(now-lastMs)/3600000:Infinity;
-    if(hrs<STALE_HOURS){skipped.push(u.email+':healthy');continue;}
+    const hrs=lastMs?workingHoursBetween(lastMs,now):Infinity;   // working hours (Mon-Fri ET) since last capture
+    if(!isStale(last,now)){skipped.push(u.email+':healthy');continue;}
     // Re-alert throttle.
     const la=await lastAlertAt(own);if(la&&(now-new Date(la).getTime())/3600000<REALERT_HOURS){skipped.push(u.email+':recently-alerted');continue;}
     const days=hrs===Infinity?null:Math.floor(hrs/24);
-    const daysTxt=days===null?'yet':(days>=1?`in ${days} day${days>1?'s':''}`:`in over ${Math.round(hrs)} hours`);
+    const daysTxt=days===null?'yet':(days>=1?`in ${days} working day${days>1?'s':''}`:`in over ${Math.round(hrs)} working hours`);
     const lastTxt=last?new Date(last).toISOString().slice(0,10):'never';
     const to=(await alertEmailFor(own))||u.email;
-    try{await send(resendKey,to,'⚠️ Radar has stopped collecting — check your Chrome extension',alertHtml(u.display_name||'',daysTxt,lastTxt));await setAlertAt(own,new Date().toISOString());sent.push(to);}catch(e){errors.push({email:to,error:String(e)});}
+    if(dry){would.push({to,last:lastTxt,working_hours:hrs===Infinity?null:Math.round(hrs*10)/10});continue;}
+    try{await send(resendKey!,to,'⚠️ Radar has stopped collecting — check your Chrome extension',alertHtml(u.display_name||'',daysTxt,lastTxt));await setAlertAt(own,new Date().toISOString());sent.push(to);}catch(e){errors.push({email:to,error:String(e)});}
   }
-  return json({ok:true,checked:users.length,sent:sent.length,recipients:sent,skipped,errors});
+  return json({ok:true,version:'v4-working-hours',dry,now:new Date(now).toISOString(),checked:users.length,sent:sent.length,recipients:sent,would_send:dry?would:undefined,skipped,errors});
 });
