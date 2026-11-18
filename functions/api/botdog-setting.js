@@ -1,4 +1,4 @@
-// functions/api/botdog-setting.js (2026-11-17, app v1.20.0)
+// functions/api/botdog-setting.js (2026-11-17, app v1.21.0)
 // Per-account Botdog ON/OFF switch shown in Settings.
 // Olivier 2026-11-17: "Botdog is an option on Settings, if it is clicked it is used, if it is not
 // clicked no reason to show data related to Botdog."
