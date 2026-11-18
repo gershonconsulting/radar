@@ -46,6 +46,11 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-11-18 Olivier approved ("All 10"): #35 then #34 merged (squash), conflicts resolved on STATUS.md + version.js, all tests/ pass:
+  ✅ #35 v1.20.0 Intelligence menu (ddbc2cb) + #34 v1.21.0 Botdog ON/OFF switch (935a21b) merged; /api/health live 1.21.0.
+  ❌ AI binding needed by Charles: add Workers AI binding `AI` on Pages gershon-radar (Production + Preview). Until then
+     GET /api/intelligence says ai:false and the menu answers "being switched on" (503); today POSTs stop earlier with a clean
+     500 "Radar is not configured" because SUPABASE_SERVICE_KEY is also missing in Production. No page crash.
 - 2026-11-18 nightly PR push (auto-merge rule):
   ✅ STATUS.md corrected: the v1.19.2 /admin PR is no longer "waiting for OK" - #36 merged 2026-11-18, live 1.19.3 (#37).
   ✅ PR #36 v1.19.2 /admin "All campaigns" (admin-only, read-only /api/admin-campaigns, same admin rule as
