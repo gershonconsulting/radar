@@ -1,11 +1,12 @@
-# Radar - STATUS (updated 2026-11-17)
+# Radar - STATUS (updated 2026-11-18)
 
 App: https://radar.gershoncrm.com/app/  - health: https://radar.gershoncrm.com/api/health
-Version: 1.19.0 on main, 1.19.1 in PR (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
+Version: 1.19.3 on main, 1.21.0 in PR #34 (Botdog switch; intended after #35 = 1.20.0) (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
 Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to main auto-deploys
 (branch previews at <branch>.gershon-radar.pages.dev). Supabase edge functions deploy separately (Ariel).
 
 ## Done
+- ✅ v1.21.0 Botdog ON/OFF switch (2026-11-17, branch botdog-toggle): Settings "Use Botdog for outreach" saved per account (config botdog_enabled via /api/botdog-setting, owner from session). OFF hides every Botdog column, filter, KPI, action, invite button/chip, onboarding step, campaigns card and key field. Default when unset = ON only if a Botdog key exists (only Olivier has one)
 - ✅ v1.19.3 (2026-11-18, branch nightly/2026-11-18-prospects-wording): landing page index.html says Prospects instead of Target(s) (6 visible strings). admin.html, sources-list.js had no visible Target text left; app.html untouched, prospects-wording.js shim kept.
 - ✅ v1.19.2 (2026-11-17, branch admin-campaigns): /admin = "All campaigns" master view of every account (status healthy/slowing/stalled/paused/not started, sources, bridges, prospects, 7-day, ICP share, Sales Nav list, Botdog, last collection, details, CSV). Admin only via /api/admin-campaigns (read-only, same admin rule as /api/admin-users). User management moved to /admin-users. tests/admin-campaigns.test.mjs
 - ✅ health-check v4 (2026-11-17, branch nightly/2026-11-17-radar-health-weekend): 36 h "stopped collecting" threshold counts working hours only (Sat/Sun ET excluded) - no more Monday-morning false alert; ?dry=1 dry run; tests/health-check.test.mjs
@@ -16,6 +17,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
+- ❌ Hub push (pushTargetsFor / pushBridges) does not yet read botdog_enabled - only matters if Olivier turns his own Botdog OFF (clients have no key, so nothing is pushed for them)
 - ❌ v1.19.2 /admin campaigns PR: waits for Olivier's OK (new admin data endpoint = permissions). Not built: "View as" a client (needs login changes) and "draft email to client".
 - ❌ daily-report v9.3: needs a Supabase function redeploy (Ariel, verify_jwt OFF); monthly-report keeps its own 429-only retry; health-check function + Code.gs send once
 - ❌ /api/health needs the SUPABASE_SERVICE_KEY binding in Pages Production (Charles, Cloudflare dashboard)
