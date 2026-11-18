@@ -4,484 +4,314 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>Radar by Gershon.AI — Admin</title>
+<title>Radar by Gershon.AI — All campaigns</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<!-- /admin (2026-11-17, app v1.19.2): master view of every Radar account. Admin only - the data
+     comes from /api/admin-campaigns, which returns 401/403 to anyone who is not an admin.
+     User management moved to /admin-users. -->
 <style>
-  :root{
-    --brand:#FE1B04; --brand-ink:#d11200; --brand-soft:#fff5f5;
-    --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; --card:#ffffff;
-  }
-  *{ box-sizing:border-box; margin:0; padding:0; }
-  html,body{ height:100%; }
-  body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
-
-  /* ---------- Top brand bar ---------- */
-  .topbar{ background:#fff; border-bottom:1px solid var(--line); }
-  .topbar-inner{ max-width:1180px; margin:0 auto; display:flex; align-items:center; gap:12px; padding:14px 24px; }
-  .topbar .logo{ display:flex; color:var(--brand); }
-  .topbar .logo svg{ width:24px; height:24px; }
-  .topbar h1{ font-size:1.3rem; font-weight:800; color:var(--brand); letter-spacing:-0.01em; }
-  .topbar .by{ font-size:0.68rem; font-weight:700; letter-spacing:0.13em; text-transform:uppercase; color:var(--muted); margin-left:2px; align-self:center; }
-  .admin-chip{ display:inline-flex; align-items:center; gap:5px; background:var(--brand-soft); color:var(--brand-ink); font-size:0.72rem; font-weight:700; padding:4px 11px; border-radius:12px; letter-spacing:0.04em; text-transform:uppercase; }
-  .topbar .spacer{ flex:1; }
-  .topbar .who{ font-size:0.82rem; color:var(--muted); }
-  .topbar a.back{ font-size:0.82rem; color:var(--brand-ink); text-decoration:none; font-weight:600; }
-  .topbar a.back:hover{ text-decoration:underline; }
-
-  /* ---------- Layout ---------- */
-  .wrap{ max-width:1180px; margin:0 auto; padding:26px 24px 60px; }
-  .page-head{ margin-bottom:20px; }
-  .page-head h2{ font-size:1.5rem; font-weight:700; color:var(--ink); }
-  .page-head p{ color:var(--muted); font-size:0.9rem; margin-top:3px; }
-
-  /* ---------- Gate cards (sign-in / access) ---------- */
-  .gate{ min-height:70vh; display:flex; align-items:center; justify-content:center; padding:24px; }
-  .gate-card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:44px 40px; max-width:420px; width:100%; text-align:center; box-shadow:0 12px 40px rgba(15,23,42,0.10); }
-  .gate-card .logo{ display:flex; justify-content:center; color:var(--brand); margin-bottom:12px; }
-  .gate-card .logo svg{ width:38px; height:38px; }
-  .gate-card h3{ font-size:1.25rem; font-weight:800; color:var(--ink); margin-bottom:8px; }
-  .gate-card p{ color:var(--muted); font-size:0.9rem; margin-bottom:24px; }
-  .gate-card .btn{ display:inline-block; background:var(--brand); color:#fff; font-weight:700; font-size:0.92rem; padding:11px 24px; border-radius:10px; text-decoration:none; transition:background .15s; }
-  .gate-card .btn:hover{ background:var(--brand-ink); }
-
-  /* ---------- Notes ---------- */
-  .note-amber{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; border-radius:10px; padding:12px 16px; font-size:0.88rem; margin-bottom:18px; }
-  .loading{ color:var(--muted); font-size:0.9rem; padding:40px; text-align:center; }
-
-  /* ---------- Stat cards ---------- */
-  .stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:26px; }
-  .stat{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
-  .stat .num{ font-size:2rem; font-weight:700; color:var(--brand-ink); line-height:1.1; }
-  .stat .label{ color:var(--muted); font-size:0.82rem; margin-top:6px; }
-
-  /* ---------- Invite form ---------- */
-  .invite{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; box-shadow:0 1px 2px rgba(15,23,42,0.04); margin-bottom:26px; }
-  .invite h3{ font-size:0.98rem; font-weight:700; color:#334155; margin-bottom:4px; }
-  .invite .hint{ color:var(--muted); font-size:0.82rem; margin-bottom:14px; }
-  .invite-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
-  .invite .fld{ flex:1; min-width:180px; }
-  .invite label{ display:block; font-size:0.72rem; font-weight:700; color:#475569; margin-bottom:5px; text-transform:uppercase; letter-spacing:0.04em; }
-  .invite input{ width:100%; padding:9px 11px; border:1px solid #d1d5db; border-radius:8px; font-size:0.9rem; font-family:inherit; }
-  .invite input:focus{ outline:none; box-shadow:0 0 0 2px #f3c4c4; border-color:var(--brand); }
-  .btn-primary{ background:var(--brand); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:0.9rem; font-weight:700; cursor:pointer; font-family:inherit; transition:background .15s; }
-  .btn-primary:hover{ background:var(--brand-ink); }
-  .btn-primary:disabled{ opacity:0.6; cursor:default; }
-  .invite-status{ margin-top:10px; font-size:0.84rem; min-height:1em; }
-  .invite-status.ok{ color:#166534; } .invite-status.err{ color:#dc2626; }
-
-  /* ---------- Table ---------- */
-  .table-wrap{ background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
-  table{ width:100%; border-collapse:collapse; }
-  th{ background:#f1f5f9; padding:11px 14px; text-align:left; font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; }
-  td{ padding:12px 14px; border-top:1px solid #f1f5f9; font-size:0.86rem; vertical-align:middle; }
-  tr:hover td{ background:#f8fafc; }
-  .u-name{ font-weight:700; color:var(--ink); }
-  .u-email{ color:var(--muted); font-size:0.8rem; margin-top:1px; }
-
-  /* ---------- Badges ---------- */
-  .badge{ display:inline-block; padding:3px 10px; border-radius:12px; font-size:0.72rem; font-weight:700; text-transform:capitalize; white-space:nowrap; }
-  .badge.active{ background:#dcfce7; color:#166534; }
-  .badge.invited{ background:#fef3c7; color:#92400e; }
-  .badge.pending{ background:#fef3c7; color:#92400e; }
-  .badge.suspended{ background:#e2e8f0; color:#475569; }
-  .badge.unknown{ background:#f1f5f9; color:#94a3b8; }
-  .role-pill{ display:inline-block; padding:2px 9px; border-radius:10px; font-size:0.72rem; font-weight:600; background:#fff5f5; color:var(--brand-ink); text-transform:capitalize; }
-  .role-pill.admin{ background:var(--brand); color:#fff; }
-
-  /* ---------- Onboarding checklist ---------- */
-  .checklist{ display:flex; gap:10px; flex-wrap:wrap; }
-  .chk{ display:inline-flex; align-items:center; gap:4px; font-size:0.74rem; font-weight:600; white-space:nowrap; }
-  .chk .mk{ width:15px; height:15px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:0.62rem; font-weight:800; flex:0 0 15px; }
-  .chk.on{ color:#166534; } .chk.on .mk{ background:#dcfce7; color:#16a34a; }
-  .chk.off{ color:#94a3b8; } .chk.off .mk{ background:#f1f5f9; color:#cbd5e1; }
-
-  /* ---------- Row actions ---------- */
-  .actions{ display:flex; gap:6px; flex-wrap:wrap; }
-  .act{ border:1px solid var(--line); background:#fff; color:#334155; font-size:0.76rem; font-weight:600; padding:5px 11px; border-radius:7px; cursor:pointer; font-family:inherit; transition:all .12s; white-space:nowrap; }
-  .act:hover{ background:#f8fafc; border-color:#cbd5e1; }
-  .act.approve{ color:#166534; border-color:#bbf7d0; } .act.approve:hover{ background:#dcfce7; }
-  .act.suspend:hover{ background:#f1f5f9; }
-  .act.admin{ color:var(--brand-ink); border-color:#f3c4c4; } .act.admin:hover{ background:var(--brand-soft); }
-  .act:disabled{ opacity:0.45; cursor:default; }
-  .last-login{ color:#475569; font-variant-numeric:tabular-nums; white-space:nowrap; }
-  .last-login .never{ color:#94a3b8; }
-
-  /* ---------- Numeric stat cells ---------- */
-  .num-cell{ font-variant-numeric:tabular-nums; font-weight:600; color:#334155; }
-  .num-cell.zero{ color:#cbd5e1; font-weight:500; }
-  .li-link{ color:var(--brand-ink); text-decoration:none; font-weight:600; font-size:0.82rem; }
-  .li-link:hover{ text-decoration:underline; }
-  .li-none{ color:#cbd5e1; font-size:0.82rem; }
-
-  .empty{ text-align:center; color:#94a3b8; padding:26px; font-size:0.9rem; }
-
-  @media (max-width:760px){
-    .wrap{ padding:18px 14px 48px; }
-    th.hide-sm, td.hide-sm{ display:none; }
-  }
+  :root{ --brand:#FE1B04; --brand-ink:#d11200; --brand-soft:#fff5f5; --ink:#1d1d1f; --muted:#6b7280; --line:#e5e7eb; --bg:#f7f7f8; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--ink); }
+  a{ color:var(--brand-ink); }
+  .shell{ display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+  .side{ background:#fff; border-right:1px solid var(--line); padding:20px 14px; display:flex; flex-direction:column; gap:4px; }
+  .brand{ display:flex; align-items:center; gap:10px; padding:4px 8px 18px; font-weight:700; font-size:17px; }
+  .brand small{ font-weight:500; color:var(--muted); font-size:13px; }
+  .grp{ font-size:11px; font-weight:600; color:var(--muted); letter-spacing:.06em; padding:14px 10px 4px; }
+  .nav{ text-decoration:none; color:#374151; padding:9px 12px; border-radius:8px; font-size:14px; }
+  .nav:hover{ background:#f3f4f6; }
+  .nav.on{ background:var(--brand); color:#fff; font-weight:600; }
+  .me{ margin-top:auto; border-top:1px solid var(--line); padding:14px 8px 0; font-size:13px; }
+  .me b{ display:block; } .me span{ color:var(--muted); font-size:12px; }
+  main{ padding:28px 32px 48px; min-width:0; display:flex; flex-direction:column; gap:20px; }
+  .lock{ display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--brand-ink); background:var(--brand-soft); padding:4px 10px; border-radius:999px; margin-bottom:10px; }
+  h1{ margin:0; font-size:28px; letter-spacing:-.01em; }
+  .sub{ margin:6px 0 0; color:var(--muted); font-size:14px; }
+  header{ display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; }
+  .btn{ font:inherit; font-size:14px; padding:10px 16px; border-radius:8px; border:1px solid #d1d5db; background:#fff; color:var(--ink); cursor:pointer; min-height:44px; text-decoration:none; display:inline-flex; align-items:center; }
+  .btn.red{ border:0; background:var(--brand); color:#fff; font-weight:600; }
+  .alert{ display:flex; align-items:center; gap:14px; background:#fef3f2; border:1px solid #fecdca; border-radius:12px; padding:14px 18px; flex-wrap:wrap; color:#7a271a; font-size:14px; }
+  .alert .msg{ flex:1; min-width:240px; }
+  .alert button{ font:inherit; font-size:13px; font-weight:600; padding:9px 14px; border-radius:8px; border:1px solid #b42318; background:#fff; color:#b42318; cursor:pointer; min-height:40px; }
+  .kpis{ display:grid; grid-template-columns:repeat(6,1fr); gap:14px; }
+  .kpi{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .kpi .l{ font-size:12px; color:var(--muted); font-weight:500; }
+  .kpi .v{ font-size:26px; font-weight:700; margin-top:6px; font-variant-numeric:tabular-nums; }
+  .kpi .h{ font-size:12px; color:var(--muted); margin-top:4px; } .kpi .h.bad{ color:#b42318; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .bar{ display:flex; gap:12px; align-items:center; padding:14px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .search{ display:flex; align-items:center; gap:8px; border:1px solid #d1d5db; border-radius:8px; padding:0 12px; min-height:40px; flex:1; min-width:220px; max-width:360px; }
+  .search input{ border:0; outline:0; font:inherit; font-size:14px; flex:1; background:transparent; }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{ font:inherit; font-size:13px; padding:8px 12px; border-radius:999px; border:1px solid #d1d5db; background:#fff; color:var(--ink); cursor:pointer; }
+  .chip[aria-pressed="true"]{ background:var(--ink); border-color:var(--ink); color:#fff; font-weight:600; }
+  .scroll{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:13px; min-width:1080px; }
+  th{ text-align:left; font-weight:600; color:#4b5563; font-size:12px; padding:10px 12px; border-bottom:1px solid var(--line); background:#fafafa; white-space:nowrap; cursor:pointer; user-select:none; }
+  td{ padding:12px; border-bottom:1px solid #eef0f2; vertical-align:middle; white-space:nowrap; }
+  .num{ text-align:right; font-variant-numeric:tabular-nums; }
+  .k{ font-size:12px; color:var(--muted); }
+  .dim{ color:var(--muted); }
+  .pill{ font-weight:600; font-size:12px; padding:4px 10px; border-radius:999px; white-space:nowrap; }
+  .s-healthy{ background:#ecfdf3; color:#067647; } .s-slowing{ background:#fffaeb; color:#b54708; }
+  .s-stalled{ background:#fef3f2; color:#b42318; } .s-paused{ background:#eff8ff; color:#175cd3; }
+  .s-not_started{ background:#f2f4f7; color:#475467; }
+  tr.bad td{ background:#fffbfa; }
+  .meter{ display:flex; align-items:center; gap:8px; } .meter i{ width:80px; height:6px; background:#f2f4f7; border-radius:3px; display:block; }
+  .meter i b{ display:block; height:6px; background:var(--brand); border-radius:3px; }
+  .warn{ font-size:12px; color:#b54708; font-weight:600; }
+  .more{ font:inherit; font-size:13px; font-weight:600; background:none; border:0; color:var(--brand-ink); cursor:pointer; padding:6px 0; }
+  .detail td{ white-space:normal; background:#fff; padding:0 12px 14px; }
+  .detail .box{ border:1px solid var(--line); border-radius:10px; padding:14px 16px; display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px 24px; font-size:13px; }
+  .detail .box .why{ grid-column:1/-1; color:#374151; }
+  .foot{ padding:12px 16px; font-size:12px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  .foot button{ font:inherit; font-size:12px; background:none; border:0; color:var(--brand-ink); cursor:pointer; text-decoration:underline; padding:0; }
+  .two{ display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px; }
+  .panel{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px; }
+  .panel h2{ margin:0 0 4px; font-size:15px; } .panel p{ margin:0 0 14px; font-size:12px; color:var(--muted); }
+  .share{ display:grid; grid-template-columns:150px 1fr 54px; align-items:center; gap:10px; font-size:13px; margin-bottom:10px; }
+  .share i{ height:10px; background:#f2f4f7; border-radius:5px; display:block; } .share i b{ display:block; height:10px; background:var(--brand); border-radius:5px; }
+  ol.todo{ margin:0; padding-left:20px; font-size:13px; display:flex; flex-direction:column; gap:8px; }
+  .gate{ min-height:80vh; display:flex; align-items:center; justify-content:center; }
+  .gate div{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:40px; max-width:420px; text-align:center; }
+  .sr{ position:absolute; left:-9999px; }
+  @media (max-width:900px){ .shell{ grid-template-columns:1fr; } .side{ display:none; } .kpis{ grid-template-columns:repeat(2,1fr); } main{ padding:20px 14px; } }
 </style>
 </head>
 <body>
+<div id="gate" class="gate" style="display:none"><div><h2 id="gateT">Checking access…</h2><p id="gateM" class="dim"></p><a class="btn red" href="/app">Go to Radar</a></div></div>
 
-<!-- ===== Top brand bar ===== -->
-<header class="topbar">
-  <div class="topbar-inner">
-    <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
-    <h1>Radar</h1>
-    <span class="by">by Gershon.AI</span>
-    <span class="admin-chip">Admin</span>
-    <span class="spacer"></span>
-    <span class="who" id="whoami"></span>
-    <a class="back" href="/">&larr; App</a>
-  </div>
-</header>
-
-<!-- ===== Gate (sign-in / access denied) ===== -->
-<div id="gate" class="gate" style="display:none">
-  <div class="gate-card">
-    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-    <h3 id="gateTitle">Sign in required</h3>
-    <p id="gateMsg">Please sign in to continue.</p>
-    <a class="btn" href="/">Go to Radar</a>
-  </div>
-</div>
-
-<!-- ===== Loading placeholder ===== -->
-<div id="boot" class="loading">Checking access…</div>
-
-<!-- ===== Panel ===== -->
-<main id="panel" class="wrap" style="display:none">
-  <div class="page-head">
-    <h2>Users &amp; access</h2>
-    <p>Manage who can use Radar, their status, roles, and onboarding progress.</p>
-  </div>
-
-  <div id="backendNote" class="note-amber" style="display:none">Admin backend not deployed yet — showing an empty panel. Actions won't take effect until the backend is live.</div>
-
-  <div class="stats" id="stats"></div>
-
-  <div class="invite">
-    <h3>Invite a user</h3>
-    <div class="hint"><strong>Email is how Radar recognizes them at sign-in</strong> — use the email tied to their LinkedIn account. The LinkedIn URL is optional (display only). Registration is <strong>open</strong> — anyone can sign in with LinkedIn and gets an active account straight away (you get an email each time). Inviting someone here just pre-creates their row.</div>
-    <div class="invite-row">
-      <div class="fld"><label>Email *</label><input type="email" id="invEmail" placeholder="person@company.com"></div>
-      <div class="fld"><label>Name</label><input type="text" id="invName" placeholder="Full name"></div>
-      <div class="fld"><label>LinkedIn profile URL</label><input type="url" id="invUrl" placeholder="https://linkedin.com/in/username"></div>
-      <button class="btn-primary" id="invBtn" onclick="inviteUser()">+ Invite user</button>
+<div id="shell" class="shell" style="display:none">
+  <aside class="side">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12" fill="none" stroke="#FE1B04" stroke-width="2.5"/><circle cx="14" cy="14" r="6" fill="none" stroke="#FE1B04" stroke-width="2.5"/><path d="M14 14 L23 6" stroke="#FE1B04" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <div>Radar <small>by Gershon.AI</small></div>
     </div>
-    <div class="invite-status" id="invStatus"></div>
-  </div>
+    <div class="grp">MY RADAR</div>
+    <a class="nav" href="/app">Open my Radar</a>
+    <div class="grp">ADMIN</div>
+    <a class="nav on" href="/admin" aria-current="page">All campaigns</a>
+    <a class="nav" href="/admin-users">Users &amp; access</a>
+    <div class="me"><b id="meName">—</b><span>Admin</span></div>
+  </aside>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th class="hide-sm">Email</th>
-          <th class="hide-sm">LinkedIn</th>
-          <th>Onboarding</th>
-          <th>Sources</th>
-          <th>Bridges</th>
-          <th>Prospects</th>
-          <th class="hide-sm">Last login</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="usersBody">
-        <tr><td colspan="9" class="empty">Loading users…</td></tr>
-      </tbody>
-    </table>
-  </div>
-</main>
+  <main>
+    <header>
+      <div>
+        <div class="lock"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Admins only</div>
+        <h1>All campaigns</h1>
+        <p class="sub" id="sub">Loading…</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" type="button" onclick="exportCsv()">Export CSV</button>
+        <a class="btn red" href="/admin-users">+ Invite a client</a>
+      </div>
+    </header>
+
+    <div id="alert" class="alert" role="alert" style="display:none">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b42318" stroke-width="2.2" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18h.01"/></svg>
+      <div class="msg" id="alertMsg"></div>
+      <button type="button" onclick="setFilter('stalled')">Show stalled only</button>
+    </div>
+
+    <section class="kpis" id="kpis" aria-label="Totals across all accounts"></section>
+
+    <section class="card">
+      <div class="bar">
+        <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span class="sr">Search accounts</span><input id="q" type="search" placeholder="Search client or account key" oninput="render()"></label>
+        <div class="chips" id="chips" role="group" aria-label="Filter by status"></div>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th scope="col" onclick="sortBy('name')">Client account</th>
+            <th scope="col" onclick="sortBy('status')">Status</th>
+            <th scope="col" class="num" onclick="sortBy('sources')">Sources</th>
+            <th scope="col" class="num" onclick="sortBy('active_bridges')">Bridges active</th>
+            <th scope="col" class="num" onclick="sortBy('prospects')">Prospects</th>
+            <th scope="col" class="num" onclick="sortBy('last_7_days')">Last 7 days</th>
+            <th scope="col" onclick="sortBy('icp_pct')">ICP share</th>
+            <th scope="col" class="num" onclick="sortBy('salesnav_listed')">In Sales Nav list</th>
+            <th scope="col" class="num" onclick="sortBy('botdog')">Botdog</th>
+            <th scope="col" onclick="sortBy('days_since')">Last collection</th>
+            <th scope="col"><span class="sr">Details</span></th>
+          </tr></thead>
+          <tbody id="rows"><tr><td colspan="11" class="dim">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="foot">
+        <span id="testNote"></span>
+        <span>Healthy = collected in the last 2 days · Slowing = 3–9 days · Stalled = 10+ days · Paused = LinkedIn safety pause · Not started = no source yet</span>
+      </div>
+    </section>
+
+    <section class="two">
+      <div class="panel"><h2>Where the prospects come from</h2><p id="shareSub"></p><div id="share"></div></div>
+      <div class="panel"><h2>Needs your attention</h2><p>Worked out from the table above</p><ol class="todo" id="todo"></ol></div>
+    </section>
+  </main>
+</div>
 
 <script>
 'use strict';
-
-var USERS = [];
-var MY_KEY = null; // caller's owner_key — used to hide self-destructive actions
+var DATA = null, FILTER = 'all', SORT = 'prospects', DESC = true, SHOW_TESTS = false, OPEN = {};
+var LABEL = { healthy:'Healthy', slowing:'Slowing', stalled:'Stalled', paused:'Paused', not_started:'Not started' };
+var RANK = { stalled:0, paused:1, slowing:2, not_started:3, healthy:4 };
 
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-// ---- Robust fetch that never throws on non-JSON / 404 ----
-// Returns { ok, status, json, notDeployed }
-async function apiFetch(url, opts){
-  opts = opts || {};
-  opts.credentials = 'same-origin';
-  try {
-    var r = await fetch(url, opts);
-    var text = await r.text();
-    var json = null, parseOk = false;
-    try { json = JSON.parse(text); parseOk = true; } catch(e) { parseOk = false; }
-    // Backend not deployed: 404, or a non-JSON body (e.g. an HTML 404 page).
-    var notDeployed = (r.status === 404) || !parseOk;
-    return { ok: r.ok, status: r.status, json: json, notDeployed: notDeployed };
-  } catch(e) {
-    // Network error — treat as not deployed / unreachable.
-    return { ok:false, status:0, json:null, notDeployed:true };
-  }
-}
-
-// ---- Dates ----
-function fmtLastLogin(v){
-  if (!v) return '<span class="never">Never</span>';
-  var d = new Date(v);
-  if (isNaN(d)) return esc(v);
-  var now = new Date();
-  var diff = now - d;
-  var day = 86400000;
-  if (diff < 0) return d.toLocaleDateString();
-  if (diff < day && now.getDate() === d.getDate()) return 'Today';
-  if (diff < 2*day) return 'Yesterday';
-  if (diff < 7*day) return Math.floor(diff/day) + 'd ago';
-  return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
-}
-function loggedInLast7(v){
-  if (!v) return false;
-  var d = new Date(v);
-  if (isNaN(d)) return false;
-  return (Date.now() - d.getTime()) <= 7*86400000;
-}
-function truthy(v){
-  if (v === true) return true;
-  if (v === false || v == null) return false;
-  var s = String(v).toLowerCase().trim();
-  return s === 'true' || s === '1' || s === 'yes' || s === 'ok' || s === 'y';
-}
-function statusClass(s){
-  var v = String(s||'').toLowerCase();
-  if (v === 'active') return 'active';
-  if (v === 'invited') return 'invited';
-  if (v === 'pending') return 'pending';
-  if (v === 'suspended') return 'suspended';
-  return 'unknown';
-}
-
-// ---- Boot: check /api/me ----
-function showGate(title, msg){
-  document.getElementById('boot').style.display = 'none';
-  document.getElementById('panel').style.display = 'none';
-  document.getElementById('gateTitle').textContent = title;
-  document.getElementById('gateMsg').textContent = msg;
-  document.getElementById('gate').style.display = 'flex';
-}
+function n(v){ return (Number(v)||0).toLocaleString('en-US'); }
+function shortDate(d){ if(!d) return ''; var t=new Date(String(d).length===10? d+'T12:00:00Z' : d); return t.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function gate(t,m){ document.getElementById('gateT').textContent=t; document.getElementById('gateM').textContent=m; document.getElementById('gate').style.display='flex'; }
 
 async function boot(){
-  var me = await apiFetch('/api/me');
-  if (!me.ok || !me.json) {
-    showGate('Sign in required', 'You need to sign in to view the admin panel.');
-    return;
-  }
-  var user = me.json.user || me.json; // tolerate {user:{...}} or flat
-  var isAdmin = me.json.isAdmin != null ? me.json.isAdmin
-              : (user && user.isAdmin != null ? user.isAdmin : false);
-  if (!truthy(isAdmin)) {
-    showGate("Admins only", "You don't have access to this page.");
-    return;
-  }
-  // Admin — render panel.
-  var who = (user && (user.name || user.email)) || '';
-  if (who) document.getElementById('whoami').textContent = who;
-  document.getElementById('boot').style.display = 'none';
-  document.getElementById('panel').style.display = 'block';
-  await loadUsers();
+  var r; try { r = await fetch('/api/admin-campaigns', { credentials:'same-origin' }); } catch(e){ return gate('Radar is unreachable','Try again in a minute.'); }
+  if (r.status === 401) return gate('Sign in required','Sign in to Radar with LinkedIn, then come back to /admin.');
+  if (r.status === 403) return gate('Admins only',"You don't have access to this page.");
+  var j = null; try { j = await r.json(); } catch(e){}
+  if (!r.ok || !j || !j.ok) return gate('Could not load campaigns', (j && j.error) || ('HTTP ' + r.status));
+  DATA = j;
+  document.getElementById('shell').style.display = 'grid';
+  try { var me = await (await fetch('/api/me',{credentials:'same-origin'})).json(); var u = me.user || me; document.getElementById('meName').textContent = (u && (u.name || u.email)) || 'Admin'; } catch(e){}
+  renderStatic(); render();
 }
 
-// ---- Load users (Supabase-backed) ----
-async function loadUsers(){
-  var res = await apiFetch('/api/admin-users');
-  if (res.notDeployed) {
-    document.getElementById('backendNote').style.display = 'block';
-    USERS = [];
-    renderStats(); renderUsers();
-    return;
-  }
-  document.getElementById('backendNote').style.display = 'none';
-  USERS = (res.json && res.json.users) ? res.json.users : [];
-  MY_KEY = (res.json && res.json.me && res.json.me.owner_key) || MY_KEY;
-  // Pending access requests first, then active admins/users, newest last.
-  var rank = { pending: 0, invited: 1, active: 2, suspended: 3 };
-  USERS.sort(function(a, b){
-    var ra = rank[String(a.status||'').toLowerCase()] != null ? rank[String(a.status||'').toLowerCase()] : 9;
-    var rb = rank[String(b.status||'').toLowerCase()] != null ? rank[String(b.status||'').toLowerCase()] : 9;
-    if (ra !== rb) return ra - rb;
-    return String(a.created_at||'').localeCompare(String(b.created_at||''));
-  });
-  renderStats();
-  renderUsers();
-}
+function shown(){ return DATA.accounts.filter(function(a){ return SHOW_TESTS || !a.test; }); }
 
-// ---- Stats ----
-function renderStats(){
-  var total = USERS.length;
-  var active = 0, invited = 0, last7 = 0;
-  USERS.forEach(function(u){
-    var st = String(u.status||'').toLowerCase();
-    if (st === 'active') active++;
-    if (st === 'invited' || st === 'pending') invited++;
-    if (loggedInLast7(u.last_login_at)) last7++;
-  });
-  var cards = [
-    { num: total,   label: 'Total users' },
-    { num: active,  label: 'Active' },
-    { num: invited, label: 'Invited / pending' },
-    { num: last7,   label: 'Signed in last 7 days' }
+function renderStatic(){
+  var t = DATA.totals, bs = t.by_status;
+  var when = new Date(DATA.generated_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  document.getElementById('sub').textContent = 'Every Radar account in one view · ' + t.accounts + ' accounts · data as of ' + when;
+  var stalled = DATA.accounts.filter(function(a){ return !a.test && a.status === 'stalled'; });
+  if (stalled.length){
+    var oldest = Math.max.apply(null, stalled.map(function(a){ return a.days_since || 0; }));
+    document.getElementById('alertMsg').innerHTML = '<strong>' + stalled.length + ' campaign' + (stalled.length>1?'s have':' has') + ' stopped collecting</strong> — '
+      + stalled.map(function(a){ return esc(a.name) + (a.last_collected ? ' (since ' + shortDate(a.last_collected) + ')' : ' (never collected)'); }).join(', ') + '.';
+    document.getElementById('alert').style.display = 'flex';
+  }
+  var k = [
+    ['Accounts', t.accounts, bs.healthy + ' healthy · ' + bs.not_started + ' not started', ''],
+    ['Prospects collected', n(t.prospects), 'all time, all accounts', ''],
+    ['New, last 7 days', n(t.last_7_days), t.producing_7d + ' account' + (t.producing_7d===1?'':'s') + ' producing', t.producing_7d < 3 ? 'bad' : ''],
+    ['ICP prospects (A + B)', n(t.icp), t.icp_pct + '% of collected', ''],
+    ['Active bridges', n(t.active_bridges), 'of ' + n(t.bridges) + ' found', ''],
+    ['Sent to Botdog', n(t.botdog), 'Botdog is for your own account only', '']
   ];
-  document.getElementById('stats').innerHTML = cards.map(function(c){
-    return '<div class="stat"><div class="num">' + c.num + '</div><div class="label">' + c.label + '</div></div>';
+  document.getElementById('kpis').innerHTML = k.map(function(c){ return '<div class="kpi"><div class="l">'+c[0]+'</div><div class="v">'+c[1]+'</div><div class="h '+c[3]+'">'+esc(c[2])+'</div></div>'; }).join('');
+
+  // prospect share
+  var tot = t.prospects || 1, list = shown().filter(function(a){ return !a.test && a.prospects; }).sort(function(a,b){ return b.prospects-a.prospects; });
+  var top = list.slice(0,4), rest = list.slice(4).reduce(function(s,a){ return s+a.prospects; },0);
+  if (rest) top.push({ name:'Other ' + (list.length-4), prospects:rest });
+  document.getElementById('shareSub').textContent = 'Share of all ' + n(t.prospects) + ' prospects, by account';
+  document.getElementById('share').innerHTML = top.map(function(a){ var p = Math.round(100*a.prospects/tot); return '<div class="share"><span>'+esc(a.name)+'</span><i><b style="width:'+Math.max(p,1)+'%"></b></i><span class="num">'+(p<1?'&lt;1':p)+'%</span></div>'; }).join('') || '<p>No prospects yet.</p>';
+
+  // todo
+  var acc = DATA.accounts.filter(function(a){ return !a.test; }), todo = [];
+  var names = function(xs){ return xs.map(function(a){ return '<strong>'+esc(a.name)+'</strong>'; }).join(', '); };
+  if (stalled.length) todo.push(names(stalled) + ' — no new prospect for 10+ days. Check the client computer is on, with the Radar extension running.');
+  var paused = acc.filter(function(a){ return a.status==='paused'; });
+  if (paused.length) todo.push(names(paused) + ' — on a LinkedIn safety pause.');
+  var thin = acc.filter(function(a){ return a.active_bridges >= 50 && a.prospects < a.active_bridges / 2; });
+  thin.forEach(function(a){ todo.push('<strong>'+esc(a.name)+'</strong> — '+n(a.active_bridges)+' active bridges but only '+n(a.prospects)+' prospects.'); });
+  var noIcp = acc.filter(function(a){ return a.prospects && !a.icp_rules; });
+  if (noIcp.length) todo.push(names(noIcp) + ' — no ICP rules, so prospects cannot be graded.');
+  var sugg = acc.filter(function(a){ return a.status==='not_started' && a.has_suggestions; });
+  if (sugg.length) todo.push(names(sugg) + ' — suggestions waiting to be turned on.');
+  document.getElementById('todo').innerHTML = todo.length ? todo.map(function(x){ return '<li>'+x+'</li>'; }).join('') : '<li>Nothing — every campaign is healthy.</li>';
+
+  var h = DATA.hidden_tests;
+  document.getElementById('testNote').innerHTML = h ? (SHOW_TESTS ? h + ' test account' + (h>1?'s':'') + ' shown · ' : h + ' test account' + (h>1?'s':'') + ' hidden · ') + '<button type="button" onclick="SHOW_TESTS=!SHOW_TESTS;renderStatic();render()">' + (SHOW_TESTS?'hide':'show') + '</button>' : '';
+}
+
+function chips(){
+  var c = { all:0, healthy:0, slowing:0, stalled:0, paused:0, not_started:0 };
+  shown().forEach(function(a){ c.all++; c[a.status]++; });
+  var order = ['all','healthy','slowing','stalled','paused','not_started'];
+  document.getElementById('chips').innerHTML = order.filter(function(s){ return s==='all' || c[s]; }).map(function(s){
+    return '<button type="button" class="chip" aria-pressed="'+(FILTER===s)+'" onclick="setFilter(\''+s+'\')">'+(s==='all'?'All':LABEL[s])+' '+c[s]+'</button>';
   }).join('');
 }
+function setFilter(s){ FILTER = s; render(); }
+function sortBy(k){ if (SORT===k) DESC=!DESC; else { SORT=k; DESC = (k!=='name' && k!=='days_since'); } render(); }
 
-// ---- Cells ----
-function numCell(n){
-  var v = Number(n) || 0;
-  return '<td class="num-cell' + (v === 0 ? ' zero' : '') + '">' + v + '</td>';
+function statusPill(a){
+  var t = LABEL[a.status];
+  if ((a.status==='stalled' || a.status==='slowing') && a.days_since!=null) t += ' ' + a.days_since + ' d';
+  if (a.status==='paused') t += ' to ' + shortDate(a.paused_until);
+  return '<span class="pill s-'+a.status+'">'+t+'</span>';
 }
-function liCell(url){
-  if (!url) return '<td><span class="li-none">&#8211;</span></td>';
-  // Show the handle rather than the full URL — the column stays narrow.
-  var handle = String(url).replace(/\/+$/,'').split('/in/')[1] || 'profile';
-  return '<td><a class="li-link" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">'
-       + esc(handle) + '</a></td>';
+function icpCell(a){
+  if (!a.prospects) return '<span class="dim">—</span>';
+  if (!a.icp_rules) return '<span class="warn">ICP rules not set</span>';
+  return '<span class="meter"><i><b style="width:'+a.icp_pct+'%"></b></i>'+a.icp_pct+'%</span>';
 }
-
-// ---- Onboarding checklist cell ----
-function onboardingCell(u){
-  var ob = u.onboarding || {};
-  var items = [
-    { key: 'linkedin',  label: 'LI',  on: !!ob.linkedin,  title: 'Signed in with LinkedIn' },
-    { key: 'sales_nav', label: 'SN',  on: !!ob.sales_nav, title: 'Sales Navigator detected' },
-    { key: 'extension', label: 'Ext', on: !!ob.extension, title: 'Chrome extension installed' },
-    { key: 'botdog',    label: 'BD',  on: !!ob.botdog,    title: 'Botdog connected' }
-  ];
-  return '<td><div class="checklist">' + items.map(function(i){
-    return '<span class="chk ' + (i.on ? 'on' : 'off') + '" title="' + esc(i.title) + '">'
-      + '<span class="mk">' + (i.on ? '&#10003;' : '&#183;') + '</span>' + i.label + '</span>';
-  }).join('') + '</div></td>';
+function lastCell(a){
+  if (!a.last_collected) return '<span class="dim">never</span>';
+  var d = a.days_since, txt = shortDate(a.last_collected) + (d===0?' · today':d===1?' · yesterday':'');
+  return a.status==='stalled' ? '<strong style="color:#b42318">'+txt+'</strong>' : txt;
 }
-
-// ---- Row actions per status ----
-function actionsCell(u){
-  var st = String(u.status||'').toLowerCase();
-  var isSelf = MY_KEY && u.owner_key === MY_KEY;
-  var k = esc(u.owner_key||'');
-  var who = esc(u.display_name || u.email || 'this user');
-  var acts = [];
-  if (isSelf) return '<td><span class="li-none">you</span></td>';
-  if (st === 'pending') {
-    acts.push('<button class="act approve" onclick="patchUser(\'' + k + '\',{status:\'active\'})">Approve</button>');
-    acts.push('<button class="act" onclick="deleteUser(\'' + k + '\',\'' + who + '\')">Deny</button>');
-  } else if (st === 'suspended') {
-    acts.push('<button class="act approve" onclick="patchUser(\'' + k + '\',{status:\'active\'})">Reactivate</button>');
-    acts.push('<button class="act" onclick="deleteUser(\'' + k + '\',\'' + who + '\')">Delete</button>');
-  } else {
-    acts.push('<button class="act suspend" onclick="patchUser(\'' + k + '\',{status:\'suspended\'})">Suspend</button>');
-    if (u.is_admin) acts.push('<button class="act admin" onclick="patchUser(\'' + k + '\',{is_admin:false})">Remove admin</button>');
-    else acts.push('<button class="act admin" onclick="patchUser(\'' + k + '\',{is_admin:true})">Make admin</button>');
-    if (st === 'invited') acts.push('<button class="act" onclick="deleteUser(\'' + k + '\',\'' + who + '\')">Delete</button>');
-  }
-  return '<td><div class="actions">' + acts.join('') + '</div></td>';
+function detail(a){
+  var why = {
+    stalled: a.last_collected ? 'No prospect saved since ' + shortDate(a.last_collected) + '. Check that the client computer is on with the Radar extension running and signed in to Sales Navigator.' : 'Sources are set up but nothing has been collected yet.',
+    slowing: 'Last prospect ' + a.days_since + ' days ago.',
+    paused: 'LinkedIn safety pause until ' + shortDate(a.paused_until) + '.',
+    not_started: a.has_suggestions ? 'No source yet. Gershon suggestions (' + a.suggested_sources + ' sources) are waiting for the client to turn them on.' : 'No source yet.',
+    healthy: 'Collecting normally.'
+  }[a.status];
+  if (a.half_speed_until) why += ' Running at half speed until ' + shortDate(a.half_speed_until) + '.';
+  return '<tr class="detail"><td colspan="11"><div class="box">'
+    + '<div class="why">'+esc(why)+'</div>'
+    + '<div><span class="k">Account key</span><br>'+esc(a.owner_key)+'</div>'
+    + '<div><span class="k">Login email</span><br>'+(a.email ? '<a href="mailto:'+esc(a.email)+'">'+esc(a.email)+'</a>' : '<span class="dim">no user row</span>')+'</div>'
+    + '<div><span class="k">Last sign-in</span><br>'+(a.last_login_at ? shortDate(a.last_login_at) : '<span class="dim">not recorded</span>')+'</div>'
+    + '<div><span class="k">Bridges</span><br>'+n(a.active_bridges)+' active of '+n(a.bridges)+'</div>'
+    + '<div><span class="k">Suggested sources (OFF)</span><br>'+n(a.suggested_sources)+'</div>'
+    + '<div><span class="k">Prospects graded</span><br>'+n(a.graded)+' of '+n(a.prospects)+'</div>'
+    + '</div></td></tr>';
 }
 
-// ---- Render users ----
-function renderUsers(){
-  var body = document.getElementById('usersBody');
-  if (!USERS.length) {
-    body.innerHTML = '<tr><td colspan="9" class="empty">No users yet.</td></tr>';
-    return;
-  }
-  body.innerHTML = USERS.map(function(u){
-    var email = u.email || '';
-    var name  = u.display_name || email || '(no name)';
-    var st    = String(u.status||'').toLowerCase() || 'unknown';
-    var stats = u.stats || {};
-
-    return '<tr data-owner="' + esc(u.owner_key||'') + '"' + (st === 'pending' ? ' style="background:#fffbeb"' : '') + '>'
-      + '<td><div class="u-name">' + esc(name) + '</div>'
-        + '<span class="badge ' + statusClass(st) + '">' + esc(st) + '</span>'
-        + (u.is_admin ? ' <span class="role-pill admin">admin</span>' : '')
-        + '</td>'
-      + '<td class="hide-sm"><span class="u-email">' + (email ? esc(email) : '&#8211;') + '</span></td>'
-      + liCell(u.linkedin_url)
-      + onboardingCell(u)
-      + numCell(stats.sources)
-      + numCell(stats.bridges)
-      + numCell(stats.targets)
-      + '<td class="hide-sm last-login" title="' + (Number(u.login_count)||0) + ' logins">' + fmtLastLogin(u.last_login_at) + '</td>'
-      + actionsCell(u)
+function render(){
+  if (!DATA) return;
+  chips();
+  var q = (document.getElementById('q').value || '').trim().toLowerCase();
+  var list = shown().filter(function(a){
+    if (FILTER !== 'all' && a.status !== FILTER) return false;
+    return !q || (a.name + ' ' + a.owner_key + ' ' + (a.email||'')).toLowerCase().indexOf(q) !== -1;
+  });
+  list.sort(function(x,y){
+    var a = SORT==='status' ? RANK[x.status] : x[SORT], b = SORT==='status' ? RANK[y.status] : y[SORT];
+    if (a==null) a = DESC ? -1 : 1e9; if (b==null) b = DESC ? -1 : 1e9;
+    var c = typeof a === 'string' ? a.localeCompare(b) : a - b;
+    return DESC ? -c : c;
+  });
+  var html = list.map(function(a){
+    var bad = a.status==='stalled', ns = a.status==='not_started';
+    var row = '<tr'+(bad?' class="bad"':'')+'>'
+      + '<td><div style="font-weight:600">'+esc(a.name)+(a.owner_key==='xTVW0K1qKi'?' <span class="dim" style="font-weight:500">(you)</span>':'')+(a.test?' <span class="dim">· test</span>':'')+'</div><div class="k">'+esc(a.owner_key)+'</div></td>'
+      + '<td>'+statusPill(a)+'</td>'
+      + '<td class="num">'+n(a.sources)+'</td>'
+      + '<td class="num">'+(a.bridges ? n(a.active_bridges)+' <span class="dim">/ '+n(a.bridges)+'</span>' : '<span class="dim">—</span>')+'</td>'
+      + '<td class="num" style="font-weight:600">'+n(a.prospects)+'</td>'
+      + '<td class="num" style="font-weight:600;color:'+(a.last_7_days?'#067647':(bad?'#b42318':'inherit'))+'">'+(ns?'<span class="dim">—</span>':(a.last_7_days?'+':'')+n(a.last_7_days))+'</td>'
+      + '<td>'+icpCell(a)+'</td>'
+      + '<td class="num">'+(a.prospects?n(a.salesnav_listed):'<span class="dim">—</span>')+'</td>'
+      + '<td class="num">'+(a.botdog?n(a.botdog):'<span class="dim">—</span>')+'</td>'
+      + '<td>'+lastCell(a)+'</td>'
+      + '<td><button type="button" class="more" aria-expanded="'+!!OPEN[a.owner_key]+'" onclick="OPEN[\''+a.owner_key+'\']=!OPEN[\''+a.owner_key+'\'];render()">'+(OPEN[a.owner_key]?'Hide':'Details')+'</button></td>'
       + '</tr>';
+    return row + (OPEN[a.owner_key] ? detail(a) : '');
   }).join('');
+  document.getElementById('rows').innerHTML = html || '<tr><td colspan="11" class="dim">No account matches.</td></tr>';
 }
 
-// ---- Update / delete users ----
-async function patchUser(ownerKey, patch){
-  var res = await apiFetch('/api/admin-users', {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(Object.assign({ owner_key: ownerKey }, patch))
-  });
-  if (res.ok && res.json && res.json.ok) { await loadUsers(); return; }
-  alert('Update failed: ' + ((res.json && res.json.error) || ('HTTP ' + res.status)));
-}
-
-async function deleteUser(ownerKey, who){
-  if (!confirm('Remove ' + who + ' from Radar? Their collected data is kept, but they lose access.')) return;
-  var res = await apiFetch('/api/admin-users', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ owner_key: ownerKey })
-  });
-  if (res.ok && res.json && res.json.ok) { await loadUsers(); return; }
-  alert('Delete failed: ' + ((res.json && res.json.error) || ('HTTP ' + res.status)));
-}
-
-// ---- Invite (POST /api/admin-users) ----
-async function inviteUser(){
-  var urlEl   = document.getElementById('invUrl');
-  var nameEl  = document.getElementById('invName');
-  var emailEl = document.getElementById('invEmail');
-  var btn     = document.getElementById('invBtn');
-  var st      = document.getElementById('invStatus');
-
-  var url   = (urlEl.value||'').trim();
-  var name  = (nameEl.value||'').trim();
-  var email = (emailEl.value||'').trim();
-
-  st.className = 'invite-status';
-  if (!email || email.indexOf('@') === -1) {
-    st.className='invite-status err';
-    st.textContent = 'Enter the email tied to their LinkedIn account — it’s how Radar recognizes them at sign-in.';
-    return;
-  }
-  if (url && !/linkedin\.com\/in\//i.test(url)) {
-    st.className='invite-status err';
-    st.textContent = 'The LinkedIn URL should look like linkedin.com/in/username (or leave it blank).';
-    return;
-  }
-
-  btn.disabled = true; st.textContent = 'Inviting…';
-  var res = await apiFetch('/api/admin-users', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ linkedin_url: url, display_name: name, email: email })
-  });
-  btn.disabled = false;
-
-  if (res.notDeployed) {
-    document.getElementById('backendNote').style.display = 'block';
-    st.className='invite-status err'; st.textContent = 'Admin backend not deployed yet — invite not saved.';
-    return;
-  }
-  if (res.ok && res.json && res.json.ok) {
-    var who = name || email || url;
-    st.className='invite-status ok';
-    st.textContent = res.json.existing
-      ? '✓ ' + who + ' was already invited.'
-      : '✓ Invited ' + who + '.';
-    urlEl.value = ''; nameEl.value = ''; emailEl.value = '';
-    await loadUsers();
-  } else {
-    st.className='invite-status err';
-    st.textContent = 'Could not invite: ' + ((res.json && res.json.error) || ('HTTP ' + res.status));
-  }
+function exportCsv(){
+  var cols = ['name','owner_key','status','sources','active_bridges','bridges','prospects','last_7_days','icp','icp_pct','salesnav_listed','botdog','last_collected','days_since','paused_until','half_speed_until','email'];
+  var lines = [cols.join(',')].concat(shown().map(function(a){ return cols.map(function(c){ var v = a[c]==null?'':String(a[c]); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }).join(','); }));
+  var url = URL.createObjectURL(new Blob([lines.join('\n')], { type:'text/csv' }));
+  var el = document.createElement('a'); el.href = url; el.download = 'radar-campaigns-' + new Date().toISOString().slice(0,10) + '.csv'; el.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
 }
 
 boot();

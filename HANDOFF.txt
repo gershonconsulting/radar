@@ -46,6 +46,19 @@ Default branch: main
 
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
+- 2026-11-18 nightly PR push (auto-merge rule):
+  ✅ PR #36 v1.19.2 /admin "All campaigns" (admin-only, read-only /api/admin-campaigns, same admin rule as
+     /api/admin-users; user management moved to /admin-users) MERGED (radar@dc27ebc) and LIVE: /api/health
+     reports version 1.19.2. Tests: admin-campaigns, daily-report, health-check, resend-retry, limits all pass;
+     node --check on the new functions and inline scripts OK.
+  ❌ Live data still blocked: /api/health is red "SUPABASE_SERVICE_KEY binding missing" in Pages Production, so
+     /api/admin-campaigns answers 500 "not configured" and the page shows "Could not load campaigns" until
+     Charles adds that binding (Cloudflare dashboard, gershon-radar > Settings > Bindings/Variables, Production).
+  ❌ PR #35 v1.20.0 Intelligence menu HELD: needs a new Workers AI binding `AI` on gershon-radar. Tests pass.
+  ❌ PR #34 v1.20.0 Botdog ON/OFF HELD: new per-account setting written to config + changes what client
+     accounts see (Botdog hidden by default for clients). Tests pass (botdog-setting 4/4 + suite).
+  ❌ #34 and #35 both claim 1.20.0 and now conflict with main on functions/_lib/version.js + STATUS.md
+     (main = 1.19.2). On approval: merge one as 1.20.0, renumber the other 1.21.0, keep both STATUS lines.
 - 2026-11-17 nightly (branch nightly/2026-11-17-radar-health-weekend) - health-check v4: weekends are not outages.
   Why: "⚠️ Radar has stopped collecting" (36 h threshold) fired Mon 11-16 06:00 UTC after a normal weekend
   (Friday capture -> Monday check = ~59 calendar hours). The extension only collects Mon-Fri (sync-core.js WORK_DAYS).
