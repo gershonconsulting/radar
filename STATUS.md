@@ -6,6 +6,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 (branch previews at <branch>.gershon-radar.pages.dev). Supabase edge functions deploy separately (Ariel).
 
 ## Done
+- ✅ v1.19.3 (2026-11-18, branch nightly/2026-11-18-prospects-wording): landing page index.html says Prospects instead of Target(s) (6 visible strings). admin.html, sources-list.js had no visible Target text left; app.html untouched, prospects-wording.js shim kept.
 - ✅ v1.19.2 (2026-11-17, branch admin-campaigns): /admin = "All campaigns" master view of every account (status healthy/slowing/stalled/paused/not started, sources, bridges, prospects, 7-day, ICP share, Sales Nav list, Botdog, last collection, details, CSV). Admin only via /api/admin-campaigns (read-only, same admin rule as /api/admin-users). User management moved to /admin-users. tests/admin-campaigns.test.mjs
 - ✅ health-check v4 (2026-11-17, branch nightly/2026-11-17-radar-health-weekend): 36 h "stopped collecting" threshold counts working hours only (Sat/Sun ET excluded) - no more Monday-morning false alert; ?dry=1 dry run; tests/health-check.test.mjs
 - ✅ v1.19.1 + daily-report v9.3 (PR #31, merged 2026-11-16; site v1.19.1 live; EOD Worker deploy fails - GitHub secret RADAR_HUB_SECRET missing; Supabase daily-report still v9.2 until redeployed): Resend sends retry 429/5xx/network 3x (1s/4s/10s) with the same Idempotency-Key - daily-report (_shared/resend.ts) and EOD Worker (cron/resend.js)
