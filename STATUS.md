@@ -16,7 +16,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
-- ❌ v1.19.2 /admin campaigns PR: waits for Olivier's OK (new admin data endpoint = permissions). Not built: "View as" a client (needs login changes) and "draft email to client".
+- ✅ v1.19.2 /admin campaigns PR #36: merged 2026-11-18, live 1.19.3 (live data still needs the SUPABASE_SERVICE_KEY binding in Pages Production, Charles). Not built: "View as" a client (needs login changes) and "draft email to client".
 - ❌ daily-report v9.3: needs a Supabase function redeploy (Ariel, verify_jwt OFF); monthly-report keeps its own 429-only retry; health-check function + Code.gs send once
 - ❌ /api/health needs the SUPABASE_SERVICE_KEY binding in Pages Production (Charles, Cloudflare dashboard)
 - ❌ daily-report Supabase function: redeploy so the email shows the new red (Ariel, verify_jwt OFF) - health-check done with v4
