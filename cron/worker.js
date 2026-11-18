@@ -21,7 +21,7 @@ import { sendResend } from "./resend.js";
 
 export const HUB =
   "https://script.google.com/macros/s/AKfycbzFX-DPwGDGFPoIxdYwNq5mMztXHNs33PHUNQox-vgrvQbgA2KLccMN9DI-YURCIWxbPw/exec";
-export const APP_URL = "https://radar.gershoncrm.com";
+export const APP_URL = "https://radar.gershon.ai";
 const FROM = "GC Radar <reports@gershon.ai>";
 const TO = "report@gershonconsulting.com";
 const TZ = "America/New_York";

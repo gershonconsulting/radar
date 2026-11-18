@@ -1,11 +1,12 @@
 # Radar - STATUS (updated 2026-11-18)
 
-App: https://radar.gershoncrm.com/app/  - health: https://radar.gershoncrm.com/api/health
-Version: 1.21.0 on main (#35 Intelligence menu 1.20.0, then #34 Botdog switch 1.21.0) (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
+App: https://radar.gershon.ai/app (new address, 2026-11-18) - old https://radar.gershoncrm.com still served by the same Pages project - health: /api/health
+Version: 1.22.0 on main (#35 Intelligence menu 1.20.0, then #34 Botdog switch 1.21.0) (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
 Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to main auto-deploys
 (branch previews at <branch>.gershon-radar.pages.dev). Supabase edge functions deploy separately (Ariel).
 
 ## Done
+- ✅ v1.22.0 + ext 1.18.1 (2026-11-18, branch move-to-radar-gershon-ai): move to radar.gershon.ai. functions/_lib/hosts.js (PRIMARY_HOST, REDIRECT_LEGACY=false); LinkedIn login uses https://radar.gershon.ai/api/auth/linkedin/callback on the new host, env LINKEDIN_REDIRECT_URI elsewhere; login/logout return to the host the user is on; links in landing, app footer, extension page, Intelligence prompt, EOD worker, daily-report, health-check, Code.gs point to the new address; hub APP_ORIGIN_RE accepts radar.gershon.ai; ext 1.18.1 adds the new host (content script + host permission). Emails still sent from radar@gershoncrm.com (Resend domain). tests/hosts.test.mjs
 - ✅ ext 1.18.0 (2026-11-18, branch ext-1.18.0-bridge-invites): bridge invites for client accounts (invites.js, OFF by default; config bridge_invites=on|dry, bridge_invite_note, limit_invites_per_day 5 / _per_week 20) + empty-discovery sources rest 30 days. Root cause of Valos / Altavia / Flying Secoya = 0 leads: their bridges are 2nd/3rd degree and nothing invited them; Flying Secoya also burned its pages re-searching 2 empty sources. Live dry test on Sales Nav OK. tests/invites.test.js
 - ✅ v1.21.0 Botdog ON/OFF switch (2026-11-17, branch botdog-toggle): Settings "Use Botdog for outreach" saved per account (config botdog_enabled via /api/botdog-setting, owner from session). OFF hides every Botdog column, filter, KPI, action, invite button/chip, onboarding step, campaigns card and key field. Default when unset = ON only if a Botdog key exists (only Olivier has one)
 - ✅ v1.20.0 Intelligence menu (2026-11-17, branch feature/intelligence-menu): sidebar Overview > Intelligence with AI Analysis / AI Suggestions / AI Chat on Cloudflare Workers AI. functions/api/intelligence.js builds the account summary server-side from Supabase for the session owner only (sources, bridges, prospects aggregated, ICP grades, bridge verdicts, 7-day activity); app/intelligence.js injected by _middleware item 8; tests/intelligence.test.mjs
@@ -19,6 +20,10 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
+- ❌ radar.gershon.ai: attach as Custom domain on Pages gershon-radar (gershon.ai is a Cloudflare zone, DNS record is created automatically) - Chrome is signed into Cloudflare user ovattia@gmail.com, which has no access to account 0b8434...
+- ❌ LinkedIn developer app: add https://radar.gershon.ai/api/auth/linkedin/callback to Authorized redirect URLs (keep the old one)
+- ❌ Redeploy Supabase hub (new origin) + daily-report + health-check (new links)
+- ❌ After client desktops run ext 1.18.1: set REDIRECT_LEGACY = true in functions/_lib/hosts.js
 - ❌ 1.18.0: load the new extension on the Valos, Altavia and Flying Secoya desktops, then set bridge_invites=on + the note Olivier approves (config, per account)
 - ❌ Intelligence needs the Workers AI binding `AI` on Pages project gershon-radar (Settings > Bindings, Production + Preview) - without it the page says "being switched on"
 - ✅ v1.19.2 /admin campaigns PR #36: merged 2026-11-18, live 1.19.3 (live data still needs the SUPABASE_SERVICE_KEY binding in Pages Production, Charles). Not built: "View as" a client (needs login changes) and "draft email to client".

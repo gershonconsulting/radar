@@ -483,7 +483,7 @@ function sendDailyReport() {
     headers: { Authorization: 'Bearer ' + key },
     payload: JSON.stringify({ from: REPORT_FROM, to: [REPORT_TO],
       subject: 'Radar daily report — ' + newToday + ' new leads today',
-      html: '<h2>Radar Daily Report</h2><p><strong>' + newToday + '</strong> new leads in last 24h. Total: <strong>' + count + '</strong></p><p><a href="https://radar.gershoncrm.com">Open Dashboard</a></p>'
+      html: '<h2>Radar Daily Report</h2><p><strong>' + newToday + '</strong> new leads in last 24h. Total: <strong>' + count + '</strong></p><p><a href="https://radar.gershon.ai">Open Dashboard</a></p>'
     }), muteHttpExceptions: true
   });
 }

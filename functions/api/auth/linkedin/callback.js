@@ -1,3 +1,4 @@
+import { originFor, linkedinRedirectUri } from '../../../_lib/hosts.js';
 // functions/api/auth/linkedin/callback.js
 // LinkedIn OpenID Connect callback handler.
 // 1. Validates CSRF state cookie.
@@ -141,7 +142,7 @@ export async function onRequestGet({ request, env }) {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: env.LINKEDIN_REDIRECT_URI,
+        redirect_uri: linkedinRedirectUri(request, env),
         client_id: env.LINKEDIN_CLIENT_ID,
         client_secret: env.LINKEDIN_CLIENT_SECRET,
       }),
@@ -166,7 +167,7 @@ export async function onRequestGet({ request, env }) {
     return new Response('Userinfo fetch failed: ' + String(err), { status: 502 });
   }
 
-  const deny = (flag) => Response.redirect('https://radar.gershoncrm.com/app.html?' + flag + '=1', 302);
+  const deny = (flag) => Response.redirect(originFor(request) + '/app.html?' + flag + '=1', 302);
   const email = String(who.email || '').toLowerCase();
 
   // ---- Resolve / self-register against the users store (OPEN sign-up) ----
@@ -242,7 +243,7 @@ export async function onRequestGet({ request, env }) {
     env.SESSION_SECRET
   );
 
-  const headers = new Headers({ Location: 'https://radar.gershoncrm.com/app.html' });
+  const headers = new Headers({ Location: originFor(request) + '/app.html' });
   headers.append('Set-Cookie', 'li_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
   headers.append('Set-Cookie', `radar_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
   return new Response(null, { status: 302, headers });
