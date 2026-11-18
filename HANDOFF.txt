@@ -47,6 +47,7 @@ Default branch: main
 3. RECENTLY DONE  [DONE]
 ----------------------------------------------------------------
 - 2026-11-18 nightly PR push (auto-merge rule):
+  ✅ STATUS.md corrected: the v1.19.2 /admin PR is no longer "waiting for OK" - #36 merged 2026-11-18, live 1.19.3 (#37).
   ✅ PR #36 v1.19.2 /admin "All campaigns" (admin-only, read-only /api/admin-campaigns, same admin rule as
      /api/admin-users; user management moved to /admin-users) MERGED (radar@dc27ebc) and LIVE: /api/health
      reports version 1.19.2. Tests: admin-campaigns, daily-report, health-check, resend-retry, limits all pass;
