@@ -6,6 +6,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 (branch previews at <branch>.gershon-radar.pages.dev). Supabase edge functions deploy separately (Ariel).
 
 ## Done
+- ✅ v1.19.2 (2026-11-17, branch admin-campaigns): /admin = "All campaigns" master view of every account (status healthy/slowing/stalled/paused/not started, sources, bridges, prospects, 7-day, ICP share, Sales Nav list, Botdog, last collection, details, CSV). Admin only via /api/admin-campaigns (read-only, same admin rule as /api/admin-users). User management moved to /admin-users. tests/admin-campaigns.test.mjs
 - ✅ health-check v4 (2026-11-17, branch nightly/2026-11-17-radar-health-weekend): 36 h "stopped collecting" threshold counts working hours only (Sat/Sun ET excluded) - no more Monday-morning false alert; ?dry=1 dry run; tests/health-check.test.mjs
 - ✅ v1.19.1 + daily-report v9.3 (PR #31, merged 2026-11-16; site v1.19.1 live; EOD Worker deploy fails - GitHub secret RADAR_HUB_SECRET missing; Supabase daily-report still v9.2 until redeployed): Resend sends retry 429/5xx/network 3x (1s/4s/10s) with the same Idempotency-Key - daily-report (_shared/resend.ts) and EOD Worker (cron/resend.js)
 - ✅ v1.19.0 (PR #22, merged 2026-11-15): bridge ICP ranking panel on the Bridges page (/api/bridge-icp, own bridges only); panel links now brand red #FE1B04
@@ -14,6 +15,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
+- ❌ v1.19.2 /admin campaigns PR: waits for Olivier's OK (new admin data endpoint = permissions). Not built: "View as" a client (needs login changes) and "draft email to client".
 - ❌ daily-report v9.3: needs a Supabase function redeploy (Ariel, verify_jwt OFF); monthly-report keeps its own 429-only retry; health-check function + Code.gs send once
 - ❌ /api/health needs the SUPABASE_SERVICE_KEY binding in Pages Production (Charles, Cloudflare dashboard)
 - ❌ daily-report Supabase function: redeploy so the email shows the new red (Ariel, verify_jwt OFF) - health-check done with v4
