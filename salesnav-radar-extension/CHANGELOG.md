@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.18.0 — 2026-11-18 — bridge invites (client accounts' Botdog) + empty sources stop eating the page budget
+**What happened.** Valos, Altavia and Flying Secoya collected nothing for 1–2 weeks with the extension
+up to date and LinkedIn signed in. Radar can only read the network of a 1st-degree bridge
+(CONNECTION_OF); on these accounts almost every bridge is 2nd/3rd degree (Altavia 174/175, Valos 16/18,
+Flying Secoya 47/65) and nothing ever invited them — Botdog only runs on Olivier's own account.
+On Flying Secoya, two sources whose discovery always came back empty were searched again on every run
+(76 times in 14 days) and used up the whole 2-pages-an-hour budget, so the 18 usable bridges were never read.
+
+**Bridge invites (invites.js) — OFF by default, per account config:**
+- `bridge_invites = on` sends connection invites to ACTIVE 2nd-degree bridges from the account's own
+  Sales Navigator (lead page → "…" → Connect → optional note → Send Invitation). High-priority sources first.
+  `bridge_invites = dry` does the whole flow once a day and cancels before Send (layout self-test).
+- `bridge_invite_note`: optional note, `{first_name}` `{company}` `{source}` filled in, max 280 chars.
+- Limits: 5 / day, 20 / week (`limit_invites_per_day`, `limit_invites_per_week`; halved for new installs),
+  max 2 per run, 1–3 min apart, LinkedIn gate `profile_view` before each, each counts as a lookup.
+- Never twice to the same person; "Connect — Pending" / "Connection sent" detected and skipped;
+  LinkedIn's weekly-invitation-limit dialog pauses invites 7 days; a check page = the usual 48 h stop;
+  Connect not found twice in a row = invites stop for the run (`invite:layout-changed`).
+- Acceptance: 2 days after sending, then every 3 days (up to 30), one Sales API degree lookup per invite;
+  degree 1 → hub `setBridgeMeta connection=1st` → the bridge is collected from on the next run.
+- Logs: `invite:sent|accepted|already-pending|not-possible|failed|summary|off`, `run:done.invitesSent`.
+- Verified live 2026-11-18 on Sales Nav (dry): Connect found in the "…" menu, note filled, "Send
+  Invitation" found, cancelled; degree lookup returns 2/3 correctly; pending invite detected.
+
+**Empty sources rest 30 days.** A discovery that finds no bridge is remembered (`radar_discover_empty`)
+and the source is not searched again for 30 days (`discover:resting-empty`). "Find bridges" in the app
+still forces a search.
+
 ## 1.17.2 — 2026-11-09 — hard LinkedIn limits (after David's and Amos's accounts were locked)
 **What happened.** On 2026-11-04 both accounts read one 625-person bridge 25 pages deep, looked up
 ~400 profiles per pass, were stopped mid-bridge by the hourly gate and started the same bridge from

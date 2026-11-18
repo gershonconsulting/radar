@@ -6,6 +6,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 (branch previews at <branch>.gershon-radar.pages.dev). Supabase edge functions deploy separately (Ariel).
 
 ## Done
+- ✅ ext 1.18.0 (2026-11-18, branch ext-1.18.0-bridge-invites): bridge invites for client accounts (invites.js, OFF by default; config bridge_invites=on|dry, bridge_invite_note, limit_invites_per_day 5 / _per_week 20) + empty-discovery sources rest 30 days. Root cause of Valos / Altavia / Flying Secoya = 0 leads: their bridges are 2nd/3rd degree and nothing invited them; Flying Secoya also burned its pages re-searching 2 empty sources. Live dry test on Sales Nav OK. tests/invites.test.js
 - ✅ v1.21.0 Botdog ON/OFF switch (2026-11-17, branch botdog-toggle): Settings "Use Botdog for outreach" saved per account (config botdog_enabled via /api/botdog-setting, owner from session). OFF hides every Botdog column, filter, KPI, action, invite button/chip, onboarding step, campaigns card and key field. Default when unset = ON only if a Botdog key exists (only Olivier has one)
 - ✅ v1.20.0 Intelligence menu (2026-11-17, branch feature/intelligence-menu): sidebar Overview > Intelligence with AI Analysis / AI Suggestions / AI Chat on Cloudflare Workers AI. functions/api/intelligence.js builds the account summary server-side from Supabase for the session owner only (sources, bridges, prospects aggregated, ICP grades, bridge verdicts, 7-day activity); app/intelligence.js injected by _middleware item 8; tests/intelligence.test.mjs
 - ✅ v1.19.3 (2026-11-18, branch nightly/2026-11-18-prospects-wording): landing page index.html says Prospects instead of Target(s) (6 visible strings). admin.html, sources-list.js had no visible Target text left; app.html untouched, prospects-wording.js shim kept.
@@ -18,6 +19,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
+- ❌ 1.18.0: load the new extension on the Valos, Altavia and Flying Secoya desktops, then set bridge_invites=on + the note Olivier approves (config, per account)
 - ❌ Intelligence needs the Workers AI binding `AI` on Pages project gershon-radar (Settings > Bindings, Production + Preview) - without it the page says "being switched on"
 - ✅ v1.19.2 /admin campaigns PR #36: merged 2026-11-18, live 1.19.3 (live data still needs the SUPABASE_SERVICE_KEY binding in Pages Production, Charles). Not built: "View as" a client (needs login changes) and "draft email to client".
 - ❌ Hub push (pushTargetsFor / pushBridges) does not yet read botdog_enabled - only matters if Olivier turns his own Botdog OFF (clients have no key, so nothing is pushed for them)
