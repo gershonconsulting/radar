@@ -24,7 +24,9 @@ const LIMIT_DEFAULTS = {
   list_saves_per_day:   25,   // members filed into Sales Nav lists (prospects + bridges)
   week_multiplier:      5,    // weekly cap = 5 x daily; unused budget is never carried over
   warning_hold_hours:   48,   // full stop after any LinkedIn warning (401/403/429/check page)
-  new_account_days:     14    // fresh installs run at half limits for this long
+  new_account_days:     14,   // fresh installs run at half limits for this long
+  invites_per_day:      5,    // 1.18.0: connection invites to 2nd-degree bridges (the Botdog equivalent)
+  invites_per_week:     20
 };
 const LIMIT_CONFIG_KEYS = {
   prospects_per_day:    'daily_lead_target',
@@ -35,17 +37,20 @@ const LIMIT_CONFIG_KEYS = {
   pages_per_bridge_day: 'limit_pages_per_bridge_day',
   list_saves_per_day:   'limit_list_saves_per_day',
   week_multiplier:      'limit_week_multiplier',
-  warning_hold_hours:   'limit_warning_hold_hours'
+  warning_hold_hours:   'limit_warning_hold_hours',
+  invites_per_day:      'limit_invites_per_day',
+  invites_per_week:     'limit_invites_per_week'
 };
 // Kinds of LinkedIn action we count, and which limits apply to each.
 const LIMIT_KINDS = {
   pages:     { day: 'pages_per_day',      hour: 'pages_per_hour' },
   lookups:   { day: 'lookups_per_day',    hour: 'lookups_per_hour' },
   prospects: { day: 'prospects_per_day',  hour: null },
-  listSaves: { day: 'list_saves_per_day', hour: null }
+  listSaves: { day: 'list_saves_per_day', hour: null },
+  invites:   { day: 'invites_per_day',    hour: null, week: 'invites_per_week' }
 };
 // Never scaled below these, never above these - a typo in config must not open the floodgates.
-const LIMIT_CEILINGS = { prospects_per_day: 100, lookups_per_day: 150, lookups_per_hour: 30, pages_per_day: 80, pages_per_hour: 15, pages_per_bridge_day: 10, list_saves_per_day: 150, week_multiplier: 5, warning_hold_hours: 168 };
+const LIMIT_CEILINGS = { prospects_per_day: 100, lookups_per_day: 150, lookups_per_hour: 30, pages_per_day: 80, pages_per_hour: 15, pages_per_bridge_day: 10, list_saves_per_day: 150, week_multiplier: 5, warning_hold_hours: 168, invites_per_day: 15, invites_per_week: 60 };
 const HOUR_MS = 3600 * 1000;
 const BRIDGE_REST_DAYS = 14;       // a fully-read bridge is re-read from page 1 after this
 
@@ -73,7 +78,7 @@ function effectiveLimits(cfg, nowMs, firstRunAt) {
   else if (first && now - first < base.new_account_days * 86400000) { scale = 0.5; why = 'new install - half limits for ' + base.new_account_days + ' days'; }
   const lim = Object.assign({}, base);
   if (scale !== 1) {
-    ['prospects_per_day', 'lookups_per_day', 'lookups_per_hour', 'pages_per_day', 'pages_per_hour', 'list_saves_per_day']
+    ['prospects_per_day', 'lookups_per_day', 'lookups_per_hour', 'pages_per_day', 'pages_per_hour', 'list_saves_per_day', 'invites_per_day', 'invites_per_week']
       .forEach(k => { lim[k] = Math.max(1, Math.floor(base[k] * scale)); });
     lim.pages_per_bridge_day = Math.max(1, Math.min(base.pages_per_bridge_day, Math.ceil(base.pages_per_bridge_day * scale)));
   }
@@ -87,7 +92,7 @@ function limitWeekKey(d) {
   d.setDate(d.getDate() - day);
   return 'W' + limitDayKey(d);
 }
-function emptyCounts() { return { pages: 0, lookups: 0, prospects: 0, listSaves: 0 }; }
+function emptyCounts() { return { pages: 0, lookups: 0, prospects: 0, listSaves: 0, invites: 0 }; }
 
 // The ledger: what this browser has already done on LinkedIn, by day, week and last hour.
 function freshLedger(st, nowMs) {
@@ -110,7 +115,7 @@ function limitRoom(st, lim, kind, nowMs) {
   st = freshLedger(st, now);
   const K = LIMIT_KINDS[kind];
   const dayCap  = lim[K.day];
-  const weekCap = dayCap * lim.week_multiplier;
+  const weekCap = K.week ? lim[K.week] : dayCap * lim.week_multiplier;
   const dayLeft  = Math.max(0, dayCap - st.dayCounts[kind]);
   const weekLeft = Math.max(0, weekCap - st.weekCounts[kind]);
   let left = Math.min(dayLeft, weekLeft), reason = '', retryMs = 0;

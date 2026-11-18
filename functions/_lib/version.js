@@ -9,4 +9,4 @@ export const APP_VERSION = '1.21.0';
 // as `latest_ext`, which the daily-report email (v9.2+) reads as "the published version".
 // (2026-11-15, app v1.18.12: moved here from _middleware.js. Supabase config latest_ext_version had
 //  stayed at 1.17.0 after 1.17.2 shipped, so the daily email said 1.17.2 was "ahead of the published 1.17.0".)
-export const LATEST_EXT = '1.17.2';
+export const LATEST_EXT = '1.18.0';

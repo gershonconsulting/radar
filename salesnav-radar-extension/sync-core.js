@@ -11,6 +11,8 @@ const WEBAPP_URL    = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/functions/v1/hub
 const INGEST_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 // 1.17.2: hard LinkedIn action limits (pages, profile lookups, list saves, new prospects) - see limits.js.
 try { importScripts('limits.js'); } catch (e) { console.error('[Radar] limits.js failed to load', e); }
+// 1.18.0: connection invites to 2nd-degree bridges (client accounts' Botdog equivalent) - see invites.js.
+try { importScripts('invites.js'); } catch (e) { console.error('[Radar] invites.js failed to load', e); }
 // ===== LinkedIn gate (1.13.0) =====
 // Radar asks the shared LinkedIn gate BEFORE every Sales Navigator search page, every bridge
 // discovery search and every lead-page open, and STOPS when the gate says no. Up to 1.12.0 Radar
@@ -92,6 +94,7 @@ const CURSOR_KEY    = 'radar_bridge_cursor';  // per-bridge reading position (re
 const OVERFLOW_KEY  = 'radar_new_overflow';   // new prospects found over today's cap, taken first tomorrow
 const FIRST_RUN_KEY = 'radar_first_run_at';   // set on a FRESH install only -> half limits for 14 days
 let LIM = null;              // effectiveLimits() result for this run
+let RADAR_CFG = {};          // 1.18.0: this account's hub config, read once per run (bridge_invites, note)
 let KNOWN_IDS = new Set();   // lead_ids this account already has (from the hub) + taken this run
 let NEW_THIS_RUN = new Set();// lead_ids accepted as NEW today (the only ones we spend lookups on)
 let PROSPECTS_FULL = false;  // today's new-prospect cap is reached -> stop reading search pages
@@ -119,6 +122,7 @@ async function loadLimits() {
   try { cfg = await fetchHubJsonp('getConfig') || {}; } catch (e) { await log('warn', 'limits:config-unreachable', { error: String(e), using: 'defaults' }); }
   let first = null;
   try { first = (await chrome.storage.local.get(FIRST_RUN_KEY))[FIRST_RUN_KEY] || null; } catch (e) {}
+  RADAR_CFG = cfg || {};
   LIM = effectiveLimits(cfg, Date.now(), first);
   const led = await loadLedger();
   await log('info', 'limits:loaded', { why: LIM.why, scale: LIM.scale, limits: LIM.limits, today: led.dayCounts, week: led.weekCounts });
@@ -563,11 +567,20 @@ async function runSync(opts) {
     const sched = await getSchedule();               // 'new-only' | 'periodic' | 'manual'
     const pending = sources.filter(s => String(s.discover_pending || '').trim());
     // Brand-new sources: have an org_id to search with, and no bridges discovered yet.
+    // 1.18.0: a source whose discovery came back EMPTY used to stay "never discovered" and was
+    // searched again on every run (Flying Secoya: 76 empty searches in 14 days, eating the whole
+    // 2-pages-an-hour budget, so no bridge was ever read). Now an empty result is remembered and the
+    // source rests DISCOVER_EMPTY_REST_DAYS. "Find bridges" in the app (discover_pending) still forces it.
+    const emptyMap = await getDiscoverEmpty();
+    const emptyRest = s => { const t = emptyMap[_normName(s.name)]; return !!t && (Date.now() - new Date(t).getTime()) < DISCOVER_EMPTY_REST_DAYS * 86400000; };
     const neverDiscovered = sources.filter(s =>
       String(s.org_id || '').trim() &&
       !String(s.discover_pending || '').trim() &&
-      !discoveredSources.has(_normName(s.name))
+      !discoveredSources.has(_normName(s.name)) &&
+      !emptyRest(s)
     );
+    const resting = sources.filter(s => !discoveredSources.has(_normName(s.name)) && emptyRest(s)).map(s => s.name);
+    if (resting.length) await log('info', 'discover:resting-empty', { sources: resting, restDays: DISCOVER_EMPTY_REST_DAYS });
     if (pending.length) {
       // User explicitly asked to collect bridges for these sources — always honored.
       await log('info', 'discover:pending', { count: pending.length, sources: pending.map(s => s.name) });
@@ -815,6 +828,15 @@ async function runSync(opts) {
     if (!GATE_HELD || GATE_HELD.reason === 'session_break') try { urlBackfill = await backfillTargetUrls(BACKFILL_URLS_PER_RUN); }
     catch (e) { await log('warn', 'backfill:error', { error: String(e) }); }
 
+    // 1.18.0: invite 2nd-degree bridges so they become 1st degree and their network can be read.
+    // Runs even when only the PAGE budget is spent (invites are a different action), never
+    // after a LinkedIn warning or a gate/account hold.
+    let invites = null;
+    const inviteOk = !GATE_HELD || GATE_HELD.reason === 'session_break' ||
+      (GATE_HELD.action === 'limits' && /^(pages|prospects|listSaves)_/.test(String(GATE_HELD.reason || '')));
+    if (inviteOk) try { invites = await runBridgeInvites(allBridges, prioMap); }
+    catch (e) { await log('warn', 'invite:error', { error: String(e) }); }
+
     // Give the invite campaign something to work with: resolve a few missing bridge URLs.
     let bridgeUrls = { attempted: 0, resolved: 0, remaining: 0 };
     if (firstSessionToday) try { bridgeUrls = await resolveBridgeUrls(BRIDGE_URL_RESOLVE_PER_RUN); }
@@ -857,6 +879,7 @@ async function runSync(opts) {
       bridgesListed: bridgesListed,
       urlsBackfilled: urlBackfill.resolved, urlsMissing: urlBackfill.remaining,
       bridgesInvited: (bridgePush && (bridgePush.sent || 0)) || 0,
+      invitesSent: (invites && invites.sent) || 0, invitesAccepted: (invites && invites.accepted) || 0, invitesMode: (invites && invites.mode) || 'off',
       errors: RUN_ERRORS, listCooling: listCooling,
       gateHeld: GATE_HELD ? GATE_HELD.reason : null,
       session: DAY.sessions, dayPages: DAY.pages, dayCap: limitsNow().pages_per_day, bridgesDoneToday: DAY.done.length,
@@ -1522,6 +1545,114 @@ async function pushBridgesToBotdog() {
   return { ok: true, sent, candidates: todo.length };
 }
 
+// ---- 1.18.0: bridge invites --------------------------------------------------------------
+const INVITES_PER_RUN = 2;          // spread the day's invites over several sessions
+const INVITE_CHECKS_PER_RUN = 5;    // acceptance checks (1 Sales API lookup each)
+async function loadInviteLedger() { try { return (await chrome.storage.local.get(INVITE_LEDGER_KEY))[INVITE_LEDGER_KEY] || {}; } catch (e) { return {}; } }
+async function saveInviteLedger(l) { try { await chrome.storage.local.set({ [INVITE_LEDGER_KEY]: l }); } catch (e) {} }
+
+async function checkInviteAcceptance(ledger, allBridges) {
+  const byUrn = {}; (allBridges || []).forEach(b => { if (b && b.urn) byUrn[b.urn] = b; });
+  const room = Math.min(INVITE_CHECKS_PER_RUN, (await limitLeft('lookups')).left);
+  const { due, expired } = dueAcceptanceChecks(ledger, byUrn, room, Date.now());
+  if (expired.length) await log('info', 'invite:expired', { count: expired.length });
+  let accepted = 0;
+  if (!due.length) return accepted;
+  const tab = await openScrapeTab('https://www.linkedin.com/sales/homepage');
+  if (!tab) return accepted;
+  try {
+    await waitForTabComplete(tab.id, 45000); await sleep(2500);
+    const res = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: checkDegreesInPage, args: [due] });
+    const out = (res && res[0] && res[0].result && res[0].result.out) || [];
+    await limitUse('lookups', out.length);
+    for (const row of out) {
+      if (row.stop) { await onLinkedInWarning('invite acceptance check', row.status); break; }
+      const e = ledger[row.urn]; if (!e) continue;
+      e.checkedAt = new Date().toISOString();
+      if (Number(row.degree) === 1) {
+        e.status = 'accepted'; e.acceptedAt = e.checkedAt; accepted++;
+        const body = { secret: INGEST_SECRET, action: 'setBridgeMeta', urn: row.urn, connection: '1st' };
+        if (CURRENT_OWNER) body.owner = CURRENT_OWNER;
+        try { await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); } catch (err) {}
+        await log('info', 'invite:accepted', { bridge: e.name || row.urn, source: e.source || '' });
+      }
+    }
+  } catch (e) { await log('warn', 'invite:check-error', { error: String(e) }); }
+  finally { try { chrome.tabs.remove(tab.id); } catch (e) {} }
+  if (accepted) notify('Bridges connected', accepted + ' bridge(s) accepted your invitation — their network will be collected from now on.');
+  return accepted;
+}
+
+async function runBridgeInvites(allBridges, prioMap) {
+  const mode = invitesEnabled(RADAR_CFG) ? 'on' : (String(RADAR_CFG.bridge_invites || '').toLowerCase() === 'dry' ? 'dry' : 'off');
+  const ledger = await loadInviteLedger();
+  const result = { mode: mode, sent: 0, accepted: 0 };
+  const candidatesAll = pickInviteCandidates(allBridges, ledger, prioMap, 9999, Date.now());
+  if (mode === 'off') {
+    if (candidatesAll.length) await log('info', 'invite:off', { waiting: candidatesAll.length, note: 'Set bridge_invites=on for this account to invite 2nd-degree bridges.' });
+    return result;
+  }
+  if (!inWorkWindow(new Date())) { await log('info', 'invite:outside-window'); return result; }
+  // Acceptance first: an accepted bridge is collected from in the next run.
+  try { result.accepted = await checkInviteAcceptance(ledger, allBridges); } catch (e) {}
+  await saveInviteLedger(ledger);
+  if (GATE_HELD && GATE_HELD.reason === 'linkedin_warning') return result;
+
+  let hold = null;
+  try { hold = (await chrome.storage.local.get(INVITE_HOLD_KEY))[INVITE_HOLD_KEY] || null; } catch (e) {}
+  if (hold && new Date(hold.until).getTime() > Date.now()) { await log('info', 'invite:held', hold); return result; }
+
+  const room = mode === 'dry' ? 1 : Math.min(INVITES_PER_RUN, (await limitLeft('invites')).left, (await limitLeft('lookups')).left);
+  if (mode === 'dry') {
+    const st = await chrome.storage.local.get('radar_invite_dry_day').catch(() => ({}));
+    if (st && st.radar_invite_dry_day === limitDayKey(new Date())) return result;
+  }
+  const todo = candidatesAll.slice(0, Math.max(0, room));
+  if (!todo.length) { await log('info', 'invite:none', { waiting: candidatesAll.length, reason: candidatesAll.length ? 'invite limit reached' : 'no 2nd-degree bridge left to invite', stats: inviteStats(ledger) }); return result; }
+
+  let uiMisses = 0;
+  for (const b of todo) {
+    if (!(await gateTake('profile_view', 'bridge invite'))) break;
+    const note = renderInviteNote(RADAR_CFG.bridge_invite_note, b);
+    const tab = await openScrapeTab('https://www.linkedin.com/sales/lead/' + b.urn + ',NAME_SEARCH,undefined');
+    if (!tab) { await log('warn', 'invite:no-tab'); break; }
+    let r = { status: 'error' };
+    try {
+      await waitForTabComplete(tab.id, 45000);
+      const res = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: sendInviteInPage, args: [note, mode === 'dry'] });
+      r = (res && res[0] && res[0].result) || { status: 'error', detail: 'no result' };
+    } catch (e) { r = { status: 'error', detail: String(e).slice(0, 120) }; }
+    finally { try { chrome.tabs.remove(tab.id); } catch (e) {} }
+    await limitUse('lookups', 1);
+    const now = new Date().toISOString();
+    const prev = ledger[b.urn] || {};
+    const base = { name: b.bridge || b.name || '', source: b.source || '', at: now, tries: (prev.tries || 0) + 1, detail: r.detail || '' };
+    if (mode === 'dry') {
+      await chrome.storage.local.set({ radar_invite_dry_day: limitDayKey(new Date()) });
+      await log(r.status === 'dry-ok' ? 'info' : 'warn', 'invite:dry-run', { bridge: base.name, result: r });
+      break;
+    }
+    if (r.status === 'sent') { ledger[b.urn] = Object.assign(base, { status: 'sent', note: !!r.noteUsed }); await limitUse('invites', 1); result.sent++; await log('info', 'invite:sent', { bridge: base.name, source: base.source, withNote: !!r.noteUsed }); }
+    else if (r.status === 'already') { ledger[b.urn] = Object.assign(base, { status: 'pending' }); await log('info', 'invite:already-pending', { bridge: base.name }); }
+    else if (r.status === 'no-connect' || r.status === 'needs-email') { ledger[b.urn] = Object.assign(base, { status: 'failed', tries: INVITE_MAX_TRIES }); await log('info', 'invite:not-possible', { bridge: base.name, why: r.status }); }
+    else if (r.status === 'li-limit') {
+      await chrome.storage.local.set({ [INVITE_HOLD_KEY]: { until: new Date(Date.now() + 7 * 86400000).toISOString(), why: 'LinkedIn weekly invitation limit' } });
+      await log('warn', 'invite:linkedin-limit', { note: 'LinkedIn weekly invitation limit reached - invites paused 7 days.' });
+      break;
+    } else if (r.status === 'challenge') { await onLinkedInWarning('bridge invite', 'check page'); break; }
+    else {
+      ledger[b.urn] = Object.assign(base, { status: 'failed' });
+      await log('warn', 'invite:failed', { bridge: base.name, result: r });
+      if (r.status === 'ui-not-found' && ++uiMisses >= 2) { await log('error', 'invite:layout-changed', { note: 'Connect button not found twice in a row - invites stopped for this run.' }); break; }
+    }
+    await saveInviteLedger(ledger);
+    if (b !== todo[todo.length - 1]) await sleepKeepAlive(randInt(60, 180) * 1000);
+  }
+  await saveInviteLedger(ledger);
+  await log('info', 'invite:summary', Object.assign({ sentThisRun: result.sent, acceptedThisRun: result.accepted, waiting: Math.max(0, candidatesAll.length - result.sent) }, inviteStats(ledger)));
+  return result;
+}
+
 // POST candidate bridges to the hub. Server dedupes by urn and sets active=false for new ones.
 async function addBridges(source, bridges) {
   const resp = await fetch(WEBAPP_URL, {
@@ -1850,6 +1981,10 @@ async function resolveMissingOrgIds(sources) {
 // --- Bridge discovery ---
 // For each Source with an org_id, search Sales Nav for senior people AT that org and
 // propose them as candidate bridges (pushed to the hub as active=false).
+const DISCOVER_EMPTY_KEY = 'radar_discover_empty';
+const DISCOVER_EMPTY_REST_DAYS = 30;
+async function getDiscoverEmpty() { try { return (await chrome.storage.local.get(DISCOVER_EMPTY_KEY))[DISCOVER_EMPTY_KEY] || {}; } catch (e) { return {}; } }
+async function markDiscoverEmpty(name) { const m = await getDiscoverEmpty(); m[_normName(name)] = new Date().toISOString(); try { await chrome.storage.local.set({ [DISCOVER_EMPTY_KEY]: m }); } catch (e) {} }
 async function discoverBridges(sourcesArg) {
   await log('info', 'discover:start');
   let sources = sourcesArg || null;
@@ -1900,7 +2035,8 @@ async function discoverBridges(sourcesArg) {
         await log('info', 'discover:pushed', { source: src.name, count: trimmed.length, ok: !!(res && res.success), activated: true });
         notify('New bridges', trimmed.length + ' people found at ' + src.name + ' — prospects will be collected on the next sync.');
       } else {
-        await log('info', 'discover:empty', { source: src.name });
+        await log('info', 'discover:empty', { source: src.name, restDays: DISCOVER_EMPTY_REST_DAYS });
+        await markDiscoverEmpty(src.name);
       }
       totalCandidates += trimmed.length;
       await humanDelay(12000, 28000);
