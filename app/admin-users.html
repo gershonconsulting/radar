@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Radar by Gershon.AI — Admin</title>
+<style>
+  :root{
+    --brand:#FE1B04; --brand-ink:#d11200; --brand-soft:#fff5f5;
+    --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; --card:#ffffff;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+
+  /* ---------- Top brand bar ---------- */
+  .topbar{ background:#fff; border-bottom:1px solid var(--line); }
+  .topbar-inner{ max-width:1180px; margin:0 auto; display:flex; align-items:center; gap:12px; padding:14px 24px; }
+  .topbar .logo{ display:flex; color:var(--brand); }
+  .topbar .logo svg{ width:24px; height:24px; }
+  .topbar h1{ font-size:1.3rem; font-weight:800; color:var(--brand); letter-spacing:-0.01em; }
+  .topbar .by{ font-size:0.68rem; font-weight:700; letter-spacing:0.13em; text-transform:uppercase; color:var(--muted); margin-left:2px; align-self:center; }
+  .admin-chip{ display:inline-flex; align-items:center; gap:5px; background:var(--brand-soft); color:var(--brand-ink); font-size:0.72rem; font-weight:700; padding:4px 11px; border-radius:12px; letter-spacing:0.04em; text-transform:uppercase; }
+  .topbar .spacer{ flex:1; }
+  .topbar .who{ font-size:0.82rem; color:var(--muted); }
+  .topbar a.back{ font-size:0.82rem; color:var(--brand-ink); text-decoration:none; font-weight:600; }
+  .topbar a.back:hover{ text-decoration:underline; }
+
+  /* ---------- Layout ---------- */
+  .wrap{ max-width:1180px; margin:0 auto; padding:26px 24px 60px; }
+  .page-head{ margin-bottom:20px; }
+  .page-head h2{ font-size:1.5rem; font-weight:700; color:var(--ink); }
+  .page-head p{ color:var(--muted); font-size:0.9rem; margin-top:3px; }
+
+  /* ---------- Gate cards (sign-in / access) ---------- */
+  .gate{ min-height:70vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .gate-card{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:44px 40px; max-width:420px; width:100%; text-align:center; box-shadow:0 12px 40px rgba(15,23,42,0.10); }
+  .gate-card .logo{ display:flex; justify-content:center; color:var(--brand); margin-bottom:12px; }
+  .gate-card .logo svg{ width:38px; height:38px; }
+  .gate-card h3{ font-size:1.25rem; font-weight:800; color:var(--ink); margin-bottom:8px; }
+  .gate-card p{ color:var(--muted); font-size:0.9rem; margin-bottom:24px; }
+  .gate-card .btn{ display:inline-block; background:var(--brand); color:#fff; font-weight:700; font-size:0.92rem; padding:11px 24px; border-radius:10px; text-decoration:none; transition:background .15s; }
+  .gate-card .btn:hover{ background:var(--brand-ink); }
+
+  /* ---------- Notes ---------- */
+  .note-amber{ background:#fffbeb; border:1px solid #fde68a; color:#92400e; border-radius:10px; padding:12px 16px; font-size:0.88rem; margin-bottom:18px; }
+  .loading{ color:var(--muted); font-size:0.9rem; padding:40px; text-align:center; }
+
+  /* ---------- Stat cards ---------- */
+  .stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:26px; }
+  .stat{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+  .stat .num{ font-size:2rem; font-weight:700; color:var(--brand-ink); line-height:1.1; }
+  .stat .label{ color:var(--muted); font-size:0.82rem; margin-top:6px; }
+
+  /* ---------- Invite form ---------- */
+  .invite{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; box-shadow:0 1px 2px rgba(15,23,42,0.04); margin-bottom:26px; }
+  .invite h3{ font-size:0.98rem; font-weight:700; color:#334155; margin-bottom:4px; }
+  .invite .hint{ color:var(--muted); font-size:0.82rem; margin-bottom:14px; }
+  .invite-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  .invite .fld{ flex:1; min-width:180px; }
+  .invite label{ display:block; font-size:0.72rem; font-weight:700; color:#475569; margin-bottom:5px; text-transform:uppercase; letter-spacing:0.04em; }
+  .invite input{ width:100%; padding:9px 11px; border:1px solid #d1d5db; border-radius:8px; font-size:0.9rem; font-family:inherit; }
+  .invite input:focus{ outline:none; box-shadow:0 0 0 2px #f3c4c4; border-color:var(--brand); }
+  .btn-primary{ background:var(--brand); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:0.9rem; font-weight:700; cursor:pointer; font-family:inherit; transition:background .15s; }
+  .btn-primary:hover{ background:var(--brand-ink); }
+  .btn-primary:disabled{ opacity:0.6; cursor:default; }
+  .invite-status{ margin-top:10px; font-size:0.84rem; min-height:1em; }
+  .invite-status.ok{ color:#166534; } .invite-status.err{ color:#dc2626; }
+
+  /* ---------- Table ---------- */
+  .table-wrap{ background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,0.04); }
+  table{ width:100%; border-collapse:collapse; }
+  th{ background:#f1f5f9; padding:11px 14px; text-align:left; font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; }
+  td{ padding:12px 14px; border-top:1px solid #f1f5f9; font-size:0.86rem; vertical-align:middle; }
+  tr:hover td{ background:#f8fafc; }
+  .u-name{ font-weight:700; color:var(--ink); }
+  .u-email{ color:var(--muted); font-size:0.8rem; margin-top:1px; }
+
+  /* ---------- Badges ---------- */
+  .badge{ display:inline-block; padding:3px 10px; border-radius:12px; font-size:0.72rem; font-weight:700; text-transform:capitalize; white-space:nowrap; }
+  .badge.active{ background:#dcfce7; color:#166534; }
+  .badge.invited{ background:#fef3c7; color:#92400e; }
+  .badge.pending{ background:#fef3c7; color:#92400e; }
+  .badge.suspended{ background:#e2e8f0; color:#475569; }
+  .badge.unknown{ background:#f1f5f9; color:#94a3b8; }
+  .role-pill{ display:inline-block; padding:2px 9px; border-radius:10px; font-size:0.72rem; font-weight:600; background:#fff5f5; color:var(--brand-ink); text-transform:capitalize; }
+  .role-pill.admin{ background:var(--brand); color:#fff; }
+
+  /* ---------- Onboarding checklist ---------- */
+  .checklist{ display:flex; gap:10px; flex-wrap:wrap; }
+  .chk{ display:inline-flex; align-items:center; gap:4px; font-size:0.74rem; font-weight:600; white-space:nowrap; }
+  .chk .mk{ width:15px; height:15px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:0.62rem; font-weight:800; flex:0 0 15px; }
+  .chk.on{ color:#166534; } .chk.on .mk{ background:#dcfce7; color:#16a34a; }
+  .chk.off{ color:#94a3b8; } .chk.off .mk{ background:#f1f5f9; color:#cbd5e1; }
+
+  /* ---------- Row actions ---------- */
+  .actions{ display:flex; gap:6px; flex-wrap:wrap; }
+  .act{ border:1px solid var(--line); background:#fff; color:#334155; font-size:0.76rem; font-weight:600; padding:5px 11px; border-radius:7px; cursor:pointer; font-family:inherit; transition:all .12s; white-space:nowrap; }
+  .act:hover{ background:#f8fafc; border-color:#cbd5e1; }
+  .act.approve{ color:#166534; border-color:#bbf7d0; } .act.approve:hover{ background:#dcfce7; }
+  .act.suspend:hover{ background:#f1f5f9; }
+  .act.admin{ color:var(--brand-ink); border-color:#f3c4c4; } .act.admin:hover{ background:var(--brand-soft); }
+  .act:disabled{ opacity:0.45; cursor:default; }
+  .last-login{ color:#475569; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .last-login .never{ color:#94a3b8; }
+
+  /* ---------- Numeric stat cells ---------- */
+  .num-cell{ font-variant-numeric:tabular-nums; font-weight:600; color:#334155; }
+  .num-cell.zero{ color:#cbd5e1; font-weight:500; }
+  .li-link{ color:var(--brand-ink); text-decoration:none; font-weight:600; font-size:0.82rem; }
+  .li-link:hover{ text-decoration:underline; }
+  .li-none{ color:#cbd5e1; font-size:0.82rem; }
+
+  .empty{ text-align:center; color:#94a3b8; padding:26px; font-size:0.9rem; }
+
+  @media (max-width:760px){
+    .wrap{ padding:18px 14px 48px; }
+    th.hide-sm, td.hide-sm{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Top brand bar ===== -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+    <h1>Radar</h1>
+    <span class="by">by Gershon.AI</span>
+    <span class="admin-chip">Admin</span>
+    <span class="spacer"></span>
+    <span class="who" id="whoami"></span>
+    <a class="back" href="/admin">&larr; All campaigns</a> <a class="back" href="/app">App</a>
+  </div>
+</header>
+
+<!-- ===== Gate (sign-in / access denied) ===== -->
+<div id="gate" class="gate" style="display:none">
+  <div class="gate-card">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+    <h3 id="gateTitle">Sign in required</h3>
+    <p id="gateMsg">Please sign in to continue.</p>
+    <a class="btn" href="/">Go to Radar</a>
+  </div>
+</div>
+
+<!-- ===== Loading placeholder ===== -->
+<div id="boot" class="loading">Checking access…</div>
+
+<!-- ===== Panel ===== -->
+<main id="panel" class="wrap" style="display:none">
+  <div class="page-head">
+    <h2>Users &amp; access</h2>
+    <p>Manage who can use Radar, their status, roles, and onboarding progress.</p>
+  </div>
+
+  <div id="backendNote" class="note-amber" style="display:none">Admin backend not deployed yet — showing an empty panel. Actions won't take effect until the backend is live.</div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="invite">
+    <h3>Invite a user</h3>
+    <div class="hint"><strong>Email is how Radar recognizes them at sign-in</strong> — use the email tied to their LinkedIn account. The LinkedIn URL is optional (display only). Registration is <strong>open</strong> — anyone can sign in with LinkedIn and gets an active account straight away (you get an email each time). Inviting someone here just pre-creates their row.</div>
+    <div class="invite-row">
+      <div class="fld"><label>Email *</label><input type="email" id="invEmail" placeholder="person@company.com"></div>
+      <div class="fld"><label>Name</label><input type="text" id="invName" placeholder="Full name"></div>
+      <div class="fld"><label>LinkedIn profile URL</label><input type="url" id="invUrl" placeholder="https://linkedin.com/in/username"></div>
+      <button class="btn-primary" id="invBtn" onclick="inviteUser()">+ Invite user</button>
+    </div>
+    <div class="invite-status" id="invStatus"></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th class="hide-sm">Email</th>
+          <th class="hide-sm">LinkedIn</th>
+          <th>Onboarding</th>
+          <th>Sources</th>
+          <th>Bridges</th>
+          <th>Prospects</th>
+          <th class="hide-sm">Last login</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="usersBody">
+        <tr><td colspan="9" class="empty">Loading users…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+'use strict';
+
+var USERS = [];
+var MY_KEY = null; // caller's owner_key — used to hide self-destructive actions
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ---- Robust fetch that never throws on non-JSON / 404 ----
+// Returns { ok, status, json, notDeployed }
+async function apiFetch(url, opts){
+  opts = opts || {};
+  opts.credentials = 'same-origin';
+  try {
+    var r = await fetch(url, opts);
+    var text = await r.text();
+    var json = null, parseOk = false;
+    try { json = JSON.parse(text); parseOk = true; } catch(e) { parseOk = false; }
+    // Backend not deployed: 404, or a non-JSON body (e.g. an HTML 404 page).
+    var notDeployed = (r.status === 404) || !parseOk;
+    return { ok: r.ok, status: r.status, json: json, notDeployed: notDeployed };
+  } catch(e) {
+    // Network error — treat as not deployed / unreachable.
+    return { ok:false, status:0, json:null, notDeployed:true };
+  }
+}
+
+// ---- Dates ----
+function fmtLastLogin(v){
+  if (!v) return '<span class="never">Never</span>';
+  var d = new Date(v);
+  if (isNaN(d)) return esc(v);
+  var now = new Date();
+  var diff = now - d;
+  var day = 86400000;
+  if (diff < 0) return d.toLocaleDateString();
+  if (diff < day && now.getDate() === d.getDate()) return 'Today';
+  if (diff < 2*day) return 'Yesterday';
+  if (diff < 7*day) return Math.floor(diff/day) + 'd ago';
+  return d.toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+}
+function loggedInLast7(v){
+  if (!v) return false;
+  var d = new Date(v);
+  if (isNaN(d)) return false;
+  return (Date.now() - d.getTime()) <= 7*86400000;
+}
+function truthy(v){
+  if (v === true) return true;
+  if (v === false || v == null) return false;
+  var s = String(v).toLowerCase().trim();
+  return s === 'true' || s === '1' || s === 'yes' || s === 'ok' || s === 'y';
+}
+function statusClass(s){
+  var v = String(s||'').toLowerCase();
+  if (v === 'active') return 'active';
+  if (v === 'invited') return 'invited';
+  if (v === 'pending') return 'pending';
+  if (v === 'suspended') return 'suspended';
+  return 'unknown';
+}
+
+// ---- Boot: check /api/me ----
+function showGate(title, msg){
+  document.getElementById('boot').style.display = 'none';
+  document.getElementById('panel').style.display = 'none';
+  document.getElementById('gateTitle').textContent = title;
+  document.getElementById('gateMsg').textContent = msg;
+  document.getElementById('gate').style.display = 'flex';
+}
+
+async function boot(){
+  var me = await apiFetch('/api/me');
+  if (!me.ok || !me.json) {
+    showGate('Sign in required', 'You need to sign in to view the admin panel.');
+    return;
+  }
+  var user = me.json.user || me.json; // tolerate {user:{...}} or flat
+  var isAdmin = me.json.isAdmin != null ? me.json.isAdmin
+              : (user && user.isAdmin != null ? user.isAdmin : false);
+  if (!truthy(isAdmin)) {
+    showGate("Admins only", "You don't have access to this page.");
+    return;
+  }
+  // Admin — render panel.
+  var who = (user && (user.name || user.email)) || '';
+  if (who) document.getElementById('whoami').textContent = who;
+  document.getElementById('boot').style.display = 'none';
+  document.getElementById('panel').style.display = 'block';
+  await loadUsers();
+}
+
+// ---- Load users (Supabase-backed) ----
+async function loadUsers(){
+  var res = await apiFetch('/api/admin-users');
+  if (res.notDeployed) {
+    document.getElementById('backendNote').style.display = 'block';
+    USERS = [];
+    renderStats(); renderUsers();
+    return;
+  }
+  document.getElementById('backendNote').style.display = 'none';
+  USERS = (res.json && res.json.users) ? res.json.users : [];
+  MY_KEY = (res.json && res.json.me && res.json.me.owner_key) || MY_KEY;
+  // Pending access requests first, then active admins/users, newest last.
+  var rank = { pending: 0, invited: 1, active: 2, suspended: 3 };
+  USERS.sort(function(a, b){
+    var ra = rank[String(a.status||'').toLowerCase()] != null ? rank[String(a.status||'').toLowerCase()] : 9;
+    var rb = rank[String(b.status||'').toLowerCase()] != null ? rank[String(b.status||'').toLowerCase()] : 9;
+    if (ra !== rb) return ra - rb;
+    return String(a.created_at||'').localeCompare(String(b.created_at||''));
+  });
+  renderStats();
+  renderUsers();
+}
+
+// ---- Stats ----
+function renderStats(){
+  var total = USERS.length;
+  var active = 0, invited = 0, last7 = 0;
+  USERS.forEach(function(u){
+    var st = String(u.status||'').toLowerCase();
+    if (st === 'active') active++;
+    if (st === 'invited' || st === 'pending') invited++;
+    if (loggedInLast7(u.last_login_at)) last7++;
+  });
+  var cards = [
+    { num: total,   label: 'Total users' },
+    { num: active,  label: 'Active' },
+    { num: invited, label: 'Invited / pending' },
+    { num: last7,   label: 'Signed in last 7 days' }
+  ];
+  document.getElementById('stats').innerHTML = cards.map(function(c){
+    return '<div class="stat"><div class="num">' + c.num + '</div><div class="label">' + c.label + '</div></div>';
+  }).join('');
+}
+
+// ---- Cells ----
+function numCell(n){
+  var v = Number(n) || 0;
+  return '<td class="num-cell' + (v === 0 ? ' zero' : '') + '">' + v + '</td>';
+}
+function liCell(url){
+  if (!url) return '<td><span class="li-none">&#8211;</span></td>';
+  // Show the handle rather than the full URL — the column stays narrow.
+  var handle = String(url).replace(/\/+$/,'').split('/in/')[1] || 'profile';
+  return '<td><a class="li-link" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">'
+       + esc(handle) + '</a></td>';
+}
+
+// ---- Onboarding checklist cell ----
+function onboardingCell(u){
+  var ob = u.onboarding || {};
+  var items = [
+    { key: 'linkedin',  label: 'LI',  on: !!ob.linkedin,  title: 'Signed in with LinkedIn' },
+    { key: 'sales_nav', label: 'SN',  on: !!ob.sales_nav, title: 'Sales Navigator detected' },
+    { key: 'extension', label: 'Ext', on: !!ob.extension, title: 'Chrome extension installed' },
+    { key: 'botdog',    label: 'BD',  on: !!ob.botdog,    title: 'Botdog connected' }
+  ];
+  return '<td><div class="checklist">' + items.map(function(i){
+    return '<span class="chk ' + (i.on ? 'on' : 'off') + '" title="' + esc(i.title) + '">'
+      + '<span class="mk">' + (i.on ? '&#10003;' : '&#183;') + '</span>' + i.label + '</span>';
+  }).join('') + '</div></td>';
+}
+
+// ---- Row actions per status ----
+function actionsCell(u){
+  var st = String(u.status||'').toLowerCase();
+  var isSelf = MY_KEY && u.owner_key === MY_KEY;
+  var k = esc(u.owner_key||'');
+  var who = esc(u.display_name || u.email || 'this user');
+  var acts = [];
+  if (isSelf) return '<td><span class="li-none">you</span></td>';
+  if (st === 'pending') {
+    acts.push('<button class="act approve" onclick="patchUser(\'' + k + '\',{status:\'active\'})">Approve</button>');
+    acts.push('<button class="act" onclick="deleteUser(\'' + k + '\',\'' + who + '\')">Deny</button>');
+  } else if (st === 'suspended') {
+    acts.push('<button class="act approve" onclick="patchUser(\'' + k + '\',{status:\'active\'})">Reactivate</button>');
+    acts.push('<button class="act" onclick="deleteUser(\'' + k + '\',\'' + who + '\')">Delete</button>');
+  } else {
+    acts.push('<button class="act suspend" onclick="patchUser(\'' + k + '\',{status:\'suspended\'})">Suspend</button>');
+    if (u.is_admin) acts.push('<button class="act admin" onclick="patchUser(\'' + k + '\',{is_admin:false})">Remove admin</button>');
+    else acts.push('<button class="act admin" onclick="patchUser(\'' + k + '\',{is_admin:true})">Make admin</button>');
+    if (st === 'invited') acts.push('<button class="act" onclick="deleteUser(\'' + k + '\',\'' + who + '\')">Delete</button>');
+  }
+  return '<td><div class="actions">' + acts.join('') + '</div></td>';
+}
+
+// ---- Render users ----
+function renderUsers(){
+  var body = document.getElementById('usersBody');
+  if (!USERS.length) {
+    body.innerHTML = '<tr><td colspan="9" class="empty">No users yet.</td></tr>';
+    return;
+  }
+  body.innerHTML = USERS.map(function(u){
+    var email = u.email || '';
+    var name  = u.display_name || email || '(no name)';
+    var st    = String(u.status||'').toLowerCase() || 'unknown';
+    var stats = u.stats || {};
+
+    return '<tr data-owner="' + esc(u.owner_key||'') + '"' + (st === 'pending' ? ' style="background:#fffbeb"' : '') + '>'
+      + '<td><div class="u-name">' + esc(name) + '</div>'
+        + '<span class="badge ' + statusClass(st) + '">' + esc(st) + '</span>'
+        + (u.is_admin ? ' <span class="role-pill admin">admin</span>' : '')
+        + '</td>'
+      + '<td class="hide-sm"><span class="u-email">' + (email ? esc(email) : '&#8211;') + '</span></td>'
+      + liCell(u.linkedin_url)
+      + onboardingCell(u)
+      + numCell(stats.sources)
+      + numCell(stats.bridges)
+      + numCell(stats.targets)
+      + '<td class="hide-sm last-login" title="' + (Number(u.login_count)||0) + ' logins">' + fmtLastLogin(u.last_login_at) + '</td>'
+      + actionsCell(u)
+      + '</tr>';
+  }).join('');
+}
+
+// ---- Update / delete users ----
+async function patchUser(ownerKey, patch){
+  var res = await apiFetch('/api/admin-users', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ owner_key: ownerKey }, patch))
+  });
+  if (res.ok && res.json && res.json.ok) { await loadUsers(); return; }
+  alert('Update failed: ' + ((res.json && res.json.error) || ('HTTP ' + res.status)));
+}
+
+async function deleteUser(ownerKey, who){
+  if (!confirm('Remove ' + who + ' from Radar? Their collected data is kept, but they lose access.')) return;
+  var res = await apiFetch('/api/admin-users', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ owner_key: ownerKey })
+  });
+  if (res.ok && res.json && res.json.ok) { await loadUsers(); return; }
+  alert('Delete failed: ' + ((res.json && res.json.error) || ('HTTP ' + res.status)));
+}
+
+// ---- Invite (POST /api/admin-users) ----
+async function inviteUser(){
+  var urlEl   = document.getElementById('invUrl');
+  var nameEl  = document.getElementById('invName');
+  var emailEl = document.getElementById('invEmail');
+  var btn     = document.getElementById('invBtn');
+  var st      = document.getElementById('invStatus');
+
+  var url   = (urlEl.value||'').trim();
+  var name  = (nameEl.value||'').trim();
+  var email = (emailEl.value||'').trim();
+
+  st.className = 'invite-status';
+  if (!email || email.indexOf('@') === -1) {
+    st.className='invite-status err';
+    st.textContent = 'Enter the email tied to their LinkedIn account — it’s how Radar recognizes them at sign-in.';
+    return;
+  }
+  if (url && !/linkedin\.com\/in\//i.test(url)) {
+    st.className='invite-status err';
+    st.textContent = 'The LinkedIn URL should look like linkedin.com/in/username (or leave it blank).';
+    return;
+  }
+
+  btn.disabled = true; st.textContent = 'Inviting…';
+  var res = await apiFetch('/api/admin-users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ linkedin_url: url, display_name: name, email: email })
+  });
+  btn.disabled = false;
+
+  if (res.notDeployed) {
+    document.getElementById('backendNote').style.display = 'block';
+    st.className='invite-status err'; st.textContent = 'Admin backend not deployed yet — invite not saved.';
+    return;
+  }
+  if (res.ok && res.json && res.json.ok) {
+    var who = name || email || url;
+    st.className='invite-status ok';
+    st.textContent = res.json.existing
+      ? '✓ ' + who + ' was already invited.'
+      : '✓ Invited ' + who + '.';
+    urlEl.value = ''; nameEl.value = ''; emailEl.value = '';
+    await loadUsers();
+  } else {
+    st.className='invite-status err';
+    st.textContent = 'Could not invite: ' + ((res.json && res.json.error) || ('HTTP ' + res.status));
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
