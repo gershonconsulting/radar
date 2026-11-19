@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Privacy Policy — Radar by Gershon.AI</title>
+<meta name="description" content="How Radar and the Radar Chrome extension collect, use, store and protect data." />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="canonical" href="https://radar.gershon.ai/privacy" />
+<style>
+  :root{--brand:#FE1B04;--brand2:#d11200;--muted:#5b6478;--line:#e6e9f2;--soft:#f5f7fc;--grad:linear-gradient(120deg,#FE1B04 0%,#d11200 100%)}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;color:#1a2133;background:#fff;line-height:1.65;-webkit-font-smoothing:antialiased}
+  a{color:var(--brand2)}
+  header{border-bottom:1px solid var(--line);background:#fff}
+  .wrap{max-width:820px;margin:0 auto;padding:0 24px}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .brand{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:1.12rem;letter-spacing:-.02em;color:#1a2133;text-decoration:none}
+  .brand .dot{width:30px;height:30px;border-radius:9px;background:var(--grad);display:grid;place-items:center}
+  .brand small{display:block;font-weight:600;font-size:.62rem;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-top:-2px}
+  main{padding:40px 0 64px}
+  h1{font-size:2.1rem;letter-spacing:-.03em;margin:0 0 .3rem}
+  .updated{color:var(--muted);font-size:.92rem;margin:0 0 2rem}
+  h2{font-size:1.22rem;margin:2.2rem 0 .6rem;letter-spacing:-.01em}
+  ul{padding-left:1.2rem}
+  li{margin:.3rem 0}
+  .box{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin:1.2rem 0}
+  table{width:100%;border-collapse:collapse;font-size:.94rem;margin:.6rem 0}
+  th,td{text-align:left;border-bottom:1px solid var(--line);padding:.55rem .5rem;vertical-align:top}
+  th{background:var(--soft)}
+  footer{border-top:1px solid var(--line);color:var(--muted);font-size:.88rem;padding:22px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/">
+      <span class="dot"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.6"/><circle cx="12" cy="12" r="4.5" stroke="#fff" stroke-width="1.6"/><circle cx="12" cy="12" r="1.6" fill="#fff"/></svg></span>
+      <span>Radar<small>by Gershon.AI</small></span>
+    </a>
+    <a href="/">Home</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: November 19, 2026</p>
+
+  <p>This policy explains how <strong>Radar</strong> (the web app at radar.gershon.ai and radar.gershoncrm.com) and the <strong>Radar — Prospect Collector</strong> Chrome extension (together, "Radar") handle data. Radar is operated by <strong>Gershon Consulting LLC</strong>, a Delaware company ("we", "us").</p>
+
+  <div class="box"><strong>In short:</strong> Radar collects business-profile information from LinkedIn Sales Navigator pages that you, the signed-in user, can already see, and stores it in your own Radar account so you can find warm introductions to your ideal customers. We do not sell data, we do not use it for advertising, and we do not read your browsing outside the sites listed below.</div>
+
+  <h2>1. Who Radar is for and what it does</h2>
+  <p>Radar is a business-development tool. You choose organizations to watch ("sources") and people in your network ("bridges"). The extension then reads, inside your own Sales Navigator session, the professional connections of those bridges that match your ideal-customer filters, and adds them to your Radar account as "prospects".</p>
+
+  <h2>2. Data we collect</h2>
+  <table>
+    <tr><th>Data</th><th>Where it comes from</th><th>Why</th></tr>
+    <tr><td>Your account: name, email address, LinkedIn member ID, profile picture</td><td>Sign in with LinkedIn (OpenID Connect)</td><td>To create and secure your account</td></tr>
+    <tr><td>Your settings: sources, bridges, ideal-customer criteria, daily limits, optional third-party API keys you enter</td><td>You, in the app or extension</td><td>To run Radar the way you configured it</td></tr>
+    <tr><td>Prospect business data: name, job title, company, location, public LinkedIn profile URL, connection degree</td><td>LinkedIn Sales Navigator pages opened by the extension in your signed-in browser</td><td>To build your prospect list (the single purpose of Radar)</td></tr>
+    <tr><td>Technical activity: extension version, run logs (pages read, counts, errors), timestamps</td><td>The extension</td><td>To keep collection within safe limits, show status, and fix problems</td></tr>
+  </table>
+  <p>Radar does <strong>not</strong> collect: your LinkedIn password, messages or inbox, payment information, browsing history, keystrokes, or content from any website other than those listed in section 4.</p>
+
+  <h2>3. How we use data</h2>
+  <ul>
+    <li>To provide Radar's features to you: collecting, grading and showing prospects, reports and email summaries about your account.</li>
+    <li>To keep the service safe and working (rate limits, error monitoring, support).</li>
+    <li>We do <strong>not</strong> sell or rent data, use it for advertising, use it to determine creditworthiness or for lending, or transfer it to data brokers.</li>
+    <li>Human access is limited to Gershon Consulting staff who need it to support your account, or where required by law.</li>
+  </ul>
+  <p>Radar's use of data complies with the Chrome Web Store User Data Policy, including its Limited Use requirements.</p>
+
+  <h2>4. What the extension accesses in your browser</h2>
+  <ul>
+    <li><strong>linkedin.com</strong> — reads Sales Navigator search and lead pages in your own session, at a human pace and within daily limits you control.</li>
+    <li><strong>radar.gershon.ai / radar.gershoncrm.com</strong> — lets the Radar web app talk to the extension (status, version, "sync now").</li>
+    <li><strong>Radar's backend</strong> (hosted on Supabase) — stores your account data and prospects.</li>
+    <li><strong>enricherpro.com</strong> (Gershon's own service) — looks up a public LinkedIn profile URL from a prospect's name and company when it is missing.</li>
+    <li><strong>api.botdog.co</strong> — only if you add your own Botdog API key and switch Botdog on; prospects you select are then sent to your Botdog campaign.</li>
+  </ul>
+  <p>Extension permissions are used only for these purposes: <em>tabs</em> and <em>scripting</em> to open and read Sales Navigator pages, <em>alarms</em> to schedule collection runs, <em>storage</em> to keep settings and progress locally, and <em>notifications</em> to tell you when a run needs your attention.</p>
+
+  <h2>5. Service providers</h2>
+  <p>We use a small number of providers to run Radar, each bound to process data only on our instructions: Supabase (database and backend functions), Cloudflare (website hosting and AI features), Resend (transactional email), LinkedIn (sign-in), and, only if you enable it, Botdog. No data is shared with anyone else except where required by law.</p>
+
+  <h2>6. Storage, security and retention</h2>
+  <ul>
+    <li>Data is transmitted over HTTPS and stored in access-controlled databases; each account can only see its own data.</li>
+    <li>We keep your data while your account is active. When you close your account, we delete your account and prospect data within 30 days, except where we must keep records by law.</li>
+  </ul>
+
+  <h2>7. Your choices and rights</h2>
+  <ul>
+    <li>You can pause collection, remove sources, bridges or prospects, or uninstall the extension at any time.</li>
+    <li>You can ask for a copy of your data, correction, or deletion by emailing <a href="mailto:support@gershonconsulting.com">support@gershonconsulting.com</a>. We answer within 30 days.</li>
+    <li>If someone whose business profile appears in Radar wants it removed, they can write to the same address and we will delete it and stop collecting it.</li>
+    <li>Residents of the EU/UK, California and other regions with data-protection laws have the rights those laws provide (access, deletion, correction, objection); contact us to exercise them.</li>
+  </ul>
+
+  <h2>8. Children</h2>
+  <p>Radar is a professional tool and is not directed to anyone under 18.</p>
+
+  <h2>9. Changes</h2>
+  <p>If we change this policy, we will update the date above and, for significant changes, tell signed-in users in the app or by email.</p>
+
+  <h2>10. Contact</h2>
+  <p>Gershon Consulting LLC — <a href="mailto:support@gershonconsulting.com">support@gershonconsulting.com</a></p>
+</main>
+
+<footer>
+  <div class="wrap">© 2026 Gershon Consulting LLC · <a href="/">Radar</a> · <a href="/privacy">Privacy</a></div>
+</footer>
+</body>
+</html>

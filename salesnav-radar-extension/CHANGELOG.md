@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.18.2 — 2026-11-19 — Chrome Web Store clean-up
+No collection change. Prepares the Chrome Web Store submission:
+- Name "Radar — Prospect Collector" (no LinkedIn trademark in the name); short_name "Radar"; toolbar title "Radar".
+- Description rewritten (single purpose, no more "Radar sheet"); homepage_url https://radar.gershon.ai.
+- Host permissions reduced to what the code calls: removed script.google.com (old Apps Script hub),
+  *.sandbox.novita.ai, api.botdog.io; Supabase narrowed from *.supabase.co to the Radar project host.
+- Privacy policy published at https://radar.gershon.ai/privacy.
+
 ## 1.18.1 — 2026-11-18 — Radar moves to radar.gershon.ai
 The extension now also talks to pages on https://radar.gershon.ai (host permission + content script),
 so the app on the new address sees it. radar.gershoncrm.com still works. No collection change.

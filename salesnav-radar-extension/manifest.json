@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Radar — Sales Nav Collector",
-  "version": "1.18.1",
-  "description": "Collects Sales Navigator connections and syncs to Radar sheet",
+  "name": "Radar — Prospect Collector",
+  "short_name": "Radar",
+  "version": "1.18.2",
+  "description": "Finds warm-intro prospects through your network on Sales Navigator and syncs them to your Radar account.",
+  "homepage_url": "https://radar.gershon.ai",
   "permissions": [
     "alarms",
     "storage",
@@ -12,14 +14,11 @@
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
-    "https://script.google.com/*",
     "https://radar.gershon.ai/*",
     "https://radar.gershoncrm.com/*",
+    "https://pkzeeqehwmtnqxdpdesl.supabase.co/*",
     "https://enricherpro.com/*",
-    "https://*.sandbox.novita.ai/*",
-    "https://api.botdog.io/*",
-    "https://api.botdog.co/*",
-    "https://*.supabase.co/*"
+    "https://api.botdog.co/*"
   ],
   "content_scripts": [
     {
@@ -37,7 +36,7 @@
     "service_worker": "sync-core.js"
   },
   "action": {
-    "default_title": "Radar Sync",
+    "default_title": "Radar",
     "default_popup": "popup.html"
   },
   "icons": {
