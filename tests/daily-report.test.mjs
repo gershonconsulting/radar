@@ -36,7 +36,7 @@ const DAY_START = '2026-11-13T05:00:00.000Z';   // ET midnight, Nov 13 (EST, UTC
 globalThis.fetch = async (url, opts = {}) => {
   const u = String(url);
   const ok = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  if (u === 'https://radar.gershoncrm.com/api/health') {
+  if (u === 'https://radar.gershon.ai/api/health') {
     if (S.siteExt === null) throw new Error('network down');
     return ok({ platform: 'radar', version: '1.18.12', latest_ext: S.siteExt, status: 'green' });
   }

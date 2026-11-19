@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.18.1 — 2026-11-18 — Radar moves to radar.gershon.ai
+The extension now also talks to pages on https://radar.gershon.ai (host permission + content script),
+so the app on the new address sees it. radar.gershoncrm.com still works. No collection change.
+
 ## 1.18.0 — 2026-11-18 — bridge invites (client accounts' Botdog) + empty sources stop eating the page budget
 **What happened.** Valos, Altavia and Flying Secoya collected nothing for 1–2 weeks with the extension
 up to date and LinkedIn signed in. Radar can only read the network of a 1st-degree bridge

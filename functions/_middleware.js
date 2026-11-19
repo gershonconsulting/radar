@@ -57,6 +57,9 @@ const HTML_PATHS = new Set(['/', '/index.html', '/app', '/app.html', '/app/app',
 //    v1.18.10 (2026-11-14): brand red #CC3333 -> #FE1B04 (logo and website red, PR #26).
 //    v1.18.11 (2026-11-14): app.html itself says Prospects (was Target/Targets); prospects-wording.js now finds nothing.
 import { APP_VERSION, LATEST_EXT } from './_lib/version.js';
+// 9) (2026-11-18, app v1.22.0) Radar moves to radar.gershon.ai - see _lib/hosts.js. Old-address page
+//    visits are 301'd to the new address only when REDIRECT_LEGACY is on (API + zips never redirected).
+import { PRIMARY_ORIGIN, LEGACY_HOST, REDIRECT_LEGACY } from './_lib/hosts.js';
 //    v1.19.0 (2026-11-15): PR #22 merged on main - bridge ICP panel (item 7 above); APP_VERSION bumped in _lib/version.js.
 const WORDING_SRC = '/prospects-wording.js?v=' + APP_VERSION;
 // Pages serves the app/ folder at the site root, so app/sources-list.js is /sources-list.js.
@@ -106,6 +109,9 @@ function cmpVer(a, b) {
 export async function onRequest(ctx) {
   const url = new URL(ctx.request.url);
   if (url.pathname.startsWith('/api/')) return ctx.next();
+  if (REDIRECT_LEGACY && url.hostname === LEGACY_HOST && !/\.zip$/.test(url.pathname)) {
+    return Response.redirect(PRIMARY_ORIGIN + url.pathname + url.search, 301);
+  }
 
   const zip = url.pathname.match(/^\/radar-extension-v(\d+\.\d+\.\d+)\.zip$/);
   if (zip) {

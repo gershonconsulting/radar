@@ -1,0 +1,10 @@
+import { originFor, linkedinRedirectUri } from '../functions/_lib/hosts.js';
+const r=u=>new Request(u), env={LINKEDIN_REDIRECT_URI:'https://radar.gershoncrm.com/api/auth/linkedin/callback'};
+const eq=(a,b)=>{ if(a!==b){console.error('FAIL',a,b);process.exit(1);} };
+eq(originFor(r('https://radar.gershon.ai/api/auth/logout')),'https://radar.gershon.ai');
+eq(originFor(r('https://radar.gershoncrm.com/x')),'https://radar.gershoncrm.com');
+eq(originFor(r('https://abc.gershon-radar.pages.dev/x')),'https://abc.gershon-radar.pages.dev');
+eq(originFor(r('https://evil.com/x')),'https://radar.gershon.ai');
+eq(linkedinRedirectUri(r('https://radar.gershon.ai/api/auth/linkedin/login'),env),'https://radar.gershon.ai/api/auth/linkedin/callback');
+eq(linkedinRedirectUri(r('https://radar.gershoncrm.com/api/auth/linkedin/login'),env),env.LINKEDIN_REDIRECT_URI);
+console.log('hosts ok');

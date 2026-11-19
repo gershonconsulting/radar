@@ -38,6 +38,6 @@ const empty = summarize(j.rows, "2026-10-25");
 assert.equal(empty.total, 0);
 assert.equal(empty.noUrlFlag, false);
 assert.match(renderHtml(empty, { ok: false, detail: "HTTP 500" }), /FAILED/);
-assert.match(renderHtml(s, { ok: true }), /https:\/\/radar\.gershoncrm\.com/);
+assert.match(renderHtml(s, { ok: true }), /https:\/\/radar\.gershon\.ai/);
 
 console.log("cron/worker.js checks passed");

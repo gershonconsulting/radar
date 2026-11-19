@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Radar — Sales Nav Collector",
-  "version": "1.18.0",
+  "version": "1.18.1",
   "description": "Collects Sales Navigator connections and syncs to Radar sheet",
   "permissions": [
     "alarms",
@@ -13,6 +13,7 @@
   "host_permissions": [
     "https://www.linkedin.com/*",
     "https://script.google.com/*",
+    "https://radar.gershon.ai/*",
     "https://radar.gershoncrm.com/*",
     "https://enricherpro.com/*",
     "https://*.sandbox.novita.ai/*",
@@ -23,6 +24,7 @@
   "content_scripts": [
     {
       "matches": [
+        "https://radar.gershon.ai/*",
         "https://radar.gershoncrm.com/*"
       ],
       "js": [

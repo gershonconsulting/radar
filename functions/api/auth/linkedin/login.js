@@ -3,13 +3,15 @@
 // Generates a CSRF state token, stores it in a short-lived HttpOnly cookie,
 // then redirects the user to LinkedIn's authorization endpoint.
 
-export async function onRequestGet({ env }) {
+import { linkedinRedirectUri } from '../../../_lib/hosts.js';
+
+export async function onRequestGet({ request, env }) {
     const state = crypto.randomUUID();
 
   const params = new URLSearchParams({
         response_type: 'code',
         client_id: env.LINKEDIN_CLIENT_ID,
-        redirect_uri: env.LINKEDIN_REDIRECT_URI,
+        redirect_uri: linkedinRedirectUri(request, env),
         scope: 'openid profile email',
         state,
   });
