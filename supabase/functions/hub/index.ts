@@ -1,4 +1,5 @@
 // Radar hub — Supabase Edge Function backend (v26).
+// v26.1 (2026-11-19): APP_ORIGIN_RE also accepts https://radar.gershon.ai (Radar moved there; app v1.22.0). DEPLOYED as Supabase hub version 27.
 // v26 (2026-11-06 nightly, NOT DEPLOYED - needs Ariel): FIRST-SEEN DATE PRESERVED. The ingest no longer
 // sends collected_date in its upsert payload. With on_conflict=owner_key,lead_id + merge-duplicates,
 // every column in the payload is rewritten on conflict, so re-collecting a prospect moved its

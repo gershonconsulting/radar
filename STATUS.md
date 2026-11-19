@@ -20,9 +20,10 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
-- ❌ radar.gershon.ai: attach as Custom domain on Pages gershon-radar (gershon.ai is a Cloudflare zone, DNS record is created automatically) - Chrome is signed into Cloudflare user ovattia@gmail.com, which has no access to account 0b8434...
-- ❌ LinkedIn developer app: add https://radar.gershon.ai/api/auth/linkedin/callback to Authorized redirect URLs (keep the old one)
-- ❌ Redeploy Supabase hub (new origin) + daily-report + health-check (new links)
+- ✅ radar.gershon.ai live (custom domain attached; LinkedIn redirect URL added 2026-11-19)
+
+- ✅ hub v26.1 deployed 2026-11-19 (Supabase version 27): radar.gershon.ai sees suggested sources
+- ❌ Redeploy Supabase daily-report + health-check (new links)
 - ❌ After client desktops run ext 1.18.1: set REDIRECT_LEGACY = true in functions/_lib/hosts.js
 - ❌ 1.18.0: load the new extension on the Valos, Altavia and Flying Secoya desktops, then set bridge_invites=on + the note Olivier approves (config, per account)
 - ❌ Intelligence needs the Workers AI binding `AI` on Pages project gershon-radar (Settings > Bindings, Production + Preview) - without it the page says "being switched on"
