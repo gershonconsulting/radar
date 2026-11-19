@@ -762,7 +762,7 @@ input:focus, select:focus{ outline:none; box-shadow:0 0 0 2px #bfdbfe; }
             <li>Come back here and hit <strong>Test installation</strong>.</li>
           </ol>
           <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;font-size:0.86rem;color:#334155">
-            <strong>Already installed?</strong> To update: unzip the new download over the old folder, then click <strong>Reload</strong> on &ldquo;Radar — Sales Nav Collector&rdquo; in <code>chrome://extensions</code>.
+            <strong>Already installed?</strong> To update: unzip the new download over the old folder, then click <strong>Reload</strong> on &ldquo;Radar — Prospect Collector&rdquo; in <code>chrome://extensions</code>.
           </div>
           <div style="margin-top:12px;font-size:0.82rem;color:#94a3b8">Keep Chrome running and stay logged into Sales Navigator — the extension collects on its schedule in the background.</div>
         </div>
@@ -1749,7 +1749,7 @@ function checkExtUpdate(){
       : !installed
       ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Extension not installed.</strong> Radar can’t collect without it.<div style="margin-top:8px"><a href="' + EXT_ZIP_URL + '" download class="btn-save" style="display:inline-block;text-decoration:none">Download the extension ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then: unzip it → open <code>chrome://extensions</code> → enable <strong>Developer mode</strong> (top-right) → <strong>Load unpacked</strong> → pick the unzipped folder. Keep the browser open so it can collect.</div></div>'
       : (behind
-        ? '<div style="background:#fef2f2;border:1px solid #dc2626;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Radar is running an outdated extension (v'+installed+').</strong> <span style="color:#7f1d1d">Collection keeps reporting success, but nothing fixed since v'+installed+' is actually running. Latest is v'+LATEST_EXT_VERSION+'.</span><div style="margin-top:8px"><a href="' + EXT_ZIP_URL + '" download class="btn-save" style="display:inline-block;text-decoration:none">Download v'+LATEST_EXT_VERSION+' ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then open <code>chrome://extensions</code> and click <strong>Reload</strong> on “Radar — Sales Nav Collector”. <strong>Downloading alone changes nothing</strong> — the browser keeps running the old build until it is reloaded.</div></div>'
+        ? '<div style="background:#fef2f2;border:1px solid #dc2626;border-radius:8px;padding:12px 14px"><strong style="color:#b91c1c">Radar is running an outdated extension (v'+installed+').</strong> <span style="color:#7f1d1d">Collection keeps reporting success, but nothing fixed since v'+installed+' is actually running. Latest is v'+LATEST_EXT_VERSION+'.</span><div style="margin-top:8px"><a href="' + EXT_ZIP_URL + '" download class="btn-save" style="display:inline-block;text-decoration:none">Download v'+LATEST_EXT_VERSION+' ↓</a></div><div style="margin-top:8px;font-size:0.85rem;color:#334155">Then open <code>chrome://extensions</code> and click <strong>Reload</strong> on “Radar — Prospect Collector”. <strong>Downloading alone changes nothing</strong> — the browser keeps running the old build until it is reloaded.</div></div>'
         : 'Installed <strong>v'+installed+'</strong> · <span style="color:#16a34a;font-weight:600">up to date ✓</span> (latest v'+LATEST_EXT_VERSION+')');
   }
   const badge = document.getElementById('extNavBadge');
@@ -1771,7 +1771,7 @@ function checkExtUpdate(){
   // state with no warning on the dashboard. Only the small nav "!" said anything.
   const copyBehind  = '⚠ Radar is collecting with an <strong>outdated extension (v'+installed+')</strong> — the fixes in v'+LATEST_EXT_VERSION+' are NOT running. Reload the extension in Chrome to activate them.';
   const copyMissing = '⚠ <strong>The Radar extension is not installed in this browser — Radar is collecting nothing on this computer.</strong> The numbers below are history collected elsewhere; they will not move until the extension is installed here and Chrome stays open.';
-  const helpUpdate  = 'To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Sales Nav Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.) Reloading is what actually updates the browser — downloading the zip on its own does nothing.';
+  const helpUpdate  = 'To update: open <code>chrome://extensions</code> → enable Developer mode → click <strong>Reload</strong> on “Radar — Prospect Collector”. (Or unzip the download and use <strong>Load unpacked</strong>.) Reloading is what actually updates the browser — downloading the zip on its own does nothing.';
   const helpInstall = '<strong>Install it — about a minute, no Chrome Web Store:</strong>'
     + '<div style="margin-top:4px">1. Download the zip above and unzip it.</div>'
     + '<div>2. Open <code>chrome://extensions</code>.</div>'

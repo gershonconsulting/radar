@@ -1,11 +1,12 @@
-# Radar - STATUS (updated 2026-11-18)
+# Radar - STATUS (updated 2026-11-19)
 
 App: https://radar.gershon.ai/app (new address, 2026-11-18) - old https://radar.gershoncrm.com still served by the same Pages project - health: /api/health
-Version: 1.22.0 on main (#35 Intelligence menu 1.20.0, then #34 Botdog switch 1.21.0) (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
+Version: 1.22.1 on main (ext 1.18.2) (#35 Intelligence menu 1.20.0, then #34 Botdog switch 1.21.0) (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
 Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to main auto-deploys
 (branch previews at <branch>.gershon-radar.pages.dev). Supabase edge functions deploy separately (Ariel).
 
 ## Done
+- ✅ v1.22.1 + ext 1.18.2 (2026-11-19, branch cws-prep): Chrome Web Store prep - extension renamed "Radar — Prospect Collector" (app/landing/health-check texts updated), new description + homepage_url, host permissions cut to linkedin, radar hosts, Radar Supabase project, enricherpro, api.botdog.co; /privacy page (app/privacy.html) + footer link
 - ✅ v1.22.0 + ext 1.18.1 (2026-11-18, branch move-to-radar-gershon-ai): move to radar.gershon.ai. functions/_lib/hosts.js (PRIMARY_HOST, REDIRECT_LEGACY=false); LinkedIn login uses https://radar.gershon.ai/api/auth/linkedin/callback on the new host, env LINKEDIN_REDIRECT_URI elsewhere; login/logout return to the host the user is on; links in landing, app footer, extension page, Intelligence prompt, EOD worker, daily-report, health-check, Code.gs point to the new address; hub APP_ORIGIN_RE accepts radar.gershon.ai; ext 1.18.1 adds the new host (content script + host permission). Emails still sent from radar@gershoncrm.com (Resend domain). tests/hosts.test.mjs
 - ✅ ext 1.18.0 (2026-11-18, branch ext-1.18.0-bridge-invites): bridge invites for client accounts (invites.js, OFF by default; config bridge_invites=on|dry, bridge_invite_note, limit_invites_per_day 5 / _per_week 20) + empty-discovery sources rest 30 days. Root cause of Valos / Altavia / Flying Secoya = 0 leads: their bridges are 2nd/3rd degree and nothing invited them; Flying Secoya also burned its pages re-searching 2 empty sources. Live dry test on Sales Nav OK. tests/invites.test.js
 - ✅ v1.21.0 Botdog ON/OFF switch (2026-11-17, branch botdog-toggle): Settings "Use Botdog for outreach" saved per account (config botdog_enabled via /api/botdog-setting, owner from session). OFF hides every Botdog column, filter, KPI, action, invite button/chip, onboarding step, campaigns card and key field. Default when unset = ON only if a Botdog key exists (only Olivier has one)
@@ -20,6 +21,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
+- ❌ Chrome Web Store: fill listing (screenshots 1280x800, promo 440x280, permission justifications, privacy practices + Limited Use, test notes, unlisted) and submit ext 1.18.2
 - ✅ radar.gershon.ai live (custom domain attached; LinkedIn redirect URL added 2026-11-19)
 
 - ✅ hub v26.1 deployed 2026-11-19 (Supabase version 27): radar.gershon.ai sees suggested sources
