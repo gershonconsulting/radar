@@ -2,20 +2,17 @@
   "manifest_version": 3,
   "name": "Radar — Prospect Collector",
   "short_name": "Radar",
-  "version": "1.18.2",
+  "version": "1.18.3",
   "description": "Finds warm-intro prospects through your network on Sales Navigator and syncs them to your Radar account.",
   "homepage_url": "https://radar.gershon.ai",
   "permissions": [
     "alarms",
     "storage",
     "scripting",
-    "tabs",
     "notifications"
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
-    "https://radar.gershon.ai/*",
-    "https://radar.gershoncrm.com/*",
     "https://pkzeeqehwmtnqxdpdesl.supabase.co/*",
     "https://enricherpro.com/*",
     "https://api.botdog.co/*"

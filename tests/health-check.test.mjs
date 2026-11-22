@@ -2,7 +2,7 @@
 // threshold counts WORKING hours only (Mon-Fri, America/New_York), so a normal weekend is not an outage.
 // Run: node --experimental-strip-types tests/health-check.test.mjs   (Node 22+; no network, no Supabase, no email)
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,7 +30,7 @@ globalThis.fetch = async (url, opts = {}) => {
   throw new Error('unhandled ' + p);
 };
 
-const mod = await import(path.join(root, 'supabase/functions/health-check/index.ts'));
+const mod = await import(pathToFileURL(path.join(root, 'supabase/functions/health-check/index.ts')).href);
 assert.equal(typeof handler, 'function', 'Deno.serve handler registered');
 const T = (iso) => new Date(iso).getTime();
 const wh = (a, b) => Math.round(mod.workingHoursBetween(T(a), T(b)) * 100) / 100;

@@ -6,6 +6,7 @@
 // =============================================================
 
 // Radar hub is now the Supabase-backed Cloudflare Function (the Google Sheet is retired).
+importScripts('consent.js');
 // The extension posts here with the shared INGEST_SECRET; the function maps that to the owner.
 const WEBAPP_URL    = 'https://pkzeeqehwmtnqxdpdesl.supabase.co/functions/v1/hub';
 const INGEST_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
@@ -205,7 +206,8 @@ let CURRENT_OWNER = '';
 try { chrome.storage.local.get('radar_owner').then(function(r){ CURRENT_OWNER = (r && r.radar_owner) || ''; }); } catch(e) {}
 (function(){
   const _origFetch = self.fetch.bind(self);
-  self.fetch = function(input, init){
+  self.fetch = async function(input, init){
+    if (!await RadarConsent.accepted()) throw new Error('collection-consent-required');
     try {
       const u = (typeof input === 'string') ? input : (input && input.url) || '';
       if (u && u.indexOf(WEBAPP_URL) === 0 && CURRENT_OWNER) {
@@ -310,6 +312,7 @@ async function deferAutoRun(trigger) {
   return false;
 }
 async function maybeAutoRun(trigger) {
+  if (!await RadarConsent.accepted()) return { status: 'consent-required' };
   // A resume whose alarm was lost with a browser restart is still honoured on the next trigger.
   if (trigger !== 'gateResume') {
     try {
@@ -341,6 +344,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   // 1.17.2: a FRESH install runs at half limits for 14 days. An update keeps full limits.
   if (details && details.reason === 'install') { try { await chrome.storage.local.set({ [FIRST_RUN_KEY]: new Date().toISOString() }); } catch (e) {} }
   await applySchedule(await getSchedule()); await log('info', 'Extension installed, schedule set', { reason: details && details.reason });
+  if (!await RadarConsent.accepted()) await chrome.tabs.create({ url: chrome.runtime.getURL('popup.html') });
 });
 // PRIMARY trigger: the first time Chrome opens each day (gated to once/day by maybeAutoRun).
 chrome.runtime.onStartup.addListener(async () => { await applySchedule(await getSchedule()); await maybeAutoRun('startup'); });
@@ -349,6 +353,23 @@ chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'dailySync') may
 
 // --- Messages ---
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // The web-page relay cannot grant consent. Only the extension's own popup can.
+  if (msg.action === 'acceptConsent') {
+    if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('popup.html')) {
+      sendResponse({ ok: false, error: 'Consent must be accepted in the Radar popup.' });
+      return false;
+    }
+    RadarConsent.accept().then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false, error: 'Could not save consent.' }));
+    return true;
+  }
+  RadarConsent.accepted().then(accepted => {
+    if (!accepted) { sendResponse({ ok: false, error: 'Open the Radar extension and accept the collection disclosure first.' }); return; }
+    handleMessage(msg, sender, sendResponse);
+  }).catch(() => sendResponse({ ok: false, error: 'Could not read consent.' }));
+  return true;
+});
+
+function handleMessage(msg, sender, sendResponse) {
   if (msg.action === 'setOwner') {
     // The web app relays the signed-in user's owner_key here so collection stays per-user.
     CURRENT_OWNER = String(msg.owner || '');
@@ -429,7 +450,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       .catch(async e => { await pushLog(); sendResponse({ ok: false, error: String(e) }); });
     return true;
   }
-});
+}
 
 // Forward the run log to the hub so it's visible server-side (for debugging).
 async function pushLog() {
@@ -497,6 +518,7 @@ async function scheduleGateResume() {
 }
 
 async function runSync(opts) {
+  if (!await RadarConsent.accepted()) return { status: 'consent-required' };
   opts = opts || {};
   if (SYNC_RUNNING) { await log('warn', 'run:already-running'); return { status: 'already-running' }; }
   // 1.17.2: limits first. A Radar pause or a LinkedIn warning hold stops EVERY run, manual

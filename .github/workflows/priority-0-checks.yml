@@ -1,0 +1,28 @@
+name: Priority 0 verification
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  offline-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check extension syntax and consent
+        run: |
+          for file in salesnav-radar-extension/*.js; do node --check "$file"; done
+          node tests/consent.test.cjs
+      - name: Run existing offline suites
+        run: |
+          for file in tests/*.test.js tests/*.test.mjs cron/worker.test.mjs; do node "$file"; done
+      - name: Ensure release ZIPs are not tracked
+        run: |
+          if git ls-files '*.zip' | grep .; then
+            echo 'Release ZIPs belong outside git.'
+            exit 1
+          fi
