@@ -75,4 +75,23 @@ document.getElementById("sync-now").addEventListener("click", function (e) {
   });
 });
 
-renderLog();
+const consentDialog = document.getElementById('consent');
+consentDialog.addEventListener('cancel', event => event.preventDefault());
+function enableCollection() {
+  document.getElementById('sync-now').disabled = false;
+  if (consentDialog.open) consentDialog.close();
+  renderLog();
+}
+document.getElementById('accept-consent').addEventListener('click', () => {
+  chrome.runtime.sendMessage({ action: 'acceptConsent' }, response => {
+    if (chrome.runtime.lastError || !response || !response.ok) {
+      document.getElementById('consent-error').textContent = 'Could not save consent. Please try again.';
+      return;
+    }
+    enableCollection();
+  });
+});
+RadarConsent.accepted().then(accepted => {
+  if (accepted) enableCollection();
+  else consentDialog.showModal();
+});

@@ -2,7 +2,7 @@
 // Run: node --experimental-strip-types tests/daily-report.test.mjs   (Node 22+; no network, no Supabase, no email)
 // Deno and fetch are stubbed; the handler is called with ?dry=1, which returns the HTML + X-Report-Subject.
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -55,7 +55,7 @@ globalThis.fetch = async (url, opts = {}) => {
   throw new Error('unhandled ' + p);
 };
 
-const mod = await import(path.join(root, 'supabase/functions/daily-report/index.ts'));
+const mod = await import(pathToFileURL(path.join(root, 'supabase/functions/daily-report/index.ts')).href);
 assert.equal(typeof handler, 'function', 'Deno.serve handler registered');
 
 async function run(over) {
@@ -150,12 +150,12 @@ r = await run({ date: '2026-11-17', dayStart: '2026-11-17T05:00:00.000Z', day: i
 assert.equal(r.subject, 'Radar Report — November 17, 2026 — ⚠️ DID NOT RUN');
 
 // ---- Pages side: /api/health exposes latest_ext; the middleware still raises an old LATEST_EXT_VERSION ----
-const ver = await import(path.join(root, 'functions/_lib/version.js'));
-const health = await import(path.join(root, 'functions/api/health.js'));
+const ver = await import(pathToFileURL(path.join(root, 'functions/_lib/version.js')).href);
+const health = await import(pathToFileURL(path.join(root, 'functions/api/health.js')).href);
 const hj = await (await health.onRequestGet({ env: {} })).json();
 assert.equal(hj.latest_ext, ver.LATEST_EXT);
 assert.equal(hj.version, ver.APP_VERSION);
-const mw = await import(path.join(root, 'functions/_middleware.js'));
+const mw = await import(pathToFileURL(path.join(root, 'functions/_middleware.js')).href);
 const page = "<html><head></head><body><script>const LATEST_EXT_VERSION = '1.17.0';</script><a href=\"/radar-extension-v1.17.0.zip\">x</a></body></html>";
 const out = await (await mw.onRequest({
   request: new Request('https://radar.test/app.html'),

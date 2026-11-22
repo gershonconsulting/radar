@@ -18,6 +18,12 @@
     .status.err { background: #fee2e2; color: #991b1b; }
     .status.info { background: #f3f4f6; color: #374151; }
     .last { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f3f4f6; font-size: 11px; color: #9ca3af; }
+    dialog { box-sizing: border-box; width: calc(100% - 24px); max-width: 340px; max-height: 90vh; overflow: auto; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }
+    dialog::backdrop { background: rgba(31,41,55,.45); }
+    body:has(dialog[open]) { min-height: 520px; }
+    dialog h2 { font-size: 16px; margin-top: 0; }
+    dialog p { line-height: 1.5; overflow-wrap: anywhere; }
+    a { color: #d11200; }
   </style>
 </head>
 <body>
@@ -25,11 +31,22 @@
     <h1>Radar Collector</h1>
     <span class="ver" id="ver"></span>
   </div>
-  <div class="sub">Collects prospects from your radar bridges in Sales Navigator and appends them to your Google Sheet. Bridge discovery for new sources happens automatically as part of the sync.</div>
+  <div class="sub">Collects prospects from your radar bridges in Sales Navigator and syncs them to your Radar account. Bridge discovery for new sources happens automatically as part of the sync.</div>
   <div class="auto">⏰ Runs automatically once a day while Chrome is open. Use Sync Now to run it on demand.</div>
-  <button id="sync-now" class="btn"><span>🔄</span> Sync Now</button>
+  <button id="sync-now" class="btn" disabled><span>🔄</span> Sync Now</button>
   <div id="status"></div>
   <div class="last" id="last-captured"></div>
+  <dialog id="consent" aria-labelledby="consent-title">
+    <h2 id="consent-title">Allow Radar collection?</h2>
+    <p>Radar reads business profiles and connections visible in your signed-in LinkedIn session: names, titles, companies, locations, profile URLs, member IDs and connection degrees.</p>
+    <p>It sends these records, account identifiers, settings and diagnostic logs to the Radar Supabase project at <strong>pkzeeqehwmtnqxdpdesl.supabase.co</strong> to build your prospect list and enforce collection limits. Logs can include profile names, IDs and errors.</p>
+    <p>Missing profile URLs may be resolved by sending name, company and title to <strong>enricherpro.com/api/enrich</strong>. Configured Botdog outreach can send profile URLs, names, titles and a campaign ID to <strong>api.botdog.co/v1/leads/add_to_campaign</strong>, directly or through the backend. Settings may also enable LinkedIn list saves and bridge invitations.</p>
+    <p>Collection stays off until you accept, including after updating an older installation. Acceptance is saved locally with a timestamp. Close this window to leave collection off. To withdraw consent, uninstall Radar or clear its extension data.</p>
+    <p><a href="https://radar.gershon.ai/privacy" target="_blank" rel="noopener">Read the privacy policy</a></p>
+    <button id="accept-consent" class="btn">Accept and enable collection</button>
+    <p id="consent-error" role="alert"></p>
+  </dialog>
+  <script src="consent.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

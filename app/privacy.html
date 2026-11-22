@@ -44,7 +44,7 @@
 
 <main class="wrap">
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: November 19, 2026</p>
+  <p class="updated">Last updated: November 22, 2026</p>
 
   <p>This policy explains how <strong>Radar</strong> (the web app at radar.gershon.ai and radar.gershoncrm.com) and the <strong>Radar — Prospect Collector</strong> Chrome extension (together, "Radar") handle data. Radar is operated by <strong>Gershon Consulting LLC</strong>, a Delaware company ("we", "us").</p>
 
@@ -58,8 +58,8 @@
     <tr><th>Data</th><th>Where it comes from</th><th>Why</th></tr>
     <tr><td>Your account: name, email address, LinkedIn member ID, profile picture</td><td>Sign in with LinkedIn (OpenID Connect)</td><td>To create and secure your account</td></tr>
     <tr><td>Your settings: sources, bridges, ideal-customer criteria, daily limits, optional third-party API keys you enter</td><td>You, in the app or extension</td><td>To run Radar the way you configured it</td></tr>
-    <tr><td>Prospect business data: name, job title, company, location, public LinkedIn profile URL, connection degree</td><td>LinkedIn Sales Navigator pages opened by the extension in your signed-in browser</td><td>To build your prospect list (the single purpose of Radar)</td></tr>
-    <tr><td>Technical activity: extension version, run logs (pages read, counts, errors), timestamps</td><td>The extension</td><td>To keep collection within safe limits, show status, and fix problems</td></tr>
+    <tr><td>Prospect business data: name, job title, company, location, public LinkedIn profile URL, LinkedIn member/lead and organization IDs, connection degree, source and bridge associations</td><td>LinkedIn Sales Navigator pages opened by the extension in your signed-in browser</td><td>To build your prospect list (the single purpose of Radar)</td></tr>
+    <tr><td>Technical activity: extension version, account/owner identifier, action counters, run logs (pages read, counts, errors, and sometimes business-profile names, IDs and URLs), timestamps</td><td>The extension</td><td>To keep collection within safe limits, show status, and fix problems</td></tr>
   </table>
   <p>Radar does <strong>not</strong> collect: your LinkedIn password, messages or inbox, payment information, browsing history, keystrokes, or content from any website other than those listed in section 4.</p>
 
@@ -76,11 +76,13 @@
   <ul>
     <li><strong>linkedin.com</strong> — reads Sales Navigator search and lead pages in your own session, at a human pace and within daily limits you control.</li>
     <li><strong>radar.gershon.ai / radar.gershoncrm.com</strong> — lets the Radar web app talk to the extension (status, version, "sync now").</li>
-    <li><strong>Radar's backend</strong> (hosted on Supabase) — stores your account data and prospects.</li>
-    <li><strong>enricherpro.com</strong> (Gershon's own service) — looks up a public LinkedIn profile URL from a prospect's name and company when it is missing.</li>
-    <li><strong>api.botdog.co</strong> — only if you add your own Botdog API key and switch Botdog on; prospects you select are then sent to your Botdog campaign.</li>
+    <li><strong>Radar Supabase project</strong> — <code>https://pkzeeqehwmtnqxdpdesl.supabase.co</code>. The extension sends profile records, bridge/source metadata, owner identifiers, settings and diagnostic logs to <code>/functions/v1/hub</code>. It sends action type, units, extension version and account identifier to <code>/functions/v1/radar-gate</code> to enforce collection limits.</li>
+    <li><strong>enricherpro.com/api/enrich</strong> (Gershon's service) — receives first name, last name, company and title to look up a missing public LinkedIn profile URL.</li>
+    <li><strong>api.botdog.co/v1/leads/add_to_campaign</strong> — configured outreach sends LinkedIn profile URLs, names, titles and campaign identifiers. The extension can call Botdog with a locally stored API key or ask the hub to use server-stored credentials. Some backend push paths do not yet honor the dashboard Botdog switch consistently; do not rely on that switch alone to prevent configured outreach.</li>
   </ul>
-  <p>Extension permissions are used only for these purposes: <em>tabs</em> and <em>scripting</em> to open and read Sales Navigator pages, <em>alarms</em> to schedule collection runs, <em>storage</em> to keep settings and progress locally, and <em>notifications</em> to tell you when a run needs your attention.</p>
+  <p>Extension permissions are used only for these purposes: <em>scripting</em> and the LinkedIn host permission to read Sales Navigator pages (opening and closing collection tabs does not require the broad tabs permission), <em>alarms</em> to schedule collection runs, <em>storage</em> to keep settings and progress locally, and <em>notifications</em> to tell you when a run needs your attention.</p>
+
+  <p>Before collection starts, the extension requires your explicit acceptance of a disclosure naming these data and destinations. Acceptance and its timestamp are stored locally. Without acceptance, background network requests and collection actions stay blocked. This also applies when an older installation updates without an existing acceptance record. You can leave collection off by closing the disclosure, or withdraw acceptance by clearing extension data or uninstalling. Configured collection may save profiles to LinkedIn lists and send bridge connection invitations, including a configured invitation note; requests use your existing signed-in LinkedIn session, and session/CSRF values stay with LinkedIn rather than being sent to the Radar backend.</p>
 
   <h2>5. Service providers</h2>
   <p>We use a small number of providers to run Radar, each bound to process data only on our instructions: Supabase (database and backend functions), Cloudflare (website hosting and AI features), Resend (transactional email), LinkedIn (sign-in), and, only if you enable it, Botdog. No data is shared with anyone else except where required by law.</p>

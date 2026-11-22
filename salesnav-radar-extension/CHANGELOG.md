@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.18.3 — 2026-11-22 — Collection disclosure and permission audit
+- Require local, timestamped consent before background requests, automatic runs and app-triggered actions. Show the disclosure on installation/update when no consent exists, and whenever the popup opens without consent.
+- Name the Supabase project, enrichment and Botdog destinations and describe transmitted data before collection starts.
+- Remove the `tabs` permission (LinkedIn host access supplies the URL visibility needed by tab queries) and redundant Radar host permissions (the explicit content-script matches remain).
+- This is source awaiting release; the website continues to advertise the last published extension build.
+
 ## 1.18.2 — 2026-11-19 — Chrome Web Store clean-up
 No collection change. Prepares the Chrome Web Store submission:
 - Name "Radar — Prospect Collector" (no LinkedIn trademark in the name); short_name "Radar"; toolbar title "Radar".
