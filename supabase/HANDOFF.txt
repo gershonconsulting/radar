@@ -1,3 +1,29 @@
+2026-11-24 nightly (branch nightly/2026-11-24-li-health-in-app): li-health v1 — tasks #39 and #11 moved into Radar.
+  Olivier's rule (2026-11-23 priority): a recurring report is a feature of the app, not a Claude scheduled task.
+  supabase/functions/li-health/ (index.ts wiring, report.ts reports) + _shared/li-health-logic.ts (pure rules):
+    mode daily  = #39 LinkedIn daily signal check: same SQL, 401 auto-pause (status only, never caps, never on 429,
+                  never reopen), silent-when-nothing, "[39] ..." from "LinkedIn Health <alerts@gershon.ai>" to
+                  report@gershonconsulting.com, idempotency li-daily-39-<NY date>. Unreachable source = email, never quiet.
+                  "Newly silent" remembered in config key li_silent_alerted_last_action (one alert per silent episode).
+    mode weekly = #11 LinkedIn Safety weekly grade: same SQL, same score formula / letters / colours / estate caps /
+                  status rule / warnings / recommendations, "<mark> [11] LinkedIn Safety ..." from
+                  "GC LinkedIn Safety <alerts@gershon.ai>", idempotency li-safety-11-<NY date>, 401-in-24h auto-pause.
+                  Trend kept in config key li_safety_grade (owner_key = gate key, estate = '_estate').
+    Airtable writes DROPPED (no Airtable token in this project): no Accounts notes / Daily Health Check rows /
+    Incidents from the app. Footer of the #11 email says so.
+  ✅ tests/li-health.test.mjs (21 tests: 401/429/silent classification, grade formula, estate caps, both handlers
+     with fake DBs + fake Resend, dry runs). deno check li-health/index.ts passes. SQL verified read-only on production.
+  ❌ GO-LIVE (HOLD — needs Olivier's OK, then Charles/Ariel):
+     1. Charles: function secrets LI_HEALTH_CRON_SECRET (new random value) and GATE_DB_URL (Gate project
+        zywlzopoxhkbblembkja -> Connect -> Session pooler URI with the DB password). RESEND_API_KEY not needed
+        (falls back to config.resend_api_key like daily-report).
+     2. Ariel: deploy li-health (verify_jwt OFF). Dry test: POST {"secret":..,"mode":"weekly","dry":true} and mode daily.
+     3. Ariel: SQL editor -> vault.create_secret(<same secret>,'li_health_cron_secret'), then run
+        supabase/handoff/2026-11-24-li-health-cron.sql (two pg_cron jobs, no schema change).
+     4. Disable scheduled tasks #39 and #11 ONLY after one correct email from the app (#11 next Monday 15:00 UTC;
+        #39 only emails when something is found — use a non-dry manual run to see one). While both run, the shared
+        idempotency key makes Resend refuse the second send of the same day.
+
 2026-11-15 nightly (branch nightly/2026-11-15-radar-email-count): daily-report v9.2.
   (a) "+20 new prospects" on the 11-11, 11-12 and 11-13 emails is the real first-seen count (checked: 20 / 20 / 20 for
       owner xTVW0K1qKi, different bridges each day, total 5364 -> 5384). It is extension 1.17.2's hard cap on NEW
