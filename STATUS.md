@@ -21,6 +21,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
+- ❌ li-health (2026-11-24, branch nightly/2026-11-24-li-health-in-app, HELD): tasks #39 daily LinkedIn signal check + #11 weekly LinkedIn Safety grade now built into Radar (Supabase function li-health + pg_cron). Needs secrets LI_HEALTH_CRON_SECRET + GATE_DB_URL (Charles), deploy + cron SQL (Ariel), then disable #39/#11 after one correct email. Airtable log not written by the app. See supabase/HANDOFF.txt
 - ❌ Chrome Web Store: fill listing (screenshots 1280x800, promo 440x280, permission justifications, privacy practices + Limited Use, test notes, unlisted) and submit ext 1.18.2
 - ✅ radar.gershon.ai live (custom domain attached; LinkedIn redirect URL added 2026-11-19)
 
