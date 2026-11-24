@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.18.3 — 2026-11-24 — an ICP link can no longer empty every bridge search
+**What happened.** Flying Secoya, Valos and Altavia collected (almost) nothing. Valos and Altavia's ICP link
+(set 09-22) was Sales Nav's "Saved leads" view (SAVED_LEADS_AND_ACCOUNTS = SL): every bridge search was
+limited to people they had already saved, so pages came back empty. Flying Secoya's ICP required membership
+of the LinkedIn group "Sustainability Professionals" on top of titles + industries + US + headcount → 0–2 people per bridge.
+**Fix.** `icpFiltersFromTemplate` now drops SAVED_LEADS_AND_ACCOUNTS, GROUP and LEAD_LIST/ACCOUNT_LIST used as
+an inclusion (exclusions are kept). A link that is only those falls back to the default search.
+Accounts were also fixed in the data (config salesnav_search_template, backups in *_backup_20261124). tests/icp-template.test.js
+
 ## 1.18.2 — 2026-11-19 — Chrome Web Store clean-up
 No collection change. Prepares the Chrome Web Store submission:
 - Name "Radar — Prospect Collector" (no LinkedIn trademark in the name); short_name "Radar"; toolbar title "Radar".

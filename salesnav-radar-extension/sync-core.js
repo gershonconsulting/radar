@@ -2379,7 +2379,14 @@ function icpFiltersFromTemplate(tpl) {
   if (depth !== 0) return null;
   const items = splitTopLevel(q.slice(start, i - 1));
   const DROP = /^\(type:(CONNECTION_OF|RELATIONSHIP)\b/;
-  const kept = items.filter(x => /^\(type:[A-Z_]+/.test(x) && !DROP.test(x));
+  // 1.18.3 (2026-11-24): filters that restrict the search to the user's OWN saved data or group
+  // memberships are not an ICP - combined with CONNECTION_OF a bridge they return ~0 people.
+  // Valos + Altavia had "Saved leads only" (SAVED_LEADS_AND_ACCOUNTS id SL) as their ICP link since
+  // 09-22 -> every bridge page empty; Flying Secoya had GROUP "Sustainability Professionals".
+  // Kept: LEAD_LIST / ACCOUNT_LIST used as EXCLUSIONS (don't re-collect people already listed).
+  const NARROW = x => /^\(type:(SAVED_LEADS_AND_ACCOUNTS|GROUP)\b/.test(x)
+    || (/^\(type:(LEAD_LIST|ACCOUNT_LIST)\b/.test(x) && /selectionType:INCLUDED/.test(x));
+  const kept = items.filter(x => /^\(type:[A-Z_]+/.test(x) && !DROP.test(x) && !NARROW(x));
   // An ICP must target something - a template made only of exclusions is not an ICP.
   const targeting = kept.filter(x => !/^\(type:(LEAD_LIST|LEAD_INTERACTIONS|ACCOUNT_LIST|PERSONA)\b/.test(x) || /selectionType:INCLUDED/.test(x));
   if (!targeting.length) return null;
