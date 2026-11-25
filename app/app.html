@@ -413,6 +413,7 @@ td a:hover{ text-decoration:underline; }
 .icp-grade.g-B{ background:#eff6ff; color:var(--primary); border-color:#bfdbfe; }
 .icp-grade.g-C{ background:#fef3c7; color:#b45309; border-color:#fcd34d; }
 .icp-grade.g-D{ background:#f1f5f9; color:#94a3b8; border-color:var(--line); }
+.icp-grade.g-none{ background:#fff; color:#cbd5e1; border:1px dashed #cbd5e1; }
 /* Bridge health: is this bridge actually earning its place in the account? */
 .hbadge{ display:inline-flex; align-items:center; gap:4px; font-size:0.68rem; font-weight:600;
   padding:1px 7px; border-radius:999px; border:1px solid transparent; white-space:nowrap; letter-spacing:0.01em; }
@@ -1347,6 +1348,7 @@ async function loadBridges() {
     const j = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
     if (j.success) { BRIDGES = j.bridges || []; BRIDGES_LOADED = true; }
   } catch(e) { console.error('loadBridges', e); }
+  await loadAccountIcp();
   await loadBridgeHealth();
 }
 
@@ -1518,8 +1520,46 @@ function icpGrade(title){
   // D — none of the above
   return 'D';
 }
-// Sort weight: A+ (highest) → D (lowest)
-function gradeRank(g){ return ({ 'A+':5, 'A':4, 'B':3, 'C':2, 'D':1 })[g] || 0; }
+// ===== Bridge grade from THIS account's ICP (v1.24.0) =====
+// The account's ICP rules (role / seniority / exclusion patterns, same rules that grade prospects
+// server-side) come from config key `icp_rules`, kept in sync from table icp_rules by a DB trigger.
+// Grade of a bridge from its LinkedIn title:
+//   A = ICP role + senior   B = ICP role   C = senior only   D = neither, or an excluded title
+//   ? = no title captured yet (cannot judge - never shown as D)
+// Accounts without icp_rules keep the old generic grade (icpGrade).
+let ACCOUNT_ICP = null;
+async function loadAccountIcp() {
+  try {
+    const t = await fetch(CONFIG.WEBAPP_URL + '?callback=_cb&action=getConfig&_=' + Date.now()).then(r => r.text());
+    const c = JSON.parse(t.replace(/^_cb\(/, '').replace(/\)$/, ''));
+    ACCOUNT_ICP = parseIcpRules(c && c.icp_rules);
+  } catch(e) { ACCOUNT_ICP = null; }
+}
+function parseIcpRules(raw) {
+  if (!raw) return null;
+  try {
+    const j = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const rx = s => { if (!s) return null; try { return new RegExp(String(s).replace(/\\m|\\M/g, '\\b'), 'i'); } catch(e) { return null; } };
+    const r = { role: rx(j.role), senior: rx(j.senior), bad: rx(j.bad) };
+    return (r.role || r.senior) ? r : null;
+  } catch(e) { return null; }
+}
+function bridgeGradeInfo(title, rules) {
+  const t = String(title || '').replace(/\s+/g, ' ').trim();
+  if (!t) return { g: '?', why: 'No title captured yet for this bridge - cannot grade.' };
+  rules = (rules === undefined) ? ACCOUNT_ICP : rules;
+  if (!rules) { const g = icpGrade(t); return { g, why: 'ICP fit ' + g + ' (generic rules): ' + t }; }
+  if (rules.bad && rules.bad.test(t)) return { g: 'D', why: 'D - title excluded by your ICP: ' + t };
+  const role = !!(rules.role && rules.role.test(t));
+  const sen  = !!(rules.senior && rules.senior.test(t));
+  if (role && (sen || !rules.senior)) return { g: 'A', why: 'A - ICP role and senior: ' + t };
+  if (role) return { g: 'B', why: 'B - ICP role, not senior: ' + t };
+  if (sen)  return { g: 'C', why: 'C - senior, outside your ICP roles: ' + t };
+  return { g: 'D', why: 'D - title does not match your ICP: ' + t };
+}
+function bridgeGrade(title) { return bridgeGradeInfo(title).g; }
+// Sort weight: A+ (highest) → D (lowest), ? (no title) last
+function gradeRank(g){ return ({ 'A+':5, 'A':4, 'B':3, 'C':2, 'D':1, '?':0 })[g] || 0; }
 // Connection-level badge from bridge.connection ("1st"/"2nd"/"3rd"/"")
 function connBadge(connection){
   const c = _norm(connection);
@@ -2986,7 +3026,7 @@ function renderBridges(){
     // then Level 1 first within a grade, then target count desc, then name
     visible.sort((a,b) => {
       if (!!b.active !== !!a.active) return (b.active?1:0) - (a.active?1:0);
-      const gb = gradeRank(icpGrade(b.title)), ga = gradeRank(icpGrade(a.title));
+      const gb = gradeRank(bridgeGrade(b.title)), ga = gradeRank(bridgeGrade(a.title));
       if (gb !== ga) return gb - ga;
       const l1b = (_norm(b.connection)==='1st')?1:0, l1a = (_norm(a.connection)==='1st')?1:0;
       if (l1b !== l1a) return l1b - l1a;
@@ -3009,8 +3049,8 @@ function renderBridges(){
             '<input type="checkbox"' + (willInvite ? ' checked' : '') +
             ' onchange="onBridgeInviteToggle(this,\'' + jsq(b.urn) + '\')"> ' + (willInvite ? 'invite' : 'skipped') +
           '</label>';
-      const grade = icpGrade(b.title);
-      const gradeBadge = '<span class="icp-grade g-' + grade.replace('+','plus') + '" title="ICP fit">' + grade + '</span>';
+      const gi = bridgeGradeInfo(b.title), grade = gi.g;
+      const gradeBadge = '<span class="icp-grade g-' + (grade === '?' ? 'none' : grade.replace('+','plus')) + '" title="' + esc(gi.why) + '">' + grade + '</span>';
       const connect = b.linkedin_url
         ? '<a class="connect" href="' + esc(b.linkedin_url) + '" target="_blank" rel="noopener">Open profile ↗</a>'
         : '';

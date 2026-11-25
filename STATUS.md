@@ -1,4 +1,4 @@
-# Radar - STATUS (updated 2026-11-23)
+# Radar - STATUS (updated 2026-11-25)
 
 App: https://radar.gershon.ai/app (new address, 2026-11-18) - old https://radar.gershoncrm.com still served by the same Pages project - health: /api/health
 Version: 1.23.0 (branch onboarding-page) / 1.22.1 on main (ext 1.18.2) (#35 Intelligence menu 1.20.0, then #34 Botdog switch 1.21.0) (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
@@ -6,6 +6,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 (branch previews at <branch>.gershon-radar.pages.dev). Supabase edge functions deploy separately (Ariel).
 
 ## Done
+- ✅ v1.24.0 (2026-11-25, branch bridge-icp-grade): Bridges page grade = the account's ICP rules (config key icp_rules, copied from table icp_rules) applied to the bridge title. A = ICP role + senior, B = ICP role, C = senior only, D = no match / excluded word, ? = no title yet (was wrongly D). Hover shows why. Sorted A→D then ?. tests/bridge-grade.test.mjs
 - ✅ ext 1.18.3 (2026-11-24, branch fix/icp-template-saved-leads): ICP link filters SAVED_LEADS_AND_ACCOUNTS / GROUP / included LEAD_LIST are dropped from bridge searches. Root cause of Flying Secoya / Valos / Altavia = no prospects (Valos+Altavia ICP link was "Saved leads" only; Flying Secoya's needed a LinkedIn group). Data fixed same day: new ICP templates for Valos + Altavia, GROUP removed for Flying Secoya (backups config *_backup_20261124). tests/icp-template.test.js
 - ✅ v1.23.0 (2026-11-23, branch onboarding-page): checklist removed from the Dashboard; menu "Setup" renamed "Onboarding"; page = 1 ICP link (input, inline save) - 2 Radar list in Sales Nav (output, inline save; Bridges list optional) - 3 Chrome extension (auto-detected, re-checked every 3 s while the page is open, no manual confirm) - 4 Sources & Bridges. Inline saves reuse saveIcpTemplate / saveSalesNavList
 - ✅ v1.22.1 + ext 1.18.2 (2026-11-19, branch cws-prep): Chrome Web Store prep - extension renamed "Radar — Prospect Collector" (app/landing/health-check texts updated), new description + homepage_url, host permissions cut to linkedin, radar hosts, Radar Supabase project, enricherpro, api.botdog.co; /privacy page (app/privacy.html) + footer link
@@ -23,6 +24,8 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
+- ❌ Bridge titles missing: Meteor 157/159, Enzymicals 193/207, Gershon 102/249 bridges have no title (discovery DOM fallback stores title ''), so they show "?". Needs ext 1.18.4 (title in DOM fallback + backfill blank titles via salesApiProfiles headline) and hub setBridgeMeta accepting title
+- ❌ Trigger icp_rules -> config (supabase/migrations/20261125_icp_rules_to_config.sql) not applied - refused by auto-mode; until then a new/edited icp_rules row needs its config icp_rules row updated too
 - ❌ li-health (2026-11-24, branch nightly/2026-11-24-li-health-in-app, HELD): tasks #39 daily LinkedIn signal check + #11 weekly LinkedIn Safety grade now built into Radar (Supabase function li-health + pg_cron). Needs secrets LI_HEALTH_CRON_SECRET + GATE_DB_URL (Charles), deploy + cron SQL (Ariel), then disable #39/#11 after one correct email. Airtable log not written by the app. See supabase/HANDOFF.txt
 - ❌ Chrome Web Store: fill listing (screenshots 1280x800, promo 440x280, permission justifications, privacy practices + Limited Use, test notes, unlisted) and submit ext 1.18.2
 - ✅ radar.gershon.ai live (custom domain attached; LinkedIn redirect URL added 2026-11-19)
