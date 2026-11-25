@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.18.4 — 2026-11-25 — bridge titles are filled in, so bridges can be graded
+**What happened.** Discovery's visible-page fallback saved bridges with an empty title (Meteor 157/159,
+Enzymicals 193/207, Gershon 102/249), so the Bridges page could not grade them against the ICP ("?").
+**Fix.** Each run looks up the current job title of up to 8 title-less bridges (active bridges first) through
+the Sales Nav profile API — 1 call each, counted as lookups, stops on 401/403/429 — and saves it with hub
+setBridgeMeta {title} (hub v27; only fills, never blanks). Logs bridge-title:done / :refused.
+
 ## 1.18.3 — 2026-11-24 — an ICP link can no longer empty every bridge search
 **What happened.** Flying Secoya, Valos and Altavia collected (almost) nothing. Valos and Altavia's ICP link
 (set 09-22) was Sales Nav's "Saved leads" view (SAVED_LEADS_AND_ACCOUNTS = SL): every bridge search was

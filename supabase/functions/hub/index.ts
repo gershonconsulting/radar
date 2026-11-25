@@ -1,4 +1,5 @@
-// Radar hub — Supabase Edge Function backend (v26).
+// Radar hub — Supabase Edge Function backend (v27).
+// v27 (2026-11-25, Olivier "1,2,3"): setBridgeMeta also accepts title (fills only, never blanks) - for the ext 1.18.4 bridge title backfill.
 // v26.1 (2026-11-19): APP_ORIGIN_RE also accepts https://radar.gershon.ai (Radar moved there; app v1.22.0). DEPLOYED as Supabase hub version 27.
 // v26 (2026-11-06 nightly, NOT DEPLOYED - needs Ariel): FIRST-SEEN DATE PRESERVED. The ingest no longer
 // sends collected_date in its upsert payload. With on_conflict=owner_key,lead_id + merge-duplicates,
@@ -269,6 +270,8 @@ Deno.serve(async (req)=>{
         if(!p.urn)return json({ok:false,error:'urn required'},400);
         const patch:any={};
         if(typeof p.linkedin_url==='string'&&p.linkedin_url)patch.linkedin_url=p.linkedin_url;
+        // v27: bridge title backfill (ext 1.18.4) - only fills, never blanks.
+        if(typeof p.title==='string'&&p.title.trim())patch.title=p.title.replace(/\s+/g,' ').trim().slice(0,200);
         if(typeof p.connection==='string'&&p.connection){
           patch.connection=p.connection;
           if(isFirstDegree(p.connection)){
