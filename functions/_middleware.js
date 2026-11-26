@@ -69,6 +69,9 @@ const BRIDGE_ICP_SRC = '/bridge-icp.js?v=' + APP_VERSION;
 // 8) (2026-11-17, app v1.20.0) Intelligence menu (AI Analysis / AI Suggestions / AI Chat on Cloudflare Workers AI,
 //    /api/intelligence reads the signed-in account's own data server-side). App page only, once.
 const INTEL_SRC = '/intelligence.js?v=' + APP_VERSION;
+// 10) (2026-11-26, app v1.25.0) app/team.js - Settings > Team (Full / Semi / Viewer access), role guard,
+//     account switcher. App page only (has id="view-settings"), once.
+const TEAM_SRC = '/team.js?v=' + APP_VERSION;
 const THEME_HREF = '/unified-theme.css?v=' + APP_VERSION;
 const CHART_RED = [
   // Dashboard (renderCharts): trend line colour + 'targets per bridge' bar colour
@@ -166,6 +169,11 @@ export async function onRequest(ctx) {
     if (/id="nav-growth"/.test(out) && out.indexOf('intelligence.js') === -1 && out.lastIndexOf('</body>') !== -1) {
       const at = out.lastIndexOf('</body>');
       out = out.slice(0, at) + '<script src="' + INTEL_SRC + '"></script>\n' + out.slice(at);
+    }
+    // 10) Team access (app v1.25.0)
+    if (/id="view-settings"/.test(out) && out.indexOf('team.js') === -1 && out.lastIndexOf('</body>') !== -1) {
+      const at = out.lastIndexOf('</body>');
+      out = out.slice(0, at) + '<script src="' + TEAM_SRC + '"></script>\n' + out.slice(at);
     }
     // 4) Unified Gershon design (app v1.15.0)
     if (out.indexOf('unified-theme.css') === -1 && out.indexOf('</head>') !== -1) {

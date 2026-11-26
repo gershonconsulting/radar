@@ -15,6 +15,7 @@ import { originFor, linkedinRedirectUri } from '../../../_lib/hosts.js';
 // 5. Issues a signed HMAC session cookie carrying { sub, email, name, owner_key, adm }.
 
 import { sign } from '../../../_lib/session.js';
+import { TEAM_KEY, parseTeam, findMember, findMemberships, pickWorkspace } from '../../../_lib/team.js';
 
 const SUPABASE_URL = 'https://pkzeeqehwmtnqxdpdesl.supabase.co';
 const SOLO_OWNER = 'xTVW0K1qKi'; // pre-multi-user owner of all existing data (Olivier)
@@ -174,11 +175,22 @@ export async function onRequestGet({ request, env }) {
   let user = null;
   let ownerKey = null;
   let isAdmin = false;
+  let member = null;      // team access (v1.25.0): { owner_key, member } when signing in to someone else's account
 
   if (env.SUPABASE_SERVICE_KEY) {
     try {
       const hit = await resolveUser(env, who);
-      if (hit && hit.user) {
+      // Team access: is this person listed on other accounts (Settings > Team)?
+      let memberships = [];
+      try { memberships = await findMemberships((path) => sb(env, path), { sub: who.sub, email }); } catch (e) { memberships = []; }
+      let ownHasData = false;
+      if (hit && hit.user && memberships.length && !hit.user.is_admin) {
+        try { const s = await sb(env, `sources?owner_key=eq.${enc(hit.user.owner_key)}&select=name&limit=1`); ownHasData = !!(s && s.length); } catch (e) { ownHasData = true; }
+      }
+      const ws = pickWorkspace({ own: hit && hit.user, ownHasData, isAdmin: !!(hit && hit.user && hit.user.is_admin), memberships });
+      if (ws.kind === 'member') {
+        member = { owner_key: ws.owner_key, member: ws.member, self_owner: (hit && hit.user && hit.user.owner_key) || null };
+      } else if (hit && hit.user) {
         user = hit.user;
         if (user.status === 'suspended') return deny('denied');
       } else {
@@ -203,6 +215,29 @@ export async function onRequestGet({ request, env }) {
         if (!user) user = { owner_key: ok }; // DB write failed — keep a unique owner so isolation holds
       }
 
+      if (member) {
+        // Signed in as a team member of another account: no users row of their own is created.
+        ownerKey = member.owner_key;
+        isAdmin = false;
+        try {
+          const rows = await sb(env, `config?owner_key=eq.${enc(ownerKey)}&key=eq.${TEAM_KEY}&select=value&limit=1`);
+          const list = parseTeam(rows && rows[0] && rows[0].value);
+          const m = findMember(list, { sub: who.sub, email });
+          if (m) {
+            m.sub = who.sub; m.status = 'active'; m.last_login_at = new Date().toISOString();
+            if (!m.name && who.name) m.name = who.name;
+            member.member = m;
+            await sb(env, 'config?on_conflict=owner_key,key', {
+              method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal',
+              body: JSON.stringify([{ owner_key: ownerKey, key: TEAM_KEY, value: JSON.stringify(list), updated_at: new Date().toISOString() }])
+            });
+          }
+          await sb(env, 'activity_log', {
+            method: 'POST', prefer: 'return=minimal',
+            body: JSON.stringify({ owner_key: ownerKey, action: 'login', detail: { email: who.email || null, via: 'oauth', team_role: member.member.role } })
+          });
+        } catch (e) { /* non-fatal */ }
+      } else {
       ownerKey = user.owner_key || (await ownerFromSub(who.sub));
       isAdmin = !!user.is_admin;
 
@@ -221,6 +256,7 @@ export async function onRequestGet({ request, env }) {
           prefer: 'return=minimal'
         });
       } catch (e) { /* non-fatal */ }
+      }
     } catch (e) {
       // Supabase unreachable — still let them in on a STABLE per-user owner (isolation preserved).
       ownerKey = allowlisted(email, env) ? SOLO_OWNER : await ownerFromSub(who.sub);
@@ -238,6 +274,7 @@ export async function onRequestGet({ request, env }) {
       sub: who.sub, email: who.email, name: who.name,
       owner_key: ownerKey,
       adm: isAdmin,
+      ...(member ? { role: member.member.role, self_owner: member.self_owner } : {}),
       iat: Date.now()
     },
     env.SESSION_SECRET

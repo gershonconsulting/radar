@@ -1,11 +1,12 @@
-# Radar - STATUS (updated 2026-11-25)
+# Radar - STATUS (updated 2026-11-26)
 
 App: https://radar.gershon.ai/app (new address, 2026-11-18) - old https://radar.gershoncrm.com still served by the same Pages project - health: /api/health
-Version: 1.24.1 (ext 1.18.4) / was 1.23.0 (branch onboarding-page) / 1.22.1 on main (ext 1.18.2) (#35 Intelligence menu 1.20.0, then #34 Botdog switch 1.21.0) (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
+Version: 1.25.0 on branch team-access (main 1.24.1, ext 1.18.4) / was 1.23.0 (branch onboarding-page) / 1.22.1 on main (ext 1.18.2) (#35 Intelligence menu 1.20.0, then #34 Botdog switch 1.21.0) (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
 Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to main auto-deploys
 (branch previews at <branch>.gershon-radar.pages.dev). Supabase edge functions deploy separately (Ariel).
 
 ## Done
+- ✅ v1.25.0 Team access (2026-11-26, branch team-access): Settings > Team - owner or Full member gives access by name + LinkedIn profile + email of their LinkedIn account, level Full / Semi / Viewer. Stored in config key team_members (JSON, no schema change). LinkedIn sign-in lands members on the account (no own users row created; an existing account with sources wins, admins always land on their own); account switcher when a person can open several. /api/me re-checks every load (removal/role change instant, members never admin). Member Chrome extensions are never linked (no owner relay, viewer mode forced). Role guard: browser blocks hub writes the role does not allow + hides buttons; server checks on /api/team, /api/botdog-setting; admin endpoints no longer match a member to the owner's row. Invites are copy-paste text (no email sent). functions/_lib/team.js, functions/api/team.js, app/team.js (_middleware item 10), tests/team.test.mjs
 - ✅ ext 1.18.4 + hub v27 (2026-11-25, branch bridge-title-backfill): each run fills the title of up to 8 title-less bridges (Sales Nav profile API, counted as lookups, stops on 401/403/429) via setBridgeMeta {title} (hub v27 deployed = Supabase hub version 28, smoke-tested). tests/bridge-title.test.mjs
 - ✅ v1.24.0 PR #47 merged 2026-11-25
 - ✅ v1.24.0 (2026-11-25, branch bridge-icp-grade): Bridges page grade = the account's ICP rules (config key icp_rules, copied from table icp_rules) applied to the bridge title. A = ICP role + senior, B = ICP role, C = senior only, D = no match / excluded word, ? = no title yet (was wrongly D). Hover shows why. Sorted A→D then ?. tests/bridge-grade.test.mjs
@@ -26,6 +27,8 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
+- ❌ Team access: Supabase hub still trusts the owner key sent by the browser, so Semi/Viewer limits on hub writes are enforced in the browser only (pre-existing hub design) - server-side fix = hub v28 checking a signed session token (needs a hub deploy OK)
+- ❌ Team access: optional invitation email from radar@ (today: "Copy invite" text)
 - ❌ Bridge titles fill in 8 per run once each desktop runs ext 1.18.4 (Meteor 157, Enzymicals 193, Gershon 102 blank on 2026-11-25). Discovery DOM fallback still saves '' for new bridges - the backfill catches them
 - ❌ Trigger icp_rules -> config (supabase/migrations/20261125_icp_rules_to_config.sql) not applied - refused by auto-mode; until then a new/edited icp_rules row needs its config icp_rules row updated too
 - ❌ li-health (2026-11-24, branch nightly/2026-11-24-li-health-in-app, HELD): tasks #39 daily LinkedIn signal check + #11 weekly LinkedIn Safety grade now built into Radar (Supabase function li-health + pg_cron). Needs secrets LI_HEALTH_CRON_SECRET + GATE_DB_URL (Charles), deploy + cron SQL (Ariel), then disable #39/#11 after one correct email. Airtable log not written by the app. See supabase/HANDOFF.txt
