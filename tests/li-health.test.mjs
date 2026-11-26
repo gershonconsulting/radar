@@ -154,7 +154,7 @@ await t('#39 handler: 401 -> pause + one email with the right sender, recipient,
   assert.ok(!/cap/.test(R.SQL.pause.split('where')[0].replace('status', '')), 'pause SQL never touches caps');
   const m = f.calls.sent[0];
   assert.equal(m.key, 'li-daily-39-2026-11-24');
-  assert.equal(m.payload.from, 'LinkedIn Health <alerts@gershon.ai>');
+  assert.equal(m.payload.from, 'GC LinkedIn Safety <alerts@gershon.ai>');
   assert.deepEqual(m.payload.to, ['report@gershonconsulting.com']);
   assert.equal(m.payload.subject, '[39] Jane Client (radar-AAA) — HTTP 401 from LinkedIn, auto-paused');
   assert.ok(m.payload.html.includes('Task #39') && m.payload.text.includes('Task #39'));
