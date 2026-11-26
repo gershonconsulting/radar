@@ -26,7 +26,7 @@ export type Deps = {
 };
 
 export const TO = ['report@gershonconsulting.com'];
-export const FROM_39 = 'LinkedIn Health <alerts@gershon.ai>';
+export const FROM_39 = 'GC LinkedIn Safety <alerts@gershon.ai>';
 export const FROM_11 = 'GC LinkedIn Safety <alerts@gershon.ai>';
 export const AIRTABLE = 'https://airtable.com/appFhB17PkHQDqTlh';
 
