@@ -622,6 +622,8 @@ async function runSync(opts) {
     let manualStats = { pending: 0, resolved: 0, unresolved: 0 };
     try { manualStats = await resolveManualBridges(MANUAL_BRIDGE_RESOLVE_PER_RUN); }
     catch (e) { await log('warn', 'manual-bridge:phase-error', { error: String(e) }); }
+    try { await backfillBridgeTitles(BRIDGE_TITLE_BACKFILL_PER_RUN); }
+    catch (e) { await log('warn', 'bridge-title:phase-error', { error: String(e) }); }
     // v1.17.0: Source PRIORITY. High-priority sources' bridges go first, then Medium, then Low;
     // order is still randomized INSIDE each tier so the access pattern keeps varying.
     let prioMap = {};
@@ -1817,6 +1819,75 @@ async function resolveManualBridges(cap) {
     try { chrome.tabs.remove(tab.id); } catch (e) {}
   }
   if (stats.resolved) notify('Bridges ready', stats.resolved + ' bridge(s) you added by hand are now searchable — prospects will be collected in this run.');
+  return stats;
+}
+
+// 1.18.4: BRIDGE TITLE BACKFILL. Discovery's visible-page fallback stores bridges with an empty
+// title, so the Bridges page cannot grade them against the ICP (shown "?"). Each run looks up the
+// LinkedIn headline of a few title-less bridges (1 Sales Nav call each, counted as lookups, stops
+// on 401/403/429) and saves it with setBridgeMeta {title}. Needs hub v27.
+const BRIDGE_TITLE_BACKFILL_PER_RUN = 8;
+async function bridgeTitlesInPage(urns) {
+  const csrf = (document.cookie.match(/JSESSIONID="?([^";]+)"?/) || [])[1];
+  if (!csrf) return { error: 'no JSESSIONID cookie', out: [] };
+  const H = { 'csrf-token': csrf, 'x-restli-protocol-version': '2.0.0', 'accept': 'application/json' };
+  const out = [];
+  for (const urn of urns) {
+    const row = { urn: urn, title: '', status: 0 };
+    try {
+      const u = '/sales-api/salesApiProfiles/(profileId:' + urn + ',authType:NAME_SEARCH,authToken:undefined)' +
+                '?decoration=%28entityUrn%2Cheadline%2Cpositions*%28title%2Ccurrent%29%29';
+      const r = await fetch(u, { credentials: 'include', headers: H });
+      row.status = r.status;
+      if (r.status === 401 || r.status === 403 || r.status === 429) { row.stop = true; out.push(row); break; }
+      if (r.ok) {
+        const j = JSON.parse(await r.text());
+        const cur = (j.positions || []).find(p => p && p.current && p.title) || (j.positions || [])[0];
+        row.title = String((cur && cur.title) || j.headline || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+      }
+    } catch (e) { row.error = String(e).slice(0, 80); }
+    out.push(row);
+    await new Promise(r => setTimeout(r, 700 + Math.floor(Math.random() * 700)));
+  }
+  return { out: out };
+}
+async function backfillBridgeTitles(cap) {
+  const stats = { pending: 0, saved: 0 };
+  let all = [];
+  try { all = await getBridges(); } catch (e) { return stats; }
+  const todo = (all || []).filter(b => /^ACwA[\w-]+$/.test(String(b.urn || '')) && !String(b.title || '').trim());
+  stats.pending = todo.length;
+  if (!todo.length || GATE_HELD) return stats;
+  const room = (await limitLeft('lookups')).left;
+  // Active bridges first: their grade decides the most.
+  todo.sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0));
+  const batch = todo.slice(0, Math.min(cap || BRIDGE_TITLE_BACKFILL_PER_RUN, room)).map(b => b.urn);
+  if (!batch.length) { await log('info', 'bridge-title:no-budget', { pending: todo.length }); return stats; }
+  const tab = await openScrapeTab('https://www.linkedin.com/sales/homepage');
+  if (!tab) return stats;
+  try {
+    await waitForTabComplete(tab.id, 45000);
+    await sleep(2500);
+    const res = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: bridgeTitlesInPage, args: [batch] });
+    const payload = (res && res[0]) ? res[0].result : null;
+    const rows = (payload && payload.out) || [];
+    await limitUse('lookups', rows.length);
+    for (const row of rows) {
+      if (row.stop) { await log('warn', 'bridge-title:refused', { status: row.status }); await onLinkedInWarning('bridge title', row.status); break; }
+      if (!row.title || CTA_RE.test(row.title)) continue;
+      const body = { secret: INGEST_SECRET, action: 'setBridgeMeta', urn: row.urn, title: row.title };
+      if (CURRENT_OWNER) body.owner = CURRENT_OWNER;
+      try {
+        const resp = await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (resp.ok) stats.saved++;
+      } catch (e) {}
+    }
+    await log('info', 'bridge-title:done', { asked: batch.length, saved: stats.saved, pending: stats.pending - stats.saved });
+  } catch (e) {
+    await log('warn', 'bridge-title:error', { error: String(e) });
+  } finally {
+    try { chrome.tabs.remove(tab.id); } catch (e) {}
+  }
   return stats;
 }
 
