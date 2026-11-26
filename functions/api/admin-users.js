@@ -61,7 +61,8 @@ const enc = encodeURIComponent;
 async function callerRow(env, session) {
   try {
     const filters = [];
-    if (session.owner_key) filters.push(`owner_key.eq.${session.owner_key}`);
+    // Team members (session.role) sign in to someone else's account: never match that owner's row.
+    if (session.owner_key && !session.role) filters.push(`owner_key.eq.${session.owner_key}`);
     if (session.sub) filters.push(`linkedin_sub.eq.${session.sub}`);
     if (session.email) filters.push(`email.eq.${String(session.email).toLowerCase()}`);
     if (!filters.length) return null;

@@ -44,7 +44,8 @@ async function isAdmin(env, session) {
   const admins = (env.ADMIN_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
   if (session.adm || admins.includes(String(session.email || '').toLowerCase())) return true;
   const f = [];
-  if (session.owner_key) f.push(`owner_key.eq.${session.owner_key}`);
+  // Team members (session.role) sign in to someone else's account: never match that owner's row.
+  if (session.owner_key && !session.role) f.push(`owner_key.eq.${session.owner_key}`);
   if (session.sub) f.push(`linkedin_sub.eq.${session.sub}`);
   if (session.email) f.push(`email.eq.${String(session.email).toLowerCase()}`);
   if (!f.length) return false;

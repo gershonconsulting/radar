@@ -1698,6 +1698,8 @@ function obDot(done){ return '<div class="ob-dot ' + (done?'done':'todo') + '">'
 // an existing install keeps warning exactly as before until someone opts a machine out.
 const COLLECT_MODE_KEY = 'radar_collecting';
 function isCollectingComputer(){
+  // Team members (v1.27.0) never collect for the account they were invited to: always a viewer here.
+  if (window.__ME && window.__ME.member) return false;
   try { return localStorage.getItem(COLLECT_MODE_KEY) !== '0'; } catch(e) { return true; }
 }
 function setCollectMode(mode){
@@ -4121,6 +4123,7 @@ async function initAuth(){
   const av = document.getElementById('userAvatar'); if (av) av.textContent = ((user.name || user.email || '?').charAt(0) || '?').toUpperCase();
   const chip = document.getElementById('userChip'); if (chip) chip.style.display = 'flex';
   window.__ME = me;   // used by the referral link builder
+  window.__ROLE = me.role || 'owner';   // team access (v1.27.0): owner | full | semi | viewer - see app/team-access script
   // ===== Per-user data isolation =====
   // Every hub call must carry the signed-in user's owner_key so each user reads/writes ONLY
   // their own sources/bridges/targets. We inject it once via a fetch wrapper (no need to touch
@@ -4147,7 +4150,8 @@ async function initAuth(){
     };
   }
   // Hand the owner_key to the Chrome extension so its collection writes to THIS user's data.
-  try { window.dispatchEvent(new CustomEvent('radar-ext-set-owner', { detail: { owner: window.__OWNER } })); } catch(e) {}
+  // Team members are NOT relayed: their Chrome would otherwise collect for this account with THEIR LinkedIn.
+  if (!me.member) { try { window.dispatchEvent(new CustomEvent('radar-ext-set-owner', { detail: { owner: window.__OWNER } })); } catch(e) {} }
   // Plan: admins and anyone flagged pro are unlimited; everyone else is on the free tier.
   window.__PLAN = (me.isAdmin || user.isAdmin || user.plan === 'pro' || me.plan === 'pro') ? 'pro' : 'free';
   setLiStatus('connected', (user.name || '').split(' ')[0] || '');

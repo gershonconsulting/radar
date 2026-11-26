@@ -7,6 +7,7 @@
 // Suspended users are rejected here even if they still hold a valid cookie.
 
 import { verify } from '../_lib/session.js';
+import { TEAM_KEY, parseTeam, findMember, ROLE_LABELS } from '../_lib/team.js';
 
 const SUPABASE_URL = 'https://pkzeeqehwmtnqxdpdesl.supabase.co';
 const SOLO_OWNER = 'xTVW0K1qKi';
@@ -148,6 +149,27 @@ export async function onRequestGet({ request, env, waitUntil }) {
     });
   }
 
+  // Team member signed in to someone else's account (v1.27.0): re-check the access on every load,
+  // so a removal or a role change applies at once. Members never inherit the owner's admin rights.
+  if (session.role) {
+    let m = null, list = null, acct = null;
+    try {
+      const rows = await sbFetch(env, `config?owner_key=eq.${enc(session.owner_key)}&key=eq.${TEAM_KEY}&select=value&limit=1`);
+      list = parseTeam(rows && rows[0] && rows[0].value);
+      m = findMember(list, session);
+      const u = await sbFetch(env, `users?owner_key=eq.${enc(session.owner_key)}&select=display_name,email,status&limit=1`);
+      acct = u && u[0];
+    } catch (e) { list = null; }
+    if (list && !m) return unauthed();                     // removed from the team
+    if (acct && acct.status === 'suspended') return unauthed();
+    const role = (m && m.role) || session.role;
+    return new Response(JSON.stringify({
+      ok: true, isAdmin: false, plan: 'pro', role,
+      member: { role, role_label: ROLE_LABELS[role] || role, account_name: (acct && (acct.display_name || acct.email)) || '', has_own_account: !!session.self_owner },
+      user: { sub: session.sub, email: session.email, name: session.name, owner_key: session.owner_key, status: 'active', onboarding: null }
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
+
   // Resolve the user row (best-effort — DB being down never locks the app).
   let user = null;
   try { user = await findUser(env, session); } catch (e) { user = null; }
@@ -166,6 +188,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
     JSON.stringify({
       ok: true,
       isAdmin,
+      role: 'owner',
       // OPEN BETA (restored 2026-09-23): every account is served as 'pro' = no free-tier caps.
       // The app's own isOpenBeta() flag was lost in 77e8de3. Remove this line to re-impose the free tier.
       plan: 'pro',
