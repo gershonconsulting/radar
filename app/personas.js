@@ -101,7 +101,7 @@
       if (withAi) {
         var out = page.querySelector('[data-ai-out]');
         if (out) out.innerHTML = j.summary ? md(j.summary) : '<span class="pe-muted">Intelligence gave no answer this time - try again in a minute.</span>';
-      } else { render(page, j); loaded = true; }
+      } else { render(page, j); loaded = !j.error; }
     } catch (e) { body.innerHTML = '<div class="pe-card pe-err">' + esc(e.message) + '</div>'; }
     busy = false;
   }
