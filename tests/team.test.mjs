@@ -1,6 +1,6 @@
 // tests/team.test.mjs - Radar team access (app v1.27.0). Run: node tests/team.test.mjs
 import assert from 'node:assert/strict';
-import { normLinkedin, isEmail, parseTeam, findMember, validateInvite, canHubWrite, canManageTeam, canEditSettings, pickWorkspace, findMemberships, publicMember, MAX_MEMBERS } from '../functions/_lib/team.js';
+import { findByToken, findInvite, inviteUrl, normLinkedin, isEmail, parseTeam, findMember, validateInvite, canHubWrite, canManageTeam, canEditSettings, pickWorkspace, findMemberships, publicMember, MAX_MEMBERS } from '../functions/_lib/team.js';
 import { callerContext } from '../functions/api/team.js';
 import { onRequest as middleware } from '../functions/_middleware.js';
 
@@ -20,6 +20,10 @@ t('invite validation', () => {
   assert.ok(ok.ok); assert.equal(ok.member.email, 'jane@meteor.bio'); assert.equal(ok.member.status, 'invited'); assert.equal(ok.member.sub, null);
   assert.match(validateInvite({ email: 'x@y.co', linkedin_url: 'linkedin.com/in/x', role: 'admin' }, []).error, /Full, Semi or Viewer/);
   assert.match(validateInvite({ email: 'x@y.co', role: 'full' }, []).error, /LinkedIn/);
+  const noMail = validateInvite({ name: 'Jenny P.', linkedin_url: 'https://www.linkedin.com/in/jennysmpark/', role: 'semi' }, []);
+  assert.ok(noMail.ok); assert.equal(noMail.member.email, ''); assert.match(noMail.member.token, /^[A-Za-z0-9]{24}$/);
+  assert.match(validateInvite({ linkedin_url: 'linkedin.com/in/jennysmpark', role: 'viewer' }, [noMail.member]).error, /LinkedIn profile already/);
+  assert.match(validateInvite({ email: 'bad', linkedin_url: 'linkedin.com/in/q', role: 'viewer' }, []).error, /does not look right/);
   assert.match(validateInvite({ email: 'jane@meteor.bio', linkedin_url: 'linkedin.com/in/j', role: 'full' }, [ok.member]).error, /already/);
   const full = Array.from({ length: MAX_MEMBERS }, (_, i) => ({ email: i + '@a.co', role: 'viewer' }));
   assert.match(validateInvite({ email: 'z@a.co', linkedin_url: 'linkedin.com/in/z', role: 'full' }, full).error, /Limit/);
@@ -84,6 +88,23 @@ await at('middleware injects team.js once into the app page', async () => {
   const res = await middleware({ request: new Request('https://radar.gershon.ai/app'), next: async () => new Response(html, { headers: { 'content-type': 'text/html' } }), env: {} });
   const out = await res.text();
   assert.equal(out.split('/team.js?v=').length - 1, 1);
+});
+
+t('invite token: one LinkedIn identity per link', () => {
+  const list = [{ id: 'a', email: '', role: 'semi', token: 'T'.repeat(24) }];
+  assert.equal(findByToken(list, 'T'.repeat(24), 'S1').id, 'a');           // unclaimed
+  list[0].sub = 'S1';
+  assert.equal(findByToken(list, 'T'.repeat(24), 'S1').id, 'a');           // same person again
+  assert.equal(findByToken(list, 'T'.repeat(24), 'S2'), null);             // someone else with the link
+  assert.equal(findByToken(list, '', 'S1'), null);
+  assert.equal(inviteUrl('https://radar.gershon.ai', list[0]), 'https://radar.gershon.ai/api/auth/linkedin/login?invite=' + 'T'.repeat(24));
+  assert.equal(parseTeam(JSON.stringify([{ token: 'x', role: 'viewer' }])).length, 1);  // email-less member kept
+});
+await at('findInvite rejects malformed tokens and reads the account', async () => {
+  const tok = 'abcDEF123'.repeat(3);
+  const sb = async () => [{ owner_key: 'AMOS', value: JSON.stringify([{ id: 'j', role: 'semi', token: tok }]) }];
+  assert.equal(await findInvite(sb, 'short', 'S'), null);
+  assert.equal((await findInvite(sb, tok, 'S')).owner_key, 'AMOS');
 });
 
 console.log('team: ' + n + ' passed');

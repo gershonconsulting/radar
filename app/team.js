@@ -96,7 +96,7 @@
     var roleCell = canManage
       ? '<select data-id="' + esc(m.id) + '" class="rt-role">' + ['full', 'semi', 'viewer'].map(function (r) { return '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + LABEL[r] + '</option>'; }).join('') + '</select>'
       : esc(LABEL[m.role]);
-    return '<tr><td><b>' + esc(m.name || '-') + '</b><br>' + st + '</td><td>' + esc(m.email) + '</td>' +
+    return '<tr><td><b>' + esc(m.name || '-') + '</b><br>' + st + '</td><td>' + (m.email ? esc(m.email) : '<span style="color:#94a3b8">via invite link</span>') + '</td>' +
       '<td>' + (m.linkedin_url ? '<a href="' + esc(m.linkedin_url) + '" target="_blank" rel="noopener">Profile&nbsp;&#8599;</a>' : '-') + '</td>' +
       '<td>' + roleCell + '</td>' +
       '<td style="text-align:right">' + (canManage ? '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><button class="rt-copy" data-copy="' + esc(m.id) + '">Copy invite</button><button class="rt-link" data-remove="' + esc(m.id) + '">Remove</button></div>' : '') + '</td></tr>';
@@ -104,9 +104,11 @@
 
   function inviteText(m) {
     var acct = state.data && state.data.account ? state.data.account.name : '';
+    var how = m.invite_url
+      ? '1. Open your personal link: ' + m.invite_url + '\n2. Sign in with your LinkedIn account - Radar opens straight on the account.'
+      : '1. Open https://radar.gershon.ai/app\n2. Click "Sign in with LinkedIn" and use the LinkedIn account of ' + m.email;
     return 'Hi ' + ((m.name || '').split(' ')[0] || '') + ',\n\nYou now have ' + LABEL[m.role] + ' access to ' + (acct ? acct + "'s " : 'our ') +
-      'Radar by Gershon.AI.\n\n1. Open https://radar.gershon.ai/app\n2. Click "Sign in with LinkedIn" and use the LinkedIn account of ' + m.email +
-      '\n\nNo Chrome extension is needed on your side.';
+      'Radar by Gershon.AI.\n\n' + how + '\n\nThe link is personal: it works for one LinkedIn account. No Chrome extension is needed on your side.';
   }
 
   function render() {
@@ -125,12 +127,12 @@
       : '<tr><td colspan="5" style="color:#6b7280">Nobody else has access yet.</td></tr>';
     card.innerHTML = head +
       '<p>Give colleagues access to this Radar account. They sign in with <strong>their own LinkedIn</strong> at radar.gershon.ai &mdash; ' +
-      'use the email of their LinkedIn account. Collection keeps running on the owner&rsquo;s LinkedIn; their Chrome extension is never used.</p>' +
+      'send them the personal invite link (Copy invite), or give the email of their LinkedIn account. Collection keeps running on the owner&rsquo;s LinkedIn; their Chrome extension is never used.</p>' +
       '<div class="rt-roles"><div><b>Full</b>' + HELP.full + '</div><div><b>Semi</b>' + HELP.semi + '</div><div><b>Viewer</b>' + HELP.viewer + '</div></div>' +
       '<div class="rt-tw"><table><thead><tr><th>Name</th><th>Email</th><th>LinkedIn</th><th>Access</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
       '<div class="rt-form"><div><label>Name</label><input id="rtName" placeholder="Jane Doe"></div>' +
       '<div><label>LinkedIn profile</label><input id="rtLi" placeholder="https://www.linkedin.com/in/…"></div>' +
-      '<div><label>Email of their LinkedIn account</label><input id="rtEmail" type="email" placeholder="jane@company.com"></div>' +
+      '<div><label>Email of their LinkedIn account (optional)</label><input id="rtEmail" type="email" placeholder="leave empty to use the invite link"></div>' +
       '<div><label>Access</label><select id="rtRole"><option value="viewer">Viewer</option><option value="semi">Semi</option><option value="full">Full</option></select></div>' +
       '<div class="rt-go"><button class="rt-btn" id="rtAdd">Give access</button></div></div>' +
       '<div class="rt-msg" id="rtMsg"></div>';
@@ -154,7 +156,7 @@
         var j = await call({ op: 'invite', name: document.getElementById('rtName').value, linkedin_url: document.getElementById('rtLi').value,
           email: document.getElementById('rtEmail').value, role: document.getElementById('rtRole').value });
         state.data.members = j.members; render();
-        try { await navigator.clipboard.writeText(inviteText(j.member)); msg('Access given. Invitation text copied - paste it in an email or LinkedIn message.', true); }
+        try { await navigator.clipboard.writeText(inviteText(j.member)); msg('Access given. Invitation with their personal link copied - paste it in an email or LinkedIn message.', true); }
         catch (e) { msg('Access given. Use "Copy invite" to get the invitation text.', true); }
       } catch (e) { msg(e.message, false); add.disabled = false; }
     };
