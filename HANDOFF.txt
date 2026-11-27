@@ -297,3 +297,6 @@ END OF HANDOFF
 ✅ PR #49 merged - li-health #39 sender "GC LinkedIn Safety <alerts@gershon.ai>" (was "LinkedIn Health").
 ❌ li-health still not deployed: needs LI_HEALTH_CRON_SECRET + GATE_DB_URL secrets, function deploy, cron SQL (PR #44).
 ❌ supabase/handoff/2026-11-09-linkedin-warning-alert.sql still sends as "Radar <radar@gershoncrm.com>" - rename to GC Radar before applying.
+
+## 2026-11-27 nightly push (branch nightly/2026-11-27-gc-senders, v1.27.2)
+✅ supabase/handoff/2026-11-09-linkedin-warning-alert.sql sender "Radar <radar@gershoncrm.com>" -> "GC Radar <radar@gershoncrm.com>" (address + recipient report@ unchanged). PR only, not merged (database change). Still NOT applied: needs Olivier's "deploy the LinkedIn warning alert to production".
