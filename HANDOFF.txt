@@ -297,3 +297,14 @@ END OF HANDOFF
 ✅ PR #49 merged - li-health #39 sender "GC LinkedIn Safety <alerts@gershon.ai>" (was "LinkedIn Health").
 ❌ li-health still not deployed: needs LI_HEALTH_CRON_SECRET + GATE_DB_URL secrets, function deploy, cron SQL (PR #44).
 ❌ supabase/handoff/2026-11-09-linkedin-warning-alert.sql still sends as "Radar <radar@gershoncrm.com>" - rename to GC Radar before applying.
+
+## 2026-11-27 nightly push (branch nightly/2026-11-27-radar-verdict) - daily-report v9.5
+Why: every Radar Report for 7+ days said "· needs attention" (amber). The ONLY trigger was bridges_never_scraped
+(107-108 every day) = an all-time count of active bridges with no prospect attributed - identical whatever the day
+did. DB check (read-only, xTVW0K1qKi): 96 of 107 are 2nd/3rd/unknown-degree (extension skips them,
+scrape:skip-not-connected, invite queued) or Sales Nav ignores their filter; 11 are 1st-degree never scraped.
+✅ Dead bridges no longer change the verdict or subject; listed without a cross as "Standing (not about yesterday)".
+✅ HTTP 429/401 on the day still turn it amber, and the subject now NAMES the issue ("· needs attention: HTTP 429 ... logged N×").
+✅ tests/daily-report.test.mjs cases 11-12 (case 1 fails on v9.4). Full tests/ suite passes.
+❌ Not live until the daily-report function is redeployed (Supabase, verify_jwt OFF) - there is no push-to-deploy
+   workflow for Supabase functions (only deploy-eod-cron.yml). Live footer still says v9.4.

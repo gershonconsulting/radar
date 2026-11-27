@@ -1,4 +1,4 @@
-// Radar — daily-report edge function (v9.4)
+// Radar — daily-report edge function (v9.5)
 // ONE email per day, per user, describing YESTERDAY (America/New_York day).
 // Triggered by pg_cron: POST { secret } (or GET ?secret=). verify_jwt=false.
 // Optional overrides for testing: ?date=YYYY-MM-DD (the ET day to report on), ?to=email, ?dry=1
@@ -70,9 +70,19 @@
 //  "weekend — not scheduled", and the "New" card no longer counts weekend days as "days without a
 //  run" (Monday compares with Friday as "the last working day"). A weekend day on which someone DID run
 //  (manual Sync Now) is reported exactly as any other day. Weekdays are unchanged.
+
+// v9.5 (2026-11-27) — the verdict was amber ("needs attention") EVERY day for 7+ days. The only trigger was
+//  `bridges_never_scraped` (107-108 every day): an ALL-TIME inventory count of active bridges with no
+//  prospect attributed, recomputed from scratch each day and identical whatever yesterday's run did. DB check
+//  (read-only, 2026-11-27, xTVW0K1qKi): 96 of the 107 are 2nd/3rd-degree or unknown-degree bridges, which the
+//  extension deliberately does not scrape ("scrape:skip-not-connected" - queued for an invite instead) or whose
+//  search Sales Nav ignores (health filter_ignored). A standing backlog cannot tell a good day from a bad one,
+//  so a report that is always amber stops being read. Dead bridges no longer change the verdict or the subject;
+//  they stay listed (no cross) under "Needs attention" as a standing item. HTTP 429 / 401 in the day's log -
+//  things that actually happened yesterday - still turn the verdict amber and name the issue in the subject.
 import { sendResend } from '../_shared/resend.ts';
 
-const REPORT_VERSION = 'v9.4';
+const REPORT_VERSION = 'v9.5';
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
@@ -309,10 +319,10 @@ async function httpErrors(ownerKey: string, start: Date, end: Date, problems: st
     return httpFromProblems(problems);   // distinct log lines - a lower bound
   }
 }
-function healthIssues(s: any, http: HttpCounts): string[] {
+// v9.5: only things that HAPPENED on the reported day. The all-time dead-bridge count is a standing
+// backlog (see deadBridgesNote) and no longer turns the verdict amber.
+function healthIssues(_s: any, http: HttpCounts): string[] {
   const out: string[] = [];
-  const dead = +s.bridges_never_scraped || 0;
-  if (dead > 0) out.push(`${dead} dead bridge${dead === 1 ? '' : 's'} — active but never produced a single prospect`);
   if (http.c429 > 0) out.push(`HTTP 429 (rate limited by LinkedIn) logged ${http.c429}×`);
   if (http.c401 > 0) out.push(`HTTP 401 (signed out / not authorised) logged ${http.c401}×`);
   return out;
@@ -376,7 +386,7 @@ type Verdict = { level: 'critical' | 'warn' | 'ok'; title: string; body: string 
 function jobVerdict(s: any, fleet: OwnerDay[] = [], issues: string[] = [], cap: number | null = null, weekend = false): Verdict {
   const v = jobVerdictBase(s, fleet, cap, weekend);
   if (v.title.startsWith('Weekend')) return v;   // v9.4: dead bridges still listed under "Needs attention"
-  // v9 (b): never green while there are dead bridges or 429/401s in the log.
+  // v9 (b): never green while there are 429/401s in the log (v9.5: dead bridges no longer count).
   if (v.level === 'ok' && issues.length) {
     return { level: 'warn', title: v.title.replace('Radar did its job', 'Radar collected, but needs attention'), body: `${v.body} ${issues.map(i => `❌ ${i}.`).join(' ')}` };
   }
@@ -575,6 +585,13 @@ function sectionTitle(t: string): string {
   return `<div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin:22px 0 8px;font-weight:700;">${esc(t)}</div>`;
 }
 
+// v9.5: standing backlog line (no cross, does not affect the verdict or subject).
+export function deadBridgesNote(s: any): string | null {
+  const dead = +s.bridges_never_scraped || 0;
+  if (dead <= 0) return null;
+  return `Standing (not about yesterday): ${dead} active bridge${dead === 1 ? '' : 's'} ha${dead === 1 ? 's' : 've'} never produced a prospect — mostly bridges that are not 1st-degree connections yet (the extension skips them and queues an invite) or whose Sales Navigator search ignores the connection filter. Review or switch them off on the Bridges page.`;
+}
+
 function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verdict, browsers: Verdict | null, prevRef: PrevRef = null, fleet: OwnerDay[] = [], issues: string[] = [], primary = GLOBAL_OWNER_KEY): string {
   const newTargets = +s.new_targets || 0;
   const avg7 = +s.avg7 || 0;
@@ -586,7 +603,8 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
   const weekend = isWeekend(dayYmd);
   const weekendIdle = weekend && (+s.runs || 0) === 0 && !fleet.some(o => o.collected) && newTargets === 0;
   if (silent.length && fleet.some(o => o.collected)) attention.push(`Silent yesterday: ${silent.map(o => silentText(o, weekend)).join(', ')}.`);
-  if (+s.bridges_never_scraped > 0 && !issues.length) attention.push(`${s.bridges_never_scraped} active bridge(s) have never produced a single prospect — their Sales Navigator search has never run successfully.`);
+  const deadNote = deadBridgesNote(s);
+  if (deadNote) attention.push(deadNote);
   if (+s.total_no_url > 0) attention.push(`${s.total_no_url} of ${s.total_targets} prospects still have no public LinkedIn URL, so they cannot be pushed to Botdog.`);
   if (+s.bad_titles > 0) attention.push(`${s.bad_titles} prospect(s) collected yesterday have a corrupted job title ("Add … to selection") — the scraper is reading the checkbox label instead of the title.`);
   const verRows: VerRow[] = Array.isArray(s.by_version) ? s.by_version : [];
@@ -746,7 +764,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ? ' — weekend, no run (by design)'
         : (+s.runs || 0) === 0 && fleet.some(o => o.collected)
         ? ` — this account did not run (other accounts +${fleet.reduce((a, o) => a + o.newTargets, 0)} new)`
-        : ((+s.new_targets || 0) > 0 ? ` — +${s.new_targets} new prospects${capReached(+s.new_targets || 0, cap) ? ' (daily cap reached)' : ''}${issues.length ? ' · needs attention' : ''}` : ' — no new prospects');
+        : ((+s.new_targets || 0) > 0 ? ` — +${s.new_targets} new prospects${capReached(+s.new_targets || 0, cap) ? ' (daily cap reached)' : ''}${issues.length ? ` · needs attention: ${issues[0]}${issues.length > 1 ? ` (+${issues.length - 1} more)` : ''}` : ''}` : ' — no new prospects');
       const subject = `Radar Report — ${shortDate(dayYmd)}${tag}`;
 
       const to = toOverride || cfg.report_email || r.email;
