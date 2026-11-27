@@ -1,4 +1,4 @@
-// tests/daily-report.test.mjs - checks daily-report v9.5 (Supabase edge function) and the Pages pieces it reads.
+// tests/daily-report.test.mjs - checks daily-report v10.1 (Supabase edge function) and the Pages pieces it reads.
 // Run: node --experimental-strip-types tests/daily-report.test.mjs   (Node 22+; no network, no Supabase, no email)
 // Deno and fetch are stubbed; the handler is called with ?dry=1, which returns the HTML + X-Report-Subject.
 import assert from 'node:assert/strict';
@@ -23,6 +23,7 @@ function scenario(over = {}) {
     prev: { new_targets: 20, runs: 4 },
     date: '2026-11-13',
     byStart: {},                  // p_start ISO -> radar_daily_stats override (other days)
+    ext: {},                      // v10: radar_ext_activity for the primary owner (the extension's own run log)
     ...over,
   };
 }
@@ -36,7 +37,7 @@ const DAY_START = '2026-11-13T05:00:00.000Z';   // ET midnight, Nov 13 (EST, UTC
 globalThis.fetch = async (url, opts = {}) => {
   const u = String(url);
   const ok = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  if (u === 'https://radar.gershon.ai/api/health') {
+  if (u === 'https://radar.gershoncrm.com/api/health') {   // v10: site domain
     if (S.siteExt === null) throw new Error('network down');
     return ok({ platform: 'radar', version: '1.18.12', latest_ext: S.siteExt, status: 'green' });
   }
@@ -48,6 +49,7 @@ globalThis.fetch = async (url, opts = {}) => {
   if (p.startsWith('config?')) return ok([]);
   if (p.startsWith('activity_log?select=log:')) return ok(S.logRows || []);   // v9.5 case 12: the day's raw log
   if (p.startsWith('gate_clients?') || p.startsWith('activity_log?')) return ok([]);
+  if (p === 'rpc/radar_ext_activity') return ok([S.ext || {}]);   // v10
   if (p === 'rpc/radar_daily_stats') {
     const b = JSON.parse(opts.body);
     if (b.p_start === (S.dayStart || DAY_START)) return ok(S.day);
@@ -90,7 +92,8 @@ assert.equal(r.subject, 'Radar Report — November 13, 2026 — +20 new prospect
 assert.match(r.html, /That is the daily cap: the extension takes at most 20 new prospects a day/);
 assert.match(r.html, /Chrome extension up to date \(v1\.17\.2\)/);
 assert.doesNotMatch(r.html, /ahead of the published/);
-assert.match(r.html, /daily-report v9\.5/);
+assert.match(r.html, /daily-report v10\.1/);
+assert.match(r.html, /radar\.gershoncrm\.com/);
 assert.match(r.html, /New to Radar \(first seen\)/);
 console.log('case 1:', r.subject);
 
@@ -176,6 +179,50 @@ assert.match(r.html, /Radar collected, but needs attention/);
 assert.match(r.html, /❌ HTTP 429/);
 console.log('case 12:', r.subject);
 
+// ---- 13. v10: bridge invitations + Chrome extension activity, invite count in the subject ----
+const extDay = {
+  invites_sent: 2, invites_failed: 1, invites_accepted: 1, invites_waiting: 14, invites_mode: 'on', not_connected: 9,
+  invites_sent_list: [{ bridge: 'Jean Dupont', source: 'Recommended Leads' }, { bridge: 'Anne Martin', source: null }],
+  invites_failed_list: [{ bridge: 'Paul Leroy', reason: 'weekly invite limit' }],
+  runs_started: 3, runs_done: 2, first_at: '2026-11-25T14:00:00Z', last_at: '2026-11-25T18:30:00Z', version: '1.27.1',
+  pages_read: 12, bridges_read: 6, bridges_with_leads: 4, found: 40, saved: 20, urls_resolved: 18, listed: 12,
+  bridge_urls_resolved: 3, discover_sources: 2, discover_candidates: 7, gate_held: [], limits_why: null, errors: 0,
+};
+r = await run({ date: '2026-11-25', dayStart: '2026-11-25T05:00:00.000Z', day: nov25, ext: extDay });
+assert.equal(r.subject, 'Radar Report — November 25, 2026 — +20 new prospects (daily cap reached) · 2 bridge invite(s)');
+assert.doesNotMatch(r.subject, /needs attention/, 'dead bridges still do not turn v10.1 amber');
+assert.match(r.html, /Bridge invitations \(connection requests\)/);
+assert.match(r.html, /Jean Dupont <span style="color:#94a3b8;">\(Recommended Leads\)<\/span>/);
+assert.match(r.html, /Paul Leroy <span style="color:#94a3b8;">— weekly invite limit<\/span>/);
+assert.match(r.html, /What the Chrome extension did/);
+assert.match(r.html, /2 finished of 3 started/);
+assert.match(r.html, /v1\.27\.1/);
+assert.match(r.html, /Radar did its job — 20 new prospects/);
+console.log('case 13:', r.subject);
+
+// ---- 14. v10: no extension activity, no invites - no invite tag, "no activity" line ----
+r = await run({ date: '2026-11-25', dayStart: '2026-11-25T05:00:00.000Z', day: nov25, ext: {} });
+assert.equal(r.subject, 'Radar Report — November 25, 2026 — +20 new prospects (daily cap reached)');
+assert.match(r.html, /The extension logged no activity yesterday\./);
+
+// ---- 15. v10: HTTP 429 + invites - the problem is named first, then the invite count ----
+r = await run({ date: '2026-11-25', dayStart: '2026-11-25T05:00:00.000Z', day: nov25b, ext: extDay,
+  logRows: [{ log: [{ level: 'error', msg: 'scrape:error', data: { error: 'status 429 rate limited' } }] }] });
+assert.equal(r.subject, 'Radar Report — November 25, 2026 — +20 new prospects (daily cap reached) · needs attention: HTTP 429 (rate limited by LinkedIn) logged 1× · 2 bridge invite(s)');
+
+// ---- 16. v10 pure helpers: mergeInvites across accounts ----
+const merged = mod.mergeInvites([
+  { owner_key: 'a', label: 'Ann', act: { invites_sent: 2, invites_mode: 'on', invites_waiting: 3, invites_sent_list: [{ bridge: 'X', source: 'S' }] } },
+  { owner_key: 'b', label: 'Bob', act: { invites_sent: 1, invites_mode: 'off', invites_failed: 1, invites_failed_list: [{ bridge: 'Y', reason: 'r' }] } },
+], {});
+assert.equal(merged.invites_sent, 3);
+assert.equal(merged.invites_waiting, 3);
+assert.equal(merged.mode_text, 'Ann');
+assert.deepEqual(merged.invites_sent_list, [{ bridge: 'X', source: 'S · Ann' }]);
+assert.deepEqual(merged.invites_failed_list, [{ bridge: 'Y (Bob)', reason: 'r' }]);
+const solo = { invites_sent: 5 };
+assert.equal(mod.mergeInvites([{ owner_key: 'a', label: 'Ann' }], solo), solo, 'one account: its own numbers');
+
 // ---- Pages side: /api/health exposes latest_ext; the middleware still raises an old LATEST_EXT_VERSION ----
 const ver = await import(path.join(root, 'functions/_lib/version.js'));
 const health = await import(path.join(root, 'functions/api/health.js'));
@@ -191,4 +238,4 @@ const out = await (await mw.onRequest({
 assert.match(out, new RegExp(`LATEST_EXT_VERSION = '${ver.LATEST_EXT.replace(/\./g, '\\.')}'`));
 assert.ok(out.includes(`/radar-extension-v${ver.LATEST_EXT}.zip`));
 
-console.log('daily-report v9.5 + /api/health latest_ext: all assertions passed');
+console.log('daily-report v10.1 + /api/health latest_ext: all assertions passed');
