@@ -1,4 +1,4 @@
-// tests/daily-report.test.mjs - checks daily-report v9.4 (Supabase edge function) and the Pages pieces it reads.
+// tests/daily-report.test.mjs - checks daily-report v9.5 (Supabase edge function) and the Pages pieces it reads.
 // Run: node --experimental-strip-types tests/daily-report.test.mjs   (Node 22+; no network, no Supabase, no email)
 // Deno and fetch are stubbed; the handler is called with ?dry=1, which returns the HTML + X-Report-Subject.
 import assert from 'node:assert/strict';
@@ -46,6 +46,7 @@ globalThis.fetch = async (url, opts = {}) => {
   if (p.startsWith('users?')) return ok([{ owner_key: OWNER, email: 'report@example.test', display_name: 'Olivier Attia', is_admin: true, status: 'active' }]);
   if (p.startsWith('config?select=owner_key,key,value')) return ok(Object.entries(S.cfg).map(([key, value]) => ({ owner_key: OWNER, key, value })));
   if (p.startsWith('config?')) return ok([]);
+  if (p.startsWith('activity_log?select=log:')) return ok(S.logRows || []);   // v9.5 case 12: the day's raw log
   if (p.startsWith('gate_clients?') || p.startsWith('activity_log?')) return ok([]);
   if (p === 'rpc/radar_daily_stats') {
     const b = JSON.parse(opts.body);
@@ -85,11 +86,11 @@ assert.equal(mod.capReached(20, null), false);
 
 // ---- 1. the 11-13 email replayed: cap explained, no false "ahead of" ----
 let r = await run();
-assert.equal(r.subject, 'Radar Report — November 13, 2026 — +20 new prospects (daily cap reached) · needs attention');
+assert.equal(r.subject, 'Radar Report — November 13, 2026 — +20 new prospects (daily cap reached)');
 assert.match(r.html, /That is the daily cap: the extension takes at most 20 new prospects a day/);
 assert.match(r.html, /Chrome extension up to date \(v1\.17\.2\)/);
 assert.doesNotMatch(r.html, /ahead of the published/);
-assert.match(r.html, /daily-report v9\.4/);
+assert.match(r.html, /daily-report v9\.5/);
 assert.match(r.html, /New to Radar \(first seen\)/);
 console.log('case 1:', r.subject);
 
@@ -101,12 +102,12 @@ assert.match(r.html, /Chrome extension up to date \(v1\.17\.2\)/);
 
 // ---- 3. under the cap: plain count, no cap text ----
 r = await run({ day: { ...scenario().day, new_targets: 13, by_bridge: [{ bridge: 'A', n: 13 }] } });
-assert.equal(r.subject, 'Radar Report — November 13, 2026 — +13 new prospects · needs attention');
+assert.equal(r.subject, 'Radar Report — November 13, 2026 — +13 new prospects');
 assert.doesNotMatch(r.html, /daily cap/);
 
 // ---- 4. an older extension (no cap before 1.17.2): no cap text even at 20 ----
 r = await run({ day: { ...scenario().day, ext_version: '1.17.0' } });
-assert.equal(r.subject, 'Radar Report — November 13, 2026 — +20 new prospects · needs attention');
+assert.equal(r.subject, 'Radar Report — November 13, 2026 — +20 new prospects');
 assert.doesNotMatch(r.html, /daily cap/);
 
 // ---- 5. a genuinely newer local build is still reported as ahead ----
@@ -130,13 +131,13 @@ for (const [date, start] of [['2026-11-14', '2026-11-14T05:00:00.000Z'], ['2026-
   assert.match(r.html, /Weekend — no collection scheduled/);
   assert.match(r.html, /weekend &#8212; no run scheduled/);
   assert.doesNotMatch(r.html, /without a run/);
-  assert.match(r.html, /108 dead bridges/, 'dead bridges still listed');
+  assert.match(r.html, /108 active bridges have never produced a prospect/, 'dead bridges still listed');
   console.log(`case 7 ${date}:`, r.subject);
 }
 
 // ---- 8. weekend on which someone ran by hand: reported like any other day ----
 r = await run({ date: '2026-11-14', dayStart: '2026-11-14T05:00:00.000Z', day: { ...scenario().day, new_targets: 7, by_bridge: [{ bridge: 'A', n: 7 }] } });
-assert.equal(r.subject, 'Radar Report — November 14, 2026 — +7 new prospects · needs attention');
+assert.equal(r.subject, 'Radar Report — November 14, 2026 — +7 new prospects');
 
 // ---- 9. Monday after a weekend: compares with Friday as the last working day, no "days without a run" ----
 r = await run({ date: '2026-11-16', dayStart: '2026-11-16T05:00:00.000Z',
@@ -148,6 +149,32 @@ assert.doesNotMatch(r.html, /without a run/);
 // ---- 10. a WEEKDAY with no run anywhere is still red ----
 r = await run({ date: '2026-11-17', dayStart: '2026-11-17T05:00:00.000Z', day: idle });
 assert.equal(r.subject, 'Radar Report — November 17, 2026 — ⚠️ DID NOT RUN');
+
+// ---- 11. v9.5: the 11-24 / 11-25 emails - a normal day with only the standing dead-bridge backlog ----
+// Every report for 7+ days said "needs attention" solely because of bridges_never_scraped (107), an
+// all-time count that is the same whatever the day did. It must not change the verdict or the subject.
+const nov25 = { ...scenario().day, new_targets: 20, runs: 3, run_done: 2, saved: 50, best_saved: 50, listed: 12,
+  bridges_never_scraped: 107, problems: ['scrape:skip-not-connected — Not a 1st-degree connection'],
+  by_bridge: [{ bridge: 'Mathieu Aimlon', n: 20 }] };
+r = await run({ date: '2026-11-25', dayStart: '2026-11-25T05:00:00.000Z', day: nov25 });
+assert.equal(r.subject, 'Radar Report — November 25, 2026 — +20 new prospects (daily cap reached)');
+assert.doesNotMatch(r.subject, /needs attention/);
+assert.match(r.html, /Radar did its job — 20 new prospects/);
+assert.doesNotMatch(r.html, /Radar collected, but needs attention/);
+assert.doesNotMatch(r.html, /❌ 107 dead bridges/);
+assert.match(r.html, /Standing \(not about yesterday\): 107 active bridges have never produced a prospect/);
+console.log('case 11:', r.subject);
+assert.equal(mod.deadBridgesNote({ bridges_never_scraped: 0 }), null);
+assert.match(mod.deadBridgesNote({ bridges_never_scraped: 1 }), /1 active bridge has never/);
+
+// ---- 12. a real problem on the day (HTTP 429) still turns it amber and is NAMED in the subject ----
+const nov25b = { ...nov25, problems: ['scrape:error — status 429 rate limited'] };
+r = await run({ date: '2026-11-25', dayStart: '2026-11-25T05:00:00.000Z', day: nov25b,
+  logRows: [{ log: [{ level: 'error', msg: 'scrape:error', data: { error: 'status 429 rate limited' } }] }] });
+assert.equal(r.subject, 'Radar Report — November 25, 2026 — +20 new prospects (daily cap reached) · needs attention: HTTP 429 (rate limited by LinkedIn) logged 1×');
+assert.match(r.html, /Radar collected, but needs attention/);
+assert.match(r.html, /❌ HTTP 429/);
+console.log('case 12:', r.subject);
 
 // ---- Pages side: /api/health exposes latest_ext; the middleware still raises an old LATEST_EXT_VERSION ----
 const ver = await import(path.join(root, 'functions/_lib/version.js'));
@@ -164,4 +191,4 @@ const out = await (await mw.onRequest({
 assert.match(out, new RegExp(`LATEST_EXT_VERSION = '${ver.LATEST_EXT.replace(/\./g, '\\.')}'`));
 assert.ok(out.includes(`/radar-extension-v${ver.LATEST_EXT}.zip`));
 
-console.log('daily-report v9.4 + /api/health latest_ext: all assertions passed');
+console.log('daily-report v9.5 + /api/health latest_ext: all assertions passed');
