@@ -72,6 +72,9 @@ const INTEL_SRC = '/intelligence.js?v=' + APP_VERSION;
 // 10) (2026-11-26, app v1.26.0) Personas - ICP optimization from the Sales Nav "Recommended Leads" list
 //     (/api/personas, owner from the session only). App page only, once, after Intelligence.
 const PERSONAS_SRC = '/personas.js?v=' + APP_VERSION;
+// 11) (2026-11-26, app v1.27.0) app/team.js - Settings > Team (Full / Semi / Viewer access), role guard,
+//     account switcher. App page only (has id="view-settings"), once.
+const TEAM_SRC = '/team.js?v=' + APP_VERSION;
 const THEME_HREF = '/unified-theme.css?v=' + APP_VERSION;
 const CHART_RED = [
   // Dashboard (renderCharts): trend line colour + 'targets per bridge' bar colour
@@ -174,6 +177,11 @@ export async function onRequest(ctx) {
     if (/id="nav-growth"/.test(out) && out.indexOf('personas.js') === -1 && out.lastIndexOf('</body>') !== -1) {
       const at = out.lastIndexOf('</body>');
       out = out.slice(0, at) + '<script src="' + PERSONAS_SRC + '"></script>\n' + out.slice(at);
+    }
+    // 11) Team access (app v1.27.0)
+    if (/id="view-settings"/.test(out) && out.indexOf('team.js') === -1 && out.lastIndexOf('</body>') !== -1) {
+      const at = out.lastIndexOf('</body>');
+      out = out.slice(0, at) + '<script src="' + TEAM_SRC + '"></script>\n' + out.slice(at);
     }
     // 4) Unified Gershon design (app v1.15.0)
     if (out.indexOf('unified-theme.css') === -1 && out.indexOf('</head>') !== -1) {

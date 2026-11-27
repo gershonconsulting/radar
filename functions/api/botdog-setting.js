@@ -11,6 +11,7 @@
 // existing outreach running; client accounts, which have no key, start OFF).
 
 import { verify } from '../_lib/session.js';
+import { TEAM_KEY, parseTeam, findMember, canEditSettings } from '../_lib/team.js';
 
 const SUPABASE_URL = 'https://pkzeeqehwmtnqxdpdesl.supabase.co';
 const enc = encodeURIComponent;
@@ -33,6 +34,15 @@ async function sb(env, path, init = {}) {
 async function ownerFromSession(request, env) {
   const session = await verify(parseCookies(request.headers.get('Cookie')).radar_session, env.SESSION_SECRET);
   if (!session || !session.sub) return null;
+  // Team members (v1.27.0): only Full may change account settings; Semi/Viewer read only.
+  if (session.role) {
+    if (!session.owner_key) return null;
+    const rows = await sb(env, `config?owner_key=eq.${enc(session.owner_key)}&key=eq.${TEAM_KEY}&select=value&limit=1`).catch(() => null);
+    const m = findMember(parseTeam(rows && rows[0] && rows[0].value), session);
+    if (!m) return null;
+    if (request.method === 'POST' && !canEditSettings(m.role)) return { denied: true };
+    return session.owner_key;
+  }
   const filter = session.owner_key ? `owner_key=eq.${enc(session.owner_key)}` : `linkedin_sub=eq.${enc(session.sub)}`;
   try {
     const u = await sb(env, `users?${filter}&select=owner_key,status&limit=1`);
@@ -54,6 +64,7 @@ export async function onRequest({ request, env }) {
   if (!env.SUPABASE_SERVICE_KEY || !env.SESSION_SECRET) return json({ success: false, error: 'not configured' }, 500);
   const owner = await ownerFromSession(request, env);
   if (!owner) return json({ success: false, error: 'not signed in' }, 401);
+  if (owner.denied) return json({ success: false, error: 'Your access level cannot change Settings.' }, 403);
   try {
     if (request.method === 'GET') {
       const rows = await sb(env, `config?owner_key=eq.${enc(owner)}&key=in.(botdog_enabled,botdog_api_key)&select=key,value`);
