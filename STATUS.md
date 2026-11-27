@@ -1,11 +1,12 @@
-# Radar - STATUS (updated 2026-11-25)
+# Radar - STATUS (updated 2026-11-26)
 
 App: https://radar.gershon.ai/app (new address, 2026-11-18) - old https://radar.gershoncrm.com still served by the same Pages project - health: /api/health
-Version: 1.24.1 (ext 1.18.4) / was 1.23.0 (branch onboarding-page) / 1.22.1 on main (ext 1.18.2) (#35 Intelligence menu 1.20.0, then #34 Botdog switch 1.21.0) (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
+Version: 1.26.0 (ext 1.19.0) / was 1.24.1 (ext 1.18.4) / was 1.23.0 (branch onboarding-page) / 1.22.1 on main (ext 1.18.2) (#35 Intelligence menu 1.20.0, then #34 Botdog switch 1.21.0) (single source: functions/_lib/version.js, which also holds the extension's LATEST_EXT)
 Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to main auto-deploys
 (branch previews at <branch>.gershon-radar.pages.dev). Supabase edge functions deploy separately (Ariel).
 
 ## Done
+- ✅ v1.26.0 + ext 1.19.0 + hub v28 (2026-11-26, branch personas-recommended-leads): PERSONAS (ICP optimization). Ext reads the Sales Nav "Recommended Leads" list once a week (recommended.js: salesApiLists listSource RECOMMENDATION -> salesApiPeopleSearch pivot -> salesApiCompanies industry/headcount; 4 read-only calls for 100 leads, verified live on Olivier's seat 2026-11-26; decoration ( ) , and list-urn colons MUST be %-encoded or LinkedIn answers 400) -> hub saveRecommendedLeads -> config recommended_leads. App: Overview > Personas (app/personas.js, middleware item 10) from /api/personas (owner from session): groups role x industry (min 3), regions, sizes, founders, warm reach, Sales Nav filters, and compares each persona with the account's prospects of the same role (ICP A/B rate) -> verdict converts / covered / under-reached / gap / off ICP. "Read them now" button (event radar-ext-refresh-personas, max every 12 h). Optional AI summary when the Workers AI binding exists. Off per account: config personas_collect=off. tests/personas.test.mjs
 - ✅ ext 1.18.4 + hub v27 (2026-11-25, branch bridge-title-backfill): each run fills the title of up to 8 title-less bridges (Sales Nav profile API, counted as lookups, stops on 401/403/429) via setBridgeMeta {title} (hub v27 deployed = Supabase hub version 28, smoke-tested). tests/bridge-title.test.mjs
 - ✅ v1.24.0 PR #47 merged 2026-11-25
 - ✅ v1.24.0 (2026-11-25, branch bridge-icp-grade): Bridges page grade = the account's ICP rules (config key icp_rules, copied from table icp_rules) applied to the bridge title. A = ICP role + senior, B = ICP role, C = senior only, D = no match / excluded word, ? = no title yet (was wrongly D). Hover shows why. Sorted A→D then ?. tests/bridge-grade.test.mjs
@@ -26,6 +27,7 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 - ✅ v1.18.11: app.html says Prospects/Prospect in all visible labels (56 strings); ids, classes, API fields, URLs unchanged
 
 ## Open
+- ❌ Personas: hub v28 must be deployed (Supabase hub) before ext 1.19.0 can save; load ext 1.19.0 on the collecting desktops (Personas stays empty until the first weekly read)
 - ❌ Bridge titles fill in 8 per run once each desktop runs ext 1.18.4 (Meteor 157, Enzymicals 193, Gershon 102 blank on 2026-11-25). Discovery DOM fallback still saves '' for new bridges - the backfill catches them
 - ❌ Trigger icp_rules -> config (supabase/migrations/20261125_icp_rules_to_config.sql) not applied - refused by auto-mode; until then a new/edited icp_rules row needs its config icp_rules row updated too
 - ❌ li-health (2026-11-24, branch nightly/2026-11-24-li-health-in-app, HELD): tasks #39 daily LinkedIn signal check + #11 weekly LinkedIn Safety grade now built into Radar (Supabase function li-health + pg_cron). Needs secrets LI_HEALTH_CRON_SECRET + GATE_DB_URL (Charles), deploy + cron SQL (Ariel), then disable #39/#11 after one correct email. Airtable log not written by the app. See supabase/HANDOFF.txt
