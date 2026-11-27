@@ -30,7 +30,8 @@ Deploy route: Cloudflare Pages project "gershon-radar", Git-connected - merge to
 ## Open
 - ❌ Team access: Supabase hub still trusts the owner key sent by the browser, so Semi/Viewer limits on hub writes are enforced in the browser only (pre-existing hub design) - server-side fix = hub v29 checking a signed session token (needs a hub deploy OK)
 - ❌ Team access: optional invitation email from radar@ (today: "Copy invite" text)
-- ❌ Personas: hub v28 must be deployed (Supabase hub) before ext 1.19.0 can save; load ext 1.19.0 on the collecting desktops (Personas stays empty until the first weekly read)
+- ✅ hub v28 deployed 2026-11-26 (Supabase hub version 29, Olivier "deploy hub v28 to production"); first Recommended Leads read saved for xTVW0K1qKi (100 leads, 98 with industry)
+- ❌ Personas for client accounts: load ext 1.19.0 on their desktops (first read happens on the next day's first session)
 - ❌ Bridge titles fill in 8 per run once each desktop runs ext 1.18.4 (Meteor 157, Enzymicals 193, Gershon 102 blank on 2026-11-25). Discovery DOM fallback still saves '' for new bridges - the backfill catches them
 - ❌ Trigger icp_rules -> config (supabase/migrations/20261125_icp_rules_to_config.sql) not applied - refused by auto-mode; until then a new/edited icp_rules row needs its config icp_rules row updated too
 - ❌ li-health (2026-11-24, branch nightly/2026-11-24-li-health-in-app, HELD): tasks #39 daily LinkedIn signal check + #11 weekly LinkedIn Safety grade now built into Radar (Supabase function li-health + pg_cron). Needs secrets LI_HEALTH_CRON_SECRET + GATE_DB_URL (Charles), deploy + cron SQL (Ariel), then disable #39/#11 after one correct email. Airtable log not written by the app. See supabase/HANDOFF.txt

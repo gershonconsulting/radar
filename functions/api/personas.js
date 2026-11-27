@@ -136,12 +136,15 @@ export function buildPersonas(leads = [], targets = []) {
     const r = tByRole[p.role] || { n: 0, icp: 0, graded: 0, regions: {} };
     const mainRegion = regions[0] ? usLike(regions[0].label) : 'Unknown';
     const inRegion = r.regions[mainRegion] || 0;
+    // Role share: how much of the Recommended Leads this role is, vs how much of the account's prospects it is.
+    const roleShareReco = pct(rows.filter(x => x.role === p.role).length, total);
+    const roleShareRadar = pct(r.n, tTotal);
     let verdict, verdict_text;
     if (!tTotal) { verdict = 'no_data'; verdict_text = 'No Radar prospects yet to compare with.'; }
     else if (r.n === 0) { verdict = 'gap'; verdict_text = 'LinkedIn suggests this persona, but Radar has collected none of them yet.'; }
-    else if (r.graded >= 10 && pct(r.icp, r.graded) >= 40) { verdict = 'converts'; verdict_text = 'Radar already brings this persona, and most of them match your ICP.'; }
     else if (r.graded >= 10 && pct(r.icp, r.graded) < 15) { verdict = 'off_icp'; verdict_text = 'Radar collects this role, but few match your ICP rule - check the rule or the sources.'; }
-    else if (pct(r.n, tTotal) < 3) { verdict = 'underserved'; verdict_text = 'Radar reaches very few of this persona compared with what LinkedIn suggests.'; }
+    else if (roleShareRadar * 2 < roleShareReco) { verdict = 'underserved'; verdict_text = 'This role is ' + roleShareReco + '% of what LinkedIn recommends but only ' + roleShareRadar + '% of your Radar prospects - add sources or bridges that reach them.'; }
+    else if (r.graded >= 10 && pct(r.icp, r.graded) >= 40) { verdict = 'converts'; verdict_text = 'Radar already brings this persona, and most of them match your ICP.'; }
     else { verdict = 'covered'; verdict_text = 'Radar collects this persona at a normal rate.'; }
     const label = (p.role === 'Founder' ? 'Founder' : p.role) + ' · ' + p.ind;
     return {
