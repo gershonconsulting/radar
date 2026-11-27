@@ -1584,7 +1584,7 @@ async function runRecommendedLeads(force) {
   if (payload.error) { await log('warn', 'reco:page-error', { error: payload.error }); return { error: payload.error }; }
   const leads = (payload.leads || []).map(el => compactRecoLead(el, payload.companies || {})).filter(l => l.name);
   const body = { secret: INGEST_SECRET, action: 'saveRecommendedLeads', owner: CURRENT_OWNER,
-    list_id: (payload.list && payload.list.id) || '', list_name: (payload.list && payload.list.name) || '', leads: leads };
+    list_id: (payload.list && payload.list.id) || '', list_name: (payload.list && payload.list.name) || '', reco_leads: leads };
   const resp = await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   let out = null; try { out = await resp.json(); } catch (e) {}
   if (!resp.ok || !out || out.ok === false) { await log('warn', 'reco:save-failed', { status: resp.status, error: out && out.error }); return { error: 'save' }; }
