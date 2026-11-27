@@ -21,7 +21,9 @@ import { sendResend } from '../_shared/resend.ts';
 const REPORT_VERSION = 'v10.1';
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
+// Auth secret comes from the Supabase function secret DAILY_REPORT_CRON_SECRET (same naming as
+// li-health's LI_HEALTH_CRON_SECRET). Read per request; if it is unset every request is refused (fail closed).
+const CRON_SECRET_ENV = 'DAILY_REPORT_CRON_SECRET';
 const GLOBAL_OWNER_KEY = 'xTVW0K1qKi';
 const TZ = 'America/New_York';
 const APP_URL = 'https://radar.gershoncrm.com/app.html';
@@ -688,7 +690,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === 'POST' && !provided) {
     try { provided = (await req.json())?.secret ?? null; } catch { provided = null; }
   }
-  if (provided !== CRON_SECRET) return json({ ok: false, error: 'unauthorized' }, 401);
+  const expected = Deno.env.get(CRON_SECRET_ENV);
+  if (!expected) return json({ ok: false, error: `not configured: set the ${CRON_SECRET_ENV} function secret` }, 503);
+  if (!provided || provided !== expected) return json({ ok: false, error: 'unauthorized' }, 401);
 
   const dry = url.searchParams.get('dry') === '1';
   const force = url.searchParams.get('force') === '1';
