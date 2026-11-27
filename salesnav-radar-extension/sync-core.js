@@ -13,6 +13,8 @@ const INGEST_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 try { importScripts('limits.js'); } catch (e) { console.error('[Radar] limits.js failed to load', e); }
 // 1.18.0: connection invites to 2nd-degree bridges (client accounts' Botdog equivalent) - see invites.js.
 try { importScripts('invites.js'); } catch (e) { console.error('[Radar] invites.js failed to load', e); }
+// 1.19.0: weekly read of the Sales Nav "Recommended Leads" list -> app Personas - see recommended.js.
+try { importScripts('recommended.js'); } catch (e) { console.error('[Radar] recommended.js failed to load', e); }
 // ===== LinkedIn gate (1.13.0) =====
 // Radar asks the shared LinkedIn gate BEFORE every Sales Navigator search page, every bridge
 // discovery search and every lead-page open, and STOPS when the gate says no. Up to 1.12.0 Radar
@@ -354,6 +356,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     CURRENT_OWNER = String(msg.owner || '');
     try { chrome.storage.local.set({ radar_owner: CURRENT_OWNER }); } catch (e) {}
     sendResponse({ ok: true });
+    return true;
+  }
+  if (msg.action === 'refreshPersonas') {
+    // 1.19.0: app Personas page "Refresh now" - reads Recommended Leads now (once per 12 h at most).
+    chrome.storage.local.get(RECO_LAST_KEY).then(st => {
+      const last = st && st[RECO_LAST_KEY];
+      if (last && Date.now() - new Date(last).getTime() < 12 * 3600000) return { skipped: 'recent', last: last };
+      return runRecommendedLeads(true);
+    }).then(r => sendResponse({ ok: true, result: r })).catch(e => sendResponse({ ok: false, error: String(e) }));
     return true;
   }
   if (msg.action === 'syncNow') {
@@ -838,6 +849,10 @@ async function runSync(opts) {
       (GATE_HELD.action === 'limits' && /^(pages|prospects|listSaves)_/.test(String(GATE_HELD.reason || '')));
     if (inviteOk) try { invites = await runBridgeInvites(allBridges, prioMap); }
     catch (e) { await log('warn', 'invite:error', { error: String(e) }); }
+
+    // 1.19.0: once a week, read the Recommended Leads list for Personas (3 read-only Sales API calls).
+    if (firstSessionToday && !GATE_HELD) try { await runRecommendedLeads(false); }
+    catch (e) { await log('warn', 'reco:error', { error: String(e) }); }
 
     // Give the invite campaign something to work with: resolve a few missing bridge URLs.
     let bridgeUrls = { attempted: 0, resolved: 0, remaining: 0 };
@@ -1545,6 +1560,37 @@ async function pushBridgesToBotdog() {
   await log('info', 'bridge-push:done', { sent });
   if (sent) notify('Bridges invited', sent + ' bridge(s) added to your Botdog invite campaign.');
   return { ok: true, sent, candidates: todo.length };
+}
+
+// ---- 1.19.0: Recommended Leads -> Personas ------------------------------------------------
+async function runRecommendedLeads(force) {
+  if (!recoEnabled(RADAR_CFG)) return { skipped: 'off' };
+  let last = null; try { last = (await chrome.storage.local.get(RECO_LAST_KEY))[RECO_LAST_KEY] || null; } catch (e) {}
+  if (!force && !recoDue(last, Date.now())) return { skipped: 'not-due' };
+  if (!CURRENT_OWNER) return { skipped: 'no-owner' };
+  if ((await limitLeft('pages')).left < 1 || (await limitLeft('lookups')).left < 2) { await log('info', 'reco:limits-later'); return { skipped: 'limits' }; }
+  const tab = await openScrapeTab('https://www.linkedin.com/sales/homepage');
+  if (!tab) return { skipped: 'no-tab' };
+  let payload = null;
+  try {
+    await waitForTabComplete(tab.id, 45000); await sleep(2500);
+    const res = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: readRecommendedLeadsInPage, args: [RECO_MAX_LEADS] });
+    payload = res && res[0] ? res[0].result : null;
+  } finally { try { chrome.tabs.remove(tab.id); } catch (e) {} }
+  if (!payload) return { skipped: 'no-result' };
+  await limitUse('pages', 1);
+  await limitUse('lookups', Math.max(1, payload.companyCalls || 0));
+  if (payload.stop) { await onLinkedInWarning('recommended leads read', payload.status); return { stopped: payload.status }; }
+  if (payload.error) { await log('warn', 'reco:page-error', { error: payload.error }); return { error: payload.error }; }
+  const leads = (payload.leads || []).map(el => compactRecoLead(el, payload.companies || {})).filter(l => l.name);
+  const body = { secret: INGEST_SECRET, action: 'saveRecommendedLeads', owner: CURRENT_OWNER,
+    list_id: (payload.list && payload.list.id) || '', list_name: (payload.list && payload.list.name) || '', leads: leads };
+  const resp = await fetch(WEBAPP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  let out = null; try { out = await resp.json(); } catch (e) {}
+  if (!resp.ok || !out || out.ok === false) { await log('warn', 'reco:save-failed', { status: resp.status, error: out && out.error }); return { error: 'save' }; }
+  try { await chrome.storage.local.set({ [RECO_LAST_KEY]: new Date().toISOString() }); } catch (e) {}
+  await log('info', 'reco:saved', { leads: leads.length, list: body.list_name || 'none' });
+  return { saved: leads.length };
 }
 
 // ---- 1.18.0: bridge invites --------------------------------------------------------------

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.19.0 — 2026-11-26 — Personas: reads your Sales Nav "Recommended Leads" once a week
+Every Sales Navigator seat has a system list "Recommended Leads" (~100 people LinkedIn suggests). Once a week
+(first session of the day, not under a LinkedIn hold) the extension reads it with 3 read-only Sales API calls —
+the list id (listSource RECOMMENDATION, different per seat), its leads (title, company, location, degree) and the
+companies' industry + headcount — and sends the compact rows to the hub (saveRecommendedLeads, hub v28) for the
+app's Intelligence > Personas page. Counted as 1 page + 1 lookup per 50 companies. Off per account with config
+personas_collect=off. The app can ask for a refresh now (event radar-ext-refresh-personas, at most every 12 h).
+Nothing is saved, viewed or sent on LinkedIn. tests/personas.test.mjs
+
 ## 1.18.4 — 2026-11-25 — bridge titles are filled in, so bridges can be graded
 **What happened.** Discovery's visible-page fallback saved bridges with an empty title (Meteor 157/159,
 Enzymicals 193/207, Gershon 102/249), so the Bridges page could not grade them against the ICP ("?").

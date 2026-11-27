@@ -53,6 +53,15 @@
         });
       } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-schedule-saved', { detail: { ok: false, error: String(e) } })); }
     });
+    // 1.19.0: Personas page "Refresh now" -> read the Sales Nav Recommended Leads list now.
+    window.addEventListener('radar-ext-refresh-personas', function () {
+      try {
+        chrome.runtime.sendMessage({ action: 'refreshPersonas' }, function (resp) {
+          var detail = (!chrome.runtime.lastError && resp && resp.ok) ? { ok: true, result: resp.result } : { ok: false, error: (resp && resp.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message) };
+          window.dispatchEvent(new CustomEvent('radar-ext-personas-done', { detail: detail }));
+        });
+      } catch (e) { window.dispatchEvent(new CustomEvent('radar-ext-personas-done', { detail: { ok: false, error: String(e) } })); }
+    });
     // let the Radar web app hand the extension the Botdog key + bridges campaign,
     // so its sync can invite non-1st-degree bridges into the dedicated campaign.
     window.addEventListener('radar-ext-set-botdog', function (ev) {
