@@ -71,17 +71,22 @@
     '#rtToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9999}#rtToast.show{opacity:1}' +
     '.rt-pill{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;background:#fff5f5;color:#d11200;border:1px solid #f3c4c4;margin-left:6px;white-space:nowrap}' +
     '.rt-acct{font-size:12px;color:#6b7280;padding:6px 12px 0}.rt-acct select{width:100%;margin-top:4px;border:1px solid #d1d5db;border-radius:8px;padding:5px 6px;font:inherit;font-size:12px}' +
-    '#rtTeam .rt-tw{overflow-x:auto;margin-top:12px}#rtTeam table{width:100%;border-collapse:collapse;font-size:13px}#rtTeam th{text-align:left;color:#6b7280;font-weight:600;padding:6px 8px;border-bottom:1px solid #e5e7eb}' +
-    '#rtTeam td select{min-width:96px}#rtTeam td{padding:8px 6px;border-bottom:1px solid #f1f5f9;vertical-align:middle}#rtTeam td a{color:#d11200;text-decoration:none}' +
-    '#rtTeam .rt-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;align-items:end}#rtTeam .rt-form .rt-go{grid-column:1/-1}' +
-    '#rtTeam .rt-form label{font-size:12px;color:#6b7280;display:block}#rtTeam .rt-form input,#rtTeam .rt-form select,#rtTeam td select{width:100%;border:1px solid #d1d5db;border-radius:8px;padding:7px 8px;font:inherit;font-size:13px;box-sizing:border-box}' +
-    '#rtTeam .rt-btn{background:#FE1B04;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;white-space:nowrap}#rtTeam .rt-btn:hover{background:#d11200}#rtTeam .rt-btn:disabled{opacity:.5}' +
-    '#rtTeam .rt-link{background:none;border:0;color:#b91c1c;cursor:pointer;font-size:12px;padding:0}#rtTeam .rt-copy{background:none;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;font-size:12px;padding:3px 8px;white-space:nowrap}' +
-    '#rtTeam .rt-roles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}#rtTeam .rt-roles div{border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;font-size:12px;color:#4b5563}#rtTeam .rt-roles b{display:block;color:#1d1d1f;margin-bottom:2px}' +
-    '#rtTeam .rt-msg{font-size:12px;margin-top:8px}#rtTeam .rt-msg.err{color:#b91c1c}#rtTeam .rt-msg.ok{color:#15803d}' +
-    '#rtTeam .rt-st{display:inline-block;margin-top:3px;font-size:11px;border-radius:999px;padding:2px 8px;white-space:nowrap}#rtTeam .rt-st.invited{background:#fef3c7;color:#92400e}#rtTeam .rt-st.active{background:#dcfce7;color:#166534}' +
+    '#rtTeam{container-type:inline-size;min-width:0}#rtTeam *{box-sizing:border-box}#rtTeam .rt-intro{margin:6px 0 16px;color:#64748b;font-size:13px;line-height:1.6}#rtTeam h3{font-size:14px;margin:0 0 14px;color:#1d1d1f}' +
+    '#rtTeam .rt-members{display:grid;gap:10px;margin:16px 0 24px}#rtTeam .rt-member{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}' +
+    '#rtTeam .rt-person{display:flex;align-items:flex-start;gap:12px;min-width:0}#rtTeam .rt-avatar{display:grid;place-items:center;flex:0 0 36px;height:36px;border-radius:50%;background:#fff5f5;color:#d11200;font-size:12px;font-weight:700}' +
+    '#rtTeam .rt-identity{min-width:0;flex:1}#rtTeam .rt-name{display:flex;gap:8px;align-items:center;flex-wrap:wrap}#rtTeam .rt-name b{font-size:14px;color:#1d1d1f;overflow-wrap:anywhere}#rtTeam .rt-email{font-size:12px;color:#64748b;overflow-wrap:anywhere;line-height:1.5;margin:4px 0}' +
+    '#rtTeam .rt-profile{font-size:12px;color:#d11200;text-decoration:none}#rtTeam .rt-profile:hover{text-decoration:underline}#rtTeam .rt-member-controls{display:flex;gap:12px;align-items:end;flex-wrap:wrap}#rtTeam .rt-access{min-width:110px}#rtTeam .rt-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}' +
+    '#rtTeam .rt-invite{border-top:1px solid #e5e7eb;padding-top:22px}#rtTeam .rt-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:end}#rtTeam .rt-form>div{min-width:0}#rtTeam .rt-field-wide{grid-column:1/-1}' +
+    '#rtTeam label{font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:6px}#rtTeam label span{font-weight:400;color:#94a3b8}#rtTeam input,#rtTeam select{width:100%;max-width:100%;min-width:0;min-height:38px;border:1px solid #d1d5db;border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;background:#fff;color:#1d1d1f}' +
+    '#rtTeam input:focus-visible,#rtTeam select:focus-visible,#rtTeam button:focus-visible,#rtTeam summary:focus-visible,#rtTeam a:focus-visible{outline:2px solid #FE1B04;outline-offset:3px}#rtTeam .rt-go{display:flex;justify-content:flex-end}' +
+    '#rtTeam .rt-btn{background:#FE1B04;color:#fff;border:0;border-radius:8px;min-height:38px;padding:9px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}#rtTeam .rt-btn:hover{background:#d11200}#rtTeam .rt-btn:disabled{opacity:.5}' +
+    '#rtTeam .rt-link,#rtTeam .rt-copy{min-height:36px;border-radius:8px;cursor:pointer;font:inherit;font-size:12px;padding:8px 10px;background:#fff}#rtTeam .rt-link{border:1px solid transparent;color:#b91c1c}#rtTeam .rt-link:hover{background:#fff5f5}#rtTeam .rt-copy{border:1px solid #d1d5db;color:#334155}#rtTeam .rt-copy:hover{background:#f8fafc}' +
+    '#rtTeam .rt-help{margin-top:16px}#rtTeam .rt-help summary{font-size:12px;color:#64748b;cursor:pointer;width:fit-content}#rtTeam .rt-roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}#rtTeam .rt-roles div{border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:12px;line-height:1.5;color:#64748b}#rtTeam .rt-roles b{display:block;color:#1d1d1f;margin-bottom:4px}' +
+    '#rtTeam .rt-empty{font-size:13px;color:#64748b;border:1px dashed #d1d5db;border-radius:10px;padding:16px;margin:0}#rtTeam .rt-msg{font-size:12px;line-height:1.6;overflow-wrap:anywhere}#rtTeam .rt-msg:not(:empty){padding:12px 14px;border-radius:8px;margin-top:16px}#rtTeam .rt-msg.err{color:#b91c1c;background:#fff5f5}#rtTeam .rt-msg.ok{color:#166534;background:#f0fdf4}' +
+    '#rtTeam .rt-st{display:inline-block;font-size:10px;font-weight:600;border-radius:999px;padding:3px 8px;white-space:nowrap}#rtTeam .rt-st.invited{background:#fef3c7;color:#92400e}#rtTeam .rt-st.active{background:#dcfce7;color:#166534}' +
     '.rt-locked{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:13px;color:#475569;margin-bottom:12px}' +
-    '@media(max-width:760px){#rtTeam .rt-form{grid-template-columns:1fr}#rtTeam .rt-roles{grid-template-columns:1fr}}' +
+    '@container(max-width:600px){#rtTeam .rt-member{grid-template-columns:minmax(0,1fr)}#rtTeam .rt-member-controls{border-top:1px solid #f1f5f9;padding-top:12px;justify-content:space-between}}' +
+    '@container(max-width:380px){#rtTeam .rt-form,#rtTeam .rt-roles{grid-template-columns:minmax(0,1fr)}#rtTeam .rt-go,#rtTeam .rt-go .rt-btn{width:100%}#rtTeam .rt-member{padding:12px}#rtTeam .rt-member-controls{gap:10px}#rtTeam .rt-access{flex:1 1 100%}}' +
     // hidden for members: extension-driving buttons (their extension is not linked to this account)
     'body.rt-member [onclick^="triggerSync("],body.rt-member [onclick^="extRunSync("],body.rt-member [onclick^="fileBridgesNow("],body.rt-member [onclick^="triggerBridgePush("],body.rt-member [onclick^="triggerBridgeList("],body.rt-member #nav-extension{display:none!important}' +
     // semi + viewer: settings saves; viewer: every add / remove
@@ -94,12 +99,14 @@
   function memberRow(m, canManage) {
     var st = m.status === 'active' ? '<span class="rt-st active">Signed in</span>' : '<span class="rt-st invited">Invited</span>';
     var roleCell = canManage
-      ? '<select data-id="' + esc(m.id) + '" class="rt-role">' + ['full', 'semi', 'viewer'].map(function (r) { return '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + LABEL[r] + '</option>'; }).join('') + '</select>'
+      ? '<label for="rtAccess-' + esc(m.id) + '">Access</label><select id="rtAccess-' + esc(m.id) + '" data-id="' + esc(m.id) + '" class="rt-role">' + ['full', 'semi', 'viewer'].map(function (r) { return '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + LABEL[r] + '</option>'; }).join('') + '</select>'
       : esc(LABEL[m.role]);
-    return '<tr><td><b>' + esc(m.name || '-') + '</b><br>' + st + '</td><td>' + (m.email ? esc(m.email) : '<span style="color:#94a3b8">via invite link</span>') + '</td>' +
-      '<td>' + (m.linkedin_url ? '<a href="' + esc(m.linkedin_url) + '" target="_blank" rel="noopener">Profile&nbsp;&#8599;</a>' : '-') + '</td>' +
-      '<td>' + roleCell + '</td>' +
-      '<td style="text-align:right">' + (canManage ? '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end"><button class="rt-copy" data-copy="' + esc(m.id) + '">Copy invite</button><button class="rt-link" data-remove="' + esc(m.id) + '">Remove</button></div>' : '') + '</td></tr>';
+    var initials = (m.name || m.email || '?').trim().split(/\s+/).slice(0, 2).map(function (s) { return s.charAt(0); }).join('').toUpperCase();
+    return '<div class="rt-member" role="listitem"><div class="rt-person"><span class="rt-avatar" aria-hidden="true">' + esc(initials) + '</span><div class="rt-identity">' +
+      '<div class="rt-name"><b>' + esc(m.name || 'Teammate') + '</b>' + st + '</div><div class="rt-email">' + esc(m.email || 'Joining via personal invite link') + '</div>' +
+      (m.linkedin_url ? '<a class="rt-profile" href="' + esc(m.linkedin_url) + '" target="_blank" rel="noopener">LinkedIn profile &#8599;</a>' : '') + '</div></div>' +
+      '<div class="rt-member-controls"><div class="rt-access">' + roleCell + '</div>' +
+      (canManage ? '<div class="rt-actions"><button class="rt-copy" data-copy="' + esc(m.id) + '">Copy invite</button><button class="rt-link" data-remove="' + esc(m.id) + '">Remove</button></div>' : '') + '</div></div>';
   }
 
   function inviteText(m) {
@@ -117,25 +124,25 @@
     var d = state.data;
     if (!d) { card.innerHTML = '<h2>Team</h2><p>Loading…</p>'; return; }
     var r = d.role;
-    var head = '<h2>Team <span style="color:#94a3b8;font-weight:400;font-size:0.8rem">(people who can open this Radar)</span></h2>';
+    var head = '<h2>Team</h2>';
     if (!d.can_manage) {
       card.innerHTML = head + '<p>You have <strong>' + esc(LABEL[r]) + '</strong> access to <strong>' + esc(d.account.name) + '</strong>&rsquo;s Radar. ' + esc(HELP[r] || '') +
         ' The account owner manages this list.</p>';
       return;
     }
     var rows = d.members.length ? d.members.map(function (m) { return memberRow(m, true); }).join('')
-      : '<tr><td colspan="5" style="color:#6b7280">Nobody else has access yet.</td></tr>';
+      : '<p class="rt-empty">No teammates yet. Invite someone below to share this Radar.</p>';
     card.innerHTML = head +
-      '<p>Give colleagues access to this Radar account. They sign in with <strong>their own LinkedIn</strong> at radar.gershon.ai &mdash; ' +
-      'send them the personal invite link (Copy invite), or give the email of their LinkedIn account. Collection keeps running on the owner&rsquo;s LinkedIn; their Chrome extension is never used.</p>' +
-      '<div class="rt-roles"><div><b>Full</b>' + HELP.full + '</div><div><b>Semi</b>' + HELP.semi + '</div><div><b>Viewer</b>' + HELP.viewer + '</div></div>' +
-      '<div class="rt-tw"><table><thead><tr><th>Name</th><th>Email</th><th>LinkedIn</th><th>Access</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-      '<div class="rt-form"><div><label>Name</label><input id="rtName" placeholder="Jane Doe"></div>' +
-      '<div><label>LinkedIn profile</label><input id="rtLi" placeholder="https://www.linkedin.com/in/…"></div>' +
-      '<div><label>Email of their LinkedIn account (optional)</label><input id="rtEmail" type="email" placeholder="leave empty to use the invite link"></div>' +
-      '<div><label>Access</label><select id="rtRole"><option value="viewer">Viewer</option><option value="semi">Semi</option><option value="full">Full</option></select></div>' +
+      '<p class="rt-intro">Share this Radar with your team. They sign in with their own LinkedIn; collection stays on your account.</p>' +
+      '<div class="rt-members"' + (d.members.length ? ' role="list" aria-label="Team members"' : '') + '>' + rows + '</div>' +
+      '<div class="rt-invite"><h3>Invite a teammate</h3><div class="rt-form">' +
+      '<div><label for="rtName">Name</label><input id="rtName" autocomplete="name" placeholder="Jane Doe"></div>' +
+      '<div><label for="rtEmail">LinkedIn email <span>(optional)</span></label><input id="rtEmail" type="email" autocomplete="email" placeholder="jane@example.com"></div>' +
+      '<div class="rt-field-wide"><label for="rtLi">LinkedIn profile</label><input id="rtLi" inputmode="url" placeholder="https://www.linkedin.com/in/…"></div>' +
+      '<div><label for="rtRole">Access</label><select id="rtRole"><option value="viewer">Viewer</option><option value="semi">Semi</option><option value="full">Full</option></select></div>' +
       '<div class="rt-go"><button class="rt-btn" id="rtAdd">Give access</button></div></div>' +
-      '<div class="rt-msg" id="rtMsg"></div>';
+      '<details class="rt-help"><summary>Compare access levels</summary><div class="rt-roles"><div><b>Viewer</b>' + HELP.viewer + '</div><div><b>Semi</b>' + HELP.semi + '</div><div><b>Full</b>' + HELP.full + '</div></div></details></div>' +
+      '<div class="rt-msg" id="rtMsg" role="status" aria-live="polite"></div>';
     wire(card);
   }
 
