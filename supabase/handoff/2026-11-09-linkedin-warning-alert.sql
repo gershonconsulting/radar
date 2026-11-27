@@ -1,6 +1,6 @@
 -- 2026-11-09 (ext 1.17.2): email report@gershonconsulting.com as soon as an extension logs a
 -- LinkedIn warning (401/403/429/check page). Before this, David's 401s ran 9 days unnoticed.
--- NOT YET APPLIED: needs Olivier's "deploy the LinkedIn warning alert to production".
+-- APPLIED to production 2026-11-27 on Olivier's OK (migration radar_linkedin_warning_alert). Sender "GC Radar" (GC-prefix rule, report@ only).
 create table if not exists public.radar_li_alerts (
   id bigserial primary key, owner_key text not null, at timestamptz not null default now(),
   detail jsonb, emailed boolean default false);
@@ -28,7 +28,7 @@ begin
        || '</p><p>Check the account owner can still use LinkedIn before it resumes.</p>';
   perform net.http_post(url := 'https://api.resend.com/emails',
     headers := jsonb_build_object('Authorization','Bearer '||k,'Content-Type','application/json'),
-    body := jsonb_build_object('from','Radar <radar@gershoncrm.com>','to',jsonb_build_array('report@gershonconsulting.com'),
+    body := jsonb_build_object('from','GC Radar <radar@gershoncrm.com>','to',jsonb_build_array('report@gershonconsulting.com'),
       'subject','Radar: LinkedIn warning on '||coalesce(who,new.owner_key)||' - paused 48h','html',html));
   update radar_li_alerts set emailed = true where id = aid;
   return new;
