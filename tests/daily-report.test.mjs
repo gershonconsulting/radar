@@ -29,8 +29,10 @@ function scenario(over = {}) {
 }
 
 let handler = null;
+const TEST_SECRET = 'test-daily-report-secret';
+let ENV_SECRET = TEST_SECRET;   // mutated by the auth cases below
 globalThis.Deno = {
-  env: { get: (k) => ({ SUPABASE_URL: 'https://sb.test', SUPABASE_SERVICE_ROLE_KEY: 'k' }[k]) },
+  env: { get: (k) => ({ SUPABASE_URL: 'https://sb.test', SUPABASE_SERVICE_ROLE_KEY: 'k', DAILY_REPORT_CRON_SECRET: ENV_SECRET }[k]) },
   serve: (h) => { handler = h; },
 };
 const DAY_START = '2026-11-13T05:00:00.000Z';   // ET midnight, Nov 13 (EST, UTC-5)
@@ -63,9 +65,22 @@ assert.equal(typeof handler, 'function', 'Deno.serve handler registered');
 
 async function run(over) {
   S = scenario(over);
-  const res = await handler(new Request(`https://fn.test/daily-report?secret=radar_7Kq3mZ9pX2vL8nT&dry=1&date=${S.date}`));
+  const res = await handler(new Request(`https://fn.test/daily-report?secret=${TEST_SECRET}&dry=1&date=${S.date}`));
   assert.equal(res.status, 200);
   return { subject: decodeURIComponent(res.headers.get('X-Report-Subject') || ''), html: await res.text() };
+}
+
+// ---- auth: secret from env, fail closed ----
+{
+  const req = (q) => handler(new Request(`https://fn.test/daily-report${q}`));
+  assert.equal((await req(`?secret=wrong&dry=1`)).status, 401, 'wrong secret -> 401');
+  assert.equal((await req(`?dry=1`)).status, 401, 'no secret -> 401');
+  ENV_SECRET = undefined;
+  assert.equal((await req(`?secret=${TEST_SECRET}&dry=1`)).status, 503, 'env unset -> refused (503)');
+  assert.equal((await req(`?dry=1`)).status, 503, 'env unset, no secret -> refused');
+  ENV_SECRET = '';
+  assert.equal((await req(`?secret=&dry=1`)).status, 503, 'empty env never matches empty secret');
+  ENV_SECRET = TEST_SECRET;
 }
 
 // ---- pure helpers ----
