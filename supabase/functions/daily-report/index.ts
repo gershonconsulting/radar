@@ -1,107 +1,34 @@
-// Radar — daily-report edge function (v9.5)
+// Radar — daily-report edge function (v10.1)
 // ONE email per day, per user, describing YESTERDAY (America/New_York day).
 // Triggered by pg_cron: POST { secret } (or GET ?secret=). verify_jwt=false.
 // Optional overrides for testing: ?date=YYYY-MM-DD (the ET day to report on), ?to=email, ?dry=1
-//
-// v4 (2026-08-21) — send-once guard: `daily_report_sent_for` holds the last ET day actually
-// delivered, per owner. Use ?force=1 to deliberately re-send; ?dry=1 bypasses it (sends nothing).
-//
-// 2026-10-22 (repo copy of deployed v7): sender display name "Radar" -> "GC Radar Report"
-// (Olivier's GC-prefix rule, see FROM below). Address, reply-to, recipients and subject unchanged.
-// 2026-10-27: house style for report emails - white header (dark #12211d text, Gershon red #FE1B04
-// accent rule) instead of white-on-navy; white page, max-width 680px; links/button #1f6f5c, no light-on-dark.
-//
-// v8 (2026-10-28) — three fixes after the 2026-10-26 email:
-//  1. "+1259 vs the day before" compared against a day that did NOT run (0 prospects). The
-//     comparison now looks back (up to 7 ET days, same radar_daily_stats RPC, read-only) for the
-//     last day that actually ran and says so: "+1259 since Fri 10-23 — 2 days without a run". If
-//     nothing ran in the 7 days before, it compares against the 7-day average instead.
-//     (new_targets_prev from the RPC is no longer used for this - see supabase/HANDOFF.txt.)
-//  2. browsersVerdict said "v1.15.0 ... collected nothing" while the "Browsers that ran" table
-//     printed 258 saved for v1.15.0. It assumed every old-build browser collects nothing and
-//     credited the day to the current build. It now reads each browser's own `saved` - the
-//     number the table prints - so the banner and the table always agree.
-//  3. Sender display name "GC Radar Report" -> "GC Radar" (GC-prefix rule for Gershon internal reports).
-//
-// v9 (2026-11-07) — three fixes after the 2026-11-05 email (stacked on #21, which makes
-// radar_daily_stats count "new" on targets.first_seen_at):
-//  a. "+633 new prospects" next to "wrote 603 records" - two numbers that look like the same thing.
-//     They are not: "New to Radar" = people first seen that day (the RPC's new_targets, one row per
-//     person); "Records written" = what the extension reported in its run:done lines, which includes
-//     people Radar already had AND is only reported by runs that finished. They now carry distinct
-//     labels everywhere (verdict, cards, pipeline table) and the verdict never says "N of them".
-//  b. Health: a green "did its job" next to 114 dead bridges and several HTTP 429s. Any dead bridge
-//     (active, never produced a prospect) or any HTTP 429/401 in the day's log turns the verdict amber
-//     and lists each issue with a cross.
-//  c. "DID NOT RUN" when only the primary account (xTVW0K1qKi) collected nothing while other owners
-//     collected (10-30, 11-04). The report now looks at every owner: DID NOT RUN only when NO owner
-//     collected; otherwise the silent owners are listed (with "did not run" / "ran, saved 0").
-
-// v9.1 (2026-11-11): brand red. Button = white with brand-red #FE1B04 border and brand-dark #d11200
-// text (house style: never light text on a dark fill); header rule #FE1B04. Sender stays
-// "GC Radar <radar@gershon.ai>". Recipients, schedule and subject unchanged.
-// NOTE: repo copy only - the deployed function must be redeployed by hand (see supabase/HANDOFF.txt).
-
-// v9.2 (2026-11-15) — two fixes after the 11-12 / 11-13 / 11-14 emails:
-//  a. "+20 new prospects" three days running looked like a LIMIT 20 / page size. It is not: the count
-//     is the RPC's count of people first seen that ET day (checked against the data: 20 on 11-11, 11-12
-//     and 11-13, from different bridges each day; total 5364 -> 5384). It is the extension's hard cap
-//     since v1.17.2 - at most `daily_lead_target` NEW prospects a day (limits.js). The email now says
-//     so when the cap is reached, so an identical number reads as "cap hit", not as a bug.
-//  b. "Chrome extension v1.17.2 (ahead of the published v1.17.0)" while 1.17.2 had been published on
-//     11-10. "Published" came only from Supabase config `latest_ext_version`, which nobody bumped; the
-//     site serves LATEST_EXT (functions/_lib/version.js), now exposed as /api/health `latest_ext`.
-//     Published = the HIGHEST of config, the site's latest_ext and the fallback - a stale copy can no
-//     longer make the running build look "ahead".
-
-// v9.3 (2026-11-16) — Resend retry. On 2026-11-13 18:20-21:54 UTC Resend failed transiently and
-//  the report was never retried (one attempt, then an error row). sendEmail now goes through
-//  ../_shared/resend.ts: network/429/5xx retried 3x after 1s/4s/10s with the SAME Idempotency-Key on
-//  every attempt of one email (one key per email, per run), so a retry cannot double-send; other 4xx are
-//  not retried; the final failure is logged and lands in `errors` as before.
-//  Needs a function redeploy (Supabase, verify_jwt OFF) - merging the repo does not deploy it.
-
-// v9.4 (2026-11-17) — weekends. The 11-14 (Sat) and 11-15 (Sun) emails said "⚠️ DID NOT RUN" in red.
-//  The data says Radar was fine: no owner logged a run or first-saw a prospect on either day, every
-//  weekday around them had runs from 6-8 owners, and the extension only runs automatically Mon-Fri
-//  08:30-19:00 local time (salesnav-radar-extension/sync-core.js WORK_DAYS = [1..5]). So a Saturday /
-//  Sunday with no run is the schedule, not an outage: the verdict is now a neutral "Weekend — no
-//  collection scheduled", the subject says "weekend, no run (by design)", silent accounts read
-//  "weekend — not scheduled", and the "New" card no longer counts weekend days as "days without a
-//  run" (Monday compares with Friday as "the last working day"). A weekend day on which someone DID run
-//  (manual Sync Now) is reported exactly as any other day. Weekdays are unchanged.
-
-// v9.5 (2026-11-27) — the verdict was amber ("needs attention") EVERY day for 7+ days. The only trigger was
-//  `bridges_never_scraped` (107-108 every day): an ALL-TIME inventory count of active bridges with no
-//  prospect attributed, recomputed from scratch each day and identical whatever yesterday's run did. DB check
-//  (read-only, 2026-11-27, xTVW0K1qKi): 96 of the 107 are 2nd/3rd-degree or unknown-degree bridges, which the
-//  extension deliberately does not scrape ("scrape:skip-not-connected" - queued for an invite instead) or whose
-//  search Sales Nav ignores (health filter_ignored). A standing backlog cannot tell a good day from a bad one,
-//  so a report that is always amber stops being read. Dead bridges no longer change the verdict or the subject;
-//  they stay listed (no cross) under "Needs attention" as a standing item. HTTP 429 / 401 in the day's log -
-//  things that actually happened yesterday - still turn the verdict amber and name the issue in the subject.
+// Full version history (v4..v9.5) is in the git history of the repo copy (supabase/functions/daily-report/index.ts, e.g. commit 5c74b9c).
+// v10 (2026-11-26) — Olivier: "Daily I need a report from radar about: the number of invitations
+//  sent to bridges for connection, new prospects collected and anything that was done during the
+//  chrome extension work." New SQL fn radar_ext_activity(owner,start,end) reads the extension's own
+//  run log (de-duplicated on ts+msg+bridge) and the email gains: a "Bridge invitations" section
+//  (sent, to whom, from which source, failed + why, accepted, still waiting, invites ON/OFF), a
+//  "What the Chrome extension did" section (runs, pages read, bridges read, prospects found/saved,
+//  URLs resolved, Sales Nav list filings, discovery, gate holds, errors), invites per account in the
+//  "All accounts" table, and the invite count in the subject line.
+// v10.1 (2026-11-27) — live v10 (deployed 11-27 00:03 UTC from a chat) + the repo's v9.5 dead-bridge
+//  calibration (PR #57): the all-time `bridges_never_scraped` count is a standing backlog, so it no longer
+//  turns the verdict amber or adds "needs attention" to the subject; it stays listed (no cross) under
+//  "Needs attention" as a standing item. HTTP 429 / 401 in the day's log still turn it amber and are named
+//  in the subject. Every v10 feature (bridge invitations, extension activity, invite count) is unchanged.
 import { sendResend } from '../_shared/resend.ts';
 
-const REPORT_VERSION = 'v9.5';
+const REPORT_VERSION = 'v10.1';
 const SB_URL = Deno.env.get('SUPABASE_URL')!;
 const SB_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const CRON_SECRET = 'radar_7Kq3mZ9pX2vL8nT';
 const GLOBAL_OWNER_KEY = 'xTVW0K1qKi';
 const TZ = 'America/New_York';
-const APP_URL = 'https://radar.gershon.ai/app.html';
+const APP_URL = 'https://radar.gershoncrm.com/app.html';
 const FALLBACK_LATEST_EXT = '1.7.3';   // also "the first build that reports its version" (extVerdict)
-const SITE_HEALTH_URL = 'https://radar.gershon.ai/api/health';   // { latest_ext } = the build the site serves
+const SITE_HEALTH_URL = 'https://radar.gershoncrm.com/api/health';   // { latest_ext } = the build the site serves
 const SENT_KEY = 'daily_report_sent_for';
 const FROM = 'GC Radar <radar@gershon.ai>';
-
-// v5 (2026-08-28) — the report blended several browsers into one verdict.
-// Under a single owner_key, one Chrome on ext v1.9.1 collects at 02:30-04:10 ET while other,
-// forgotten Chromes (v1.9.0, v1.7.4) run later and report found:0 / saved:0 plus no-tab,
-// not-authenticated and scrape-window errors. On 2026-08-27 the v1.7.4 browser produced 38 of the
-// day's 39 error entries, all landing in the same "Needs attention" list as the healthy browser's
-// - and `ext_version` was unbounded by the report window, so the same email could blame the
-// account for a dead browser AND claim the extension was up to date. radar_daily_stats now
-// returns `by_version`, `best_*` and a window-bounded `ext_version`; this file reads them.
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -236,6 +163,12 @@ async function stats(ownerKey: string, start: Date, end: Date): Promise<any> {
 // that ran; after LOOKBACK_DAYS with no run, fall back to the 7-day average.
 const LOOKBACK_DAYS = 7;
 type PrevRef = { ymd: string; n: number; gap: number; workGap?: number } | null;   // gap = days without a run in between; workGap = of those, weekdays
+async function extActivity(ownerKey: string, start: Date, end: Date): Promise<any> {
+  try {
+    const r = await sb('rpc/radar_ext_activity', { method: 'POST', body: { p_owner: ownerKey, p_start: start.toISOString(), p_end: end.toISOString() } });
+    return (Array.isArray(r) ? r[0] : r) || {};
+  } catch (_e) { return {}; }
+}
 function dayRan(ps: any): boolean {
   return (+ps?.runs || 0) > 0 || (+ps?.new_targets || 0) > 0;
 }
@@ -266,7 +199,7 @@ export function prevDeltaHtml(cur: number, ref: PrevRef, avg7: number, weekendId
 // v9 (c): every owner that collects. Candidates = extension clients seen in the last 14 days,
 // app users, and anyone who logged a run that day. An owner belongs to the fleet if it collected
 // that day or in the 7 days before (so test/abandoned installs are not reported as "silent").
-type OwnerDay = { owner_key: string; label: string; runs: number; newTargets: number; written: number; collected: boolean };
+type OwnerDay = { owner_key: string; label: string; runs: number; newTargets: number; written: number; collected: boolean; invites?: number; invitesFailed?: number; act?: any };
 function collectedOn(s: any): boolean {
   return (+s?.new_targets || 0) > 0 || (+s?.best_saved || 0) > 0;
 }
@@ -278,6 +211,11 @@ async function fleetDay(start: Date, end: Date, names: Record<string, string>, p
     for (const r of gc) if (r.owner_key) keys.add(r.owner_key);
   } catch (_e) { /* best-effort */ }
   for (const k of Object.keys(names)) keys.add(k);
+  // v10: accounts without a users row get the name from their latest LinkedIn login (not the raw owner key).
+  try {
+    const lg: Array<{ owner_key: string; name: string | null }> = await sb(`activity_log?select=owner_key,name:detail->>name&action=eq.login&order=at.desc&limit=1000`);
+    for (const r of lg) if (r.owner_key && r.name && !names[r.owner_key]) names[r.owner_key] = r.name;
+  } catch (_e) { /* best-effort */ }
   try {
     const ran: Array<{ owner_key: string }> = await sb(`activity_log?select=owner_key&action=eq.sync_log&at=gte.${enc(start.toISOString())}&at=lt.${enc(end.toISOString())}`);
     for (const r of ran) if (r.owner_key) keys.add(r.owner_key);
@@ -289,8 +227,10 @@ async function fleetDay(start: Date, end: Date, names: Record<string, string>, p
     const n = +s.new_targets || 0;
     const before = Math.round((+s.avg7 || 0) * 7) - n;          // first-seen in the 7 days before
     const collected = collectedOn(s);
-    if (k !== primary && !collected && before <= 0) continue;    // never collects: not part of the fleet
-    out.push({ owner_key: k, label: names[k] || k, runs: +s.runs || 0, newTargets: n, written: +s.saved || 0, collected });
+    const a = await extActivity(k, start, end);
+    // v10: an account that only sent bridge invites that day still belongs in the table.
+    if (k !== primary && !collected && before <= 0 && !(+a.invites_sent || 0)) continue;    // never collects: not part of the fleet
+    out.push({ owner_key: k, label: names[k] || k, runs: +s.runs || 0, newTargets: n, written: +s.saved || 0, collected, invites: +a.invites_sent || 0, invitesFailed: +a.invites_failed || 0, act: a });
   }
   return out.sort((a, b) => (a.owner_key === primary ? -1 : b.owner_key === primary ? 1 : b.newTargets - a.newTargets || b.written - a.written));
 }
@@ -466,7 +406,7 @@ function extVerdict(s: any, latest: string): Verdict {
 }
 
 // v5. Stale browsers running ALONGSIDE a current one - the failure mode no single-version
-// warning could ever describe.
+// warning could ever describe. (v6/v7/v8 rules: see repo copy.)
 type VerRow = { version: string; runs: number; found: number; saved: number; listed: number; errors: number; last_run_at: string };
 function browsersVerdict(s: any, latest: string): Verdict | null {
   const rows: VerRow[] = Array.isArray(s.by_version) ? s.by_version : [];
@@ -476,22 +416,6 @@ function browsersVerdict(s: any, latest: string): Verdict | null {
   const good = rows.filter(r => !isStale(r));
   const vl = (r: VerRow) => `v${r.version === 'unreported' ? '?' : r.version}`;
   const savedOf = (r: VerRow) => +r.saved || 0;
-  // v6 (2026-08-28, Olivier's call): only ONE browser has to work. Other Chromes are knowingly
-  // left on old builds and will not be fixed, so shouting about them daily would train the reader
-  // to ignore a red banner - the exact habit that let a real outage hide for days. Red is reserved
-  // for "the pipeline is actually broken". If a current build collected anything, the stale
-  // browsers are reported as a plain fact and the subject line stays clean.
-  //
-  // v7: `saved` comes from run:done, which a long run may never push inside the day - on
-  // 2026-08-28 v1.9.1 showed 8 runs, run_done 0, saved 0 while 1133 targets actually landed. So do
-  // NOT gate on r.saved alone: if a current build ran at all and the day produced prospects, it
-  // was that browser (the stale ones demonstrably collect nothing).
-  //
-  // v8: ...except when they do. On 2026-10-26 the v1.15.0 browser saved 258 (printed in the
-  // "Browsers that ran" table) while this banner said it "collected nothing" and credited the day
-  // to the current build. Every per-browser statement below now comes from that browser's own
-  // `saved` - the same number the table prints. The dayProduced heuristic is only used when NO
-  // browser reported a saved count.
   if (!stale.length) {
     return { level: 'ok', title: `${rows.length} browsers collecting, all on v${latest}`, body: rows.map(r => `v${r.version}: ${r.runs} run(s), ${r.saved} saved`).join(' · ') };
   }
@@ -509,14 +433,12 @@ function browsersVerdict(s: any, latest: string): Verdict | null {
     const others = collecting.slice(1).map(r => `${vl(r)}${isStale(r) ? ' (old build)' : ''} also saved ${r.saved}`);
     const othersLine = others.length ? ` ${others.join('; ')}.` : '';
     if (!isStale(w)) {
-      // A current build did the most work.
       return {
         level: 'ok',
         title: `Collecting on ${vl(w)} — ${plural(stale.length, 'other browser')} on old builds`,
         body: `${vl(w)} saved ${w.saved} record(s) yesterday.${othersLine}${idleLine} Left alone deliberately — nothing to do here.`,
       };
     }
-    // The browser doing the work is itself on an old build: still collecting, so not red.
     const curIdle = good.filter(r => savedOf(r) === 0);
     return {
       level: 'warn',
@@ -525,7 +447,6 @@ function browsersVerdict(s: any, latest: string): Verdict | null {
     };
   }
 
-  // No browser reported a saved count (run:done can lag - see v7 above).
   if (good.length && dayProduced) {
     const w = good[0];
     return {
@@ -592,7 +513,64 @@ export function deadBridgesNote(s: any): string | null {
   return `Standing (not about yesterday): ${dead} active bridge${dead === 1 ? '' : 's'} ha${dead === 1 ? 's' : 've'} never produced a prospect — mostly bridges that are not 1st-degree connections yet (the extension skips them and queues an invite) or whose Sales Navigator search ignores the connection filter. Review or switch them off on the Bridges page.`;
 }
 
-function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verdict, browsers: Verdict | null, prevRef: PrevRef = null, fleet: OwnerDay[] = [], issues: string[] = [], primary = GLOBAL_OWNER_KEY): string {
+// v10: in a multi-account email the invitations block covers EVERY account (each line says which).
+export function mergeInvites(fleet: OwnerDay[], own: any): any {
+  if (fleet.length < 2) return own;
+  const acts = fleet.map(o => ({ o, a: o.act || {} }));
+  const sum = (k: string) => acts.reduce((n, x) => n + (+x.a[k] || 0), 0);
+  const on = acts.filter(x => String(x.a.invites_mode || '').toLowerCase() === 'on').map(x => x.o.label);
+  const waiting = acts.filter(x => x.a.invites_waiting !== null && x.a.invites_waiting !== undefined);
+  return {
+    invites_sent: sum('invites_sent'), invites_failed: sum('invites_failed'), invites_accepted: sum('invites_accepted'),
+    invites_waiting: waiting.length ? waiting.reduce((n, x) => n + (+x.a.invites_waiting || 0), 0) : null,
+    not_connected: sum('not_connected'),
+    mode_text: on.length ? on.join(', ') : 'no account',
+    invites_sent_list: acts.flatMap(x => (x.a.invites_sent_list || []).map((i: any) => ({ bridge: i.bridge, source: [i.source, x.o.label].filter(Boolean).join(' · ') }))),
+    invites_failed_list: acts.flatMap(x => (x.a.invites_failed_list || []).map((i: any) => ({ bridge: `${i.bridge} (${x.o.label})`, reason: i.reason }))),
+  };
+}
+export function invitesSection(a: any): string {
+  const sent: Array<{ bridge: string; source: string | null }> = Array.isArray(a?.invites_sent_list) ? a.invites_sent_list : [];
+  const failed: Array<{ bridge: string; reason: string }> = Array.isArray(a?.invites_failed_list) ? a.invites_failed_list : [];
+  const mode = a?.mode_text ? String(a.mode_text) : a?.invites_mode ? String(a.invites_mode).toUpperCase() : 'unknown';
+  const li = (t: string) => `<li style="margin:3px 0;">${t}</li>`;
+  return sectionTitle('Bridge invitations (connection requests)') +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>` +
+    card('Invitations sent', +a?.invites_sent || 0, `<span style="color:#94a3b8;">to 2nd/3rd-degree bridges</span>`) +
+    card('Accepted', +a?.invites_accepted || 0, `<span style="color:#94a3b8;">bridge became 1st-degree</span>`) +
+    card('Still waiting', a?.invites_waiting ?? '—', `<span style="color:#94a3b8;">bridges not yet connected</span>`) +
+    `</tr></table>` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">` +
+    row(a?.mode_text ? 'Invitations switched ON for' : 'Invitations switched', mode === 'ON' || a?.mode_text ? esc(mode) : `<span style="color:#b45309;">${esc(mode)}</span>`) +
+    row('Bridges skipped (not 1st-degree yet)', String(a?.not_connected ?? '—')) +
+    row('Invitations that failed', failed.length ? `<span style="color:#dc2626;">${+a.invites_failed || failed.length}</span>` : '0') +
+    `</table>` +
+    (sent.length ? `<div style="font-size:13px;color:#334155;margin:8px 0 0;"><b>Sent to:</b><ul style="margin:4px 0 0;padding-left:20px;line-height:1.5;">${sent.map(x => li(`${esc(x.bridge)}${x.source ? ` <span style="color:#94a3b8;">(${esc(x.source)})</span>` : ''}`)).join('')}</ul></div>` : '') +
+    (failed.length ? `<div style="font-size:13px;color:#334155;margin:8px 0 0;"><b>Failed:</b><ul style="margin:4px 0 0;padding-left:20px;line-height:1.5;">${failed.map(x => li(`${esc(x.bridge)} <span style="color:#94a3b8;">— ${esc(x.reason)}</span>`)).join('')}</ul></div>` : '');
+}
+export function extSection(a: any): string {
+  const ran = (+a?.runs_started || 0) + (+a?.runs_done || 0) > 0;
+  if (!ran) return sectionTitle('What the Chrome extension did') + `<div style="font-size:14px;color:#94a3b8;">The extension logged no activity yesterday.</div>`;
+  const t = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString('en-US', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }) : '—';
+  const held: string[] = Array.isArray(a.gate_held) ? a.gate_held.filter(Boolean) : [];
+  return sectionTitle('What the Chrome extension did') +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">` +
+    row('Runs', `${+a.runs_done || 0} finished of ${+a.runs_started || 0} started <span style="font-weight:400;color:#94a3b8;">(${t(a.first_at)}–${t(a.last_at)} ET${a.version ? `, v${esc(a.version)}` : ''})</span>`) +
+    row('Sales Navigator pages read', String(+a.pages_read || 0)) +
+    row('Bridges read', `${+a.bridges_read || 0} <span style="font-weight:400;color:#94a3b8;">(${+a.bridges_with_leads || 0} returned prospects)</span>`) +
+    row('Prospects found / saved', `${+a.found || 0} / ${+a.saved || 0}`) +
+    row('Prospect LinkedIn URLs resolved', String(+a.urls_resolved || 0)) +
+    row('Filed into the Sales Navigator list', String(+a.listed || 0)) +
+    row('Bridge profile URLs resolved', String(+a.bridge_urls_resolved || 0)) +
+    row('Sources searched for new bridges', `${+a.discover_sources || 0} <span style="font-weight:400;color:#94a3b8;">(${+a.discover_candidates || 0} candidates)</span>`) +
+    row('Bridge invitations sent', String(+a.invites_sent || 0)) +
+    (held.length ? row('Paused by the LinkedIn safety gate', `<span style="color:#b45309;">${esc(held.join(', '))}</span>`) : '') +
+    (a.limits_why ? row('Limits in force', esc(a.limits_why)) : '') +
+    row('Errors in the log', (+a.errors || 0) > 0 ? `<span style="color:#dc2626;">${+a.errors}</span>` : '0') +
+    `</table>`;
+}
+
+function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verdict, browsers: Verdict | null, prevRef: PrevRef = null, fleet: OwnerDay[] = [], issues: string[] = [], primary = GLOBAL_OWNER_KEY, act: any = {}): string {
   const newTargets = +s.new_targets || 0;
   const avg7 = +s.avg7 || 0;
   const byBridge: Array<{ bridge: string; n: number }> = Array.isArray(s.by_bridge) ? s.by_bridge : [];
@@ -667,12 +645,15 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
         `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">` +
         fleet.map(o => row(`${o.label}${o.owner_key === primary ? ' (this account)' : ''}`,
           o.collected
-            ? `${o.newTargets} new &middot; ${o.written} written &middot; ${o.runs} run(s)`
+            ? `${o.newTargets} new &middot; ${o.written} written &middot; ${o.invites || 0} invite(s) &middot; ${o.runs} run(s)`
             : o.runs === 0 && weekend
             ? `<span style="color:#94a3b8;">weekend &#8212; not scheduled</span>`
-            : `<span style="color:#b45309;">silent &#8212; ${o.runs === 0 ? 'did not run' : `${o.runs} run(s), saved 0`}</span>`)).join('') +
+            : `<span style="color:#b45309;">silent &#8212; ${o.runs === 0 ? 'did not run' : `${o.runs} run(s), saved 0`}</span>${o.invites ? ` &middot; ${o.invites} invite(s)` : ''}`)).join('') +
         `</table>`;
     })()}
+
+    ${invitesSection(mergeInvites(fleet, act))}
+    ${extSection(act)}
 
     ${sectionTitle('Where yesterday’s prospects came from')}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${bridgeRows}</table>
@@ -687,7 +668,7 @@ function buildHtml(name: string, s: any, dayYmd: string, job: Verdict, ext: Verd
     </div>
   </td></tr>
   <tr><td style="padding:16px 24px 22px;border-top:1px solid #e2e8f0;">
-    <div style="font-size:12px;color:#94a3b8;line-height:1.6;">Generated by Radar (daily-report ${REPORT_VERSION}) &#8212; radar.gershon.ai. Covers ${esc(longDate(dayYmd))}, midnight to midnight, New York time.<br/>Reply to <a href="mailto:support@gershonconsulting.com" style="color:#1f6f5c;text-decoration:underline;">support@gershonconsulting.com</a>.</div>
+    <div style="font-size:12px;color:#94a3b8;line-height:1.6;">Generated by Radar (daily-report ${REPORT_VERSION}) &#8212; radar.gershoncrm.com. Covers ${esc(longDate(dayYmd))}, midnight to midnight, New York time.<br/>Reply to <a href="mailto:support@gershonconsulting.com" style="color:#1f6f5c;text-decoration:underline;">support@gershonconsulting.com</a>.</div>
   </td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -754,7 +735,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const browsers = browsersVerdict(s, latestExt);
       let prevRef: PrevRef = null;
       try { prevRef = await lastRunDay(r.owner_key, dayYmd); } catch (_e) { prevRef = null; /* falls back to the 7-day average */ }
-      const html = buildHtml(r.display_name || '', s, dayYmd, job, ext, browsers, prevRef, fleet, issues, r.owner_key);
+      const act = await extActivity(r.owner_key, start, end);
+      const html = buildHtml(r.display_name || '', s, dayYmd, job, ext, browsers, prevRef, fleet, issues, r.owner_key, act);
 
       const tag = (browsers && browsers.level === 'critical' && job.level !== 'critical')
         ? ' — ⚠️ OUTDATED BROWSER'
@@ -765,7 +747,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         : (+s.runs || 0) === 0 && fleet.some(o => o.collected)
         ? ` — this account did not run (other accounts +${fleet.reduce((a, o) => a + o.newTargets, 0)} new)`
         : ((+s.new_targets || 0) > 0 ? ` — +${s.new_targets} new prospects${capReached(+s.new_targets || 0, cap) ? ' (daily cap reached)' : ''}${issues.length ? ` · needs attention: ${issues[0]}${issues.length > 1 ? ` (+${issues.length - 1} more)` : ''}` : ''}` : ' — no new prospects');
-      const subject = `Radar Report — ${shortDate(dayYmd)}${tag}`;
+      const inv = fleet.length > 1 ? fleet.reduce((x, o) => x + (o.invites || 0), 0) : (+act.invites_sent || 0);
+      const subject = `Radar Report — ${shortDate(dayYmd)}${tag}${inv ? ` · ${inv} bridge invite(s)` : ''}`;
 
       const to = toOverride || cfg.report_email || r.email;
       if (dry) { preview = html; previewSubject = subject; sent.push(`${to} (dry)`); continue; }
