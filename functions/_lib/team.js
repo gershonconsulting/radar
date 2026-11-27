@@ -5,7 +5,8 @@
 // Login with LinkedIn."
 //
 // Storage: one config row per account, key 'team_members', value = JSON array (no schema change).
-//   { id, name, email, linkedin_url, role: full|semi|viewer, status: invited|active,
+//   { id, name, email (optional since v1.27.1), linkedin_url, role: full|semi|viewer, status: invited|active,
+//     token (personal invite link secret, v1.27.1),
 //     sub (LinkedIn OIDC sub, bound on first sign-in), invited_at, invited_by, last_login_at }
 // A member signs in with LinkedIn; the match is the EMAIL of their LinkedIn account (OIDC gives no
 // profile URL), then their sub once bound. Removed members are deleted from the list.
@@ -44,7 +45,7 @@ export function parseTeam(value) {
   if (!value) return [];
   try {
     const arr = typeof value === 'string' ? JSON.parse(value) : value;
-    return Array.isArray(arr) ? arr.filter(m => m && m.email && ROLES.includes(m.role)) : [];
+    return Array.isArray(arr) ? arr.filter(m => m && (m.email || m.token) && ROLES.includes(m.role)) : [];
   } catch (e) { return []; }
 }
 
@@ -62,18 +63,45 @@ export function validateInvite(body, list, now = new Date().toISOString(), by = 
   const email = normEmail(body.email);
   const li = normLinkedin(body.linkedin_url);
   const role = String(body.role || '').toLowerCase();
-  if (!isEmail(email)) return { ok: false, error: 'Enter a valid email (the one on their LinkedIn account).' };
+  if (email && !isEmail(email)) return { ok: false, error: 'This email does not look right (or leave it empty and send the invite link).' };
   if (!li) return { ok: false, error: 'Enter their LinkedIn profile link (linkedin.com/in/...).' };
   if (!ROLES.includes(role)) return { ok: false, error: 'Pick an access level: Full, Semi or Viewer.' };
-  if ((list || []).some(m => normEmail(m.email) === email)) return { ok: false, error: 'This email already has access.' };
+  if (email && (list || []).some(m => normEmail(m.email) === email)) return { ok: false, error: 'This email already has access.' };
+  if ((list || []).some(m => m.linkedin_url && m.linkedin_url.toLowerCase() === li.toLowerCase())) return { ok: false, error: 'This LinkedIn profile already has access.' };
   if ((list || []).length >= MAX_MEMBERS) return { ok: false, error: 'Limit reached (' + MAX_MEMBERS + ' people per account).' };
   const id = 'm' + Math.random().toString(36).slice(2, 10);
-  return { ok: true, member: { id, name, email, linkedin_url: li, role, status: 'invited', sub: null, invited_at: now, invited_by: by, last_login_at: null } };
+  return { ok: true, member: { id, name, email: email || '', linkedin_url: li, role, status: 'invited', sub: null, token: makeToken(), invited_at: now, invited_by: by, last_login_at: null } };
 }
 
-// What a member list looks like to the browser (no LinkedIn sub).
-export function publicMember(m) {
-  return { id: m.id, name: m.name || '', email: m.email, linkedin_url: m.linkedin_url || '', role: m.role,
+export function makeToken() {
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const b = new Uint8Array(24); crypto.getRandomValues(b);
+  let t = ''; for (let i = 0; i < b.length; i++) t += A[b[i] % A.length];
+  return t;
+}
+export function inviteUrl(origin, m) { return m && m.token ? origin + '/api/auth/linkedin/login?invite=' + m.token : ''; }
+
+// Member whose personal invite link this is: unclaimed, or already claimed by this same LinkedIn identity.
+export function findByToken(list, token, sub) {
+  if (!token) return null;
+  return (list || []).find(m => m.token && m.token === token && (!m.sub || m.sub === sub)) || null;
+}
+
+// Accounts whose team list holds this invite token. sb(path) = Supabase REST GET.
+export async function findInvite(sb, token, sub) {
+  if (!/^[A-Za-z0-9]{20,64}$/.test(String(token || ''))) return null;
+  const rows = await sb(`config?key=eq.${TEAM_KEY}&value=like.${encodeURIComponent('*' + token + '*')}&select=owner_key,value&limit=5`);
+  for (const r of rows || []) {
+    const m = findByToken(parseTeam(r.value), token, sub);
+    if (m) return { owner_key: r.owner_key, member: m };
+  }
+  return null;
+}
+
+// What a member list looks like to the browser (no LinkedIn sub). Only owners / Full members get the list.
+export function publicMember(m, origin = '') {
+  return { id: m.id, name: m.name || '', email: m.email || '', linkedin_url: m.linkedin_url || '', role: m.role,
+           invite_url: origin ? inviteUrl(origin, m) : '',
            status: m.status || 'invited', invited_at: m.invited_at || null, last_login_at: m.last_login_at || null };
 }
 

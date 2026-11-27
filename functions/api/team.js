@@ -9,6 +9,7 @@
 // See functions/_lib/team.js for storage and the role rules.
 
 import { verify, sign } from '../_lib/session.js';
+import { originFor } from '../_lib/hosts.js';
 import { TEAM_KEY, ROLES, parseTeam, findMember, validateInvite, publicMember, canManageTeam, findMemberships } from '../_lib/team.js';
 
 const SUPABASE_URL = 'https://pkzeeqehwmtnqxdpdesl.supabase.co';
@@ -50,8 +51,12 @@ async function writeTeam(sb, owner, list) {
 async function accountName(sb, owner) {
   try {
     const u = await sb(`users?owner_key=eq.${enc(owner)}&select=display_name,email&limit=1`);
-    return (u && u[0] && (u[0].display_name || u[0].email)) || owner;
-  } catch (e) { return owner; }
+    if (u && u[0] && (u[0].display_name || u[0].email)) return u[0].display_name || u[0].email;
+    // older accounts have no users row: use the name / email of the last LinkedIn sign-in
+    const a = await sb(`activity_log?owner_key=eq.${enc(owner)}&action=eq.login&select=detail&order=at.desc&limit=1`);
+    const d = (a && a[0] && a[0].detail) || {};
+    return d.name || d.email || 'this account';
+  } catch (e) { return 'this account'; }
 }
 async function log(sb, owner, action, detail) {
   try { await sb('activity_log', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify([{ owner_key: owner, action, detail }]) }); } catch (e) {}
@@ -75,6 +80,8 @@ export async function callerContext(sb, session) {
 export async function onRequest({ request, env }) {
   if (!env.SUPABASE_SERVICE_KEY || !env.SESSION_SECRET) return json({ success: false, error: 'not configured' }, 500);
   const sb = makeSb(env);
+  const origin = originFor(request);
+  const pm = (m) => publicMember(m, origin);
   const session = await verify(parseCookies(request.headers.get('Cookie')).radar_session, env.SESSION_SECRET);
   let ctx;
   try { ctx = await callerContext(sb, session); } catch (e) { return json({ success: false, error: String(e.message || e) }, 500); }
@@ -93,7 +100,7 @@ export async function onRequest({ request, env }) {
       return json({
         success: true, role: ctx.role, can_manage: canManageTeam(ctx.role),
         account: { owner_key: ctx.owner, name: await accountName(sb, ctx.owner) },
-        members: canManageTeam(ctx.role) ? list.map(publicMember) : [],
+        members: canManageTeam(ctx.role) ? list.map(pm) : [],
         workspaces
       });
     }
@@ -129,7 +136,7 @@ export async function onRequest({ request, env }) {
       list.push(v.member);
       await writeTeam(sb, ctx.owner, list);
       await log(sb, ctx.owner, 'team_invite', { email: v.member.email, role: v.member.role, by });
-      return json({ success: true, member: publicMember(v.member), members: list.map(publicMember) });
+      return json({ success: true, member: pm(v.member), members: list.map(pm) });
     }
     const idx = list.findIndex(m => m.id === body.id);
     if (idx < 0) return json({ success: false, error: 'member not found' }, 404);
@@ -140,13 +147,13 @@ export async function onRequest({ request, env }) {
       list[idx].role = role;
       await writeTeam(sb, ctx.owner, list);
       await log(sb, ctx.owner, 'team_role', { email: list[idx].email, role, by });
-      return json({ success: true, members: list.map(publicMember) });
+      return json({ success: true, members: list.map(pm) });
     }
     if (op === 'remove') {
       const [gone] = list.splice(idx, 1);
       await writeTeam(sb, ctx.owner, list);
       await log(sb, ctx.owner, 'team_remove', { email: gone.email, by });
-      return json({ success: true, members: list.map(publicMember) });
+      return json({ success: true, members: list.map(pm) });
     }
     return json({ success: false, error: 'unknown op' }, 400);
   } catch (e) {

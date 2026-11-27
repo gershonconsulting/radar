@@ -26,5 +26,12 @@ export async function onRequestGet({ request, env }) {
         `li_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`
       );
 
+  // Team invite link (v1.27.1): /api/auth/linkedin/login?invite=<token> remembers the token for the
+  // callback, which attaches this LinkedIn identity to the inviting account (no email needed).
+  const invite = new URL(request.url).searchParams.get('invite') || '';
+  if (/^[A-Za-z0-9]{20,64}$/.test(invite)) {
+    headers.append('Set-Cookie', `radar_invite=${invite}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=900`);
+  }
+
   return new Response(null, { status: 302, headers });
 }

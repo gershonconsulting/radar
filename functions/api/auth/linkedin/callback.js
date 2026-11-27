@@ -15,7 +15,7 @@ import { originFor, linkedinRedirectUri } from '../../../_lib/hosts.js';
 // 5. Issues a signed HMAC session cookie carrying { sub, email, name, owner_key, adm }.
 
 import { sign } from '../../../_lib/session.js';
-import { TEAM_KEY, parseTeam, findMember, findMemberships, pickWorkspace } from '../../../_lib/team.js';
+import { TEAM_KEY, parseTeam, findMember, findMemberships, pickWorkspace, findInvite, findByToken } from '../../../_lib/team.js';
 
 const SUPABASE_URL = 'https://pkzeeqehwmtnqxdpdesl.supabase.co';
 const SOLO_OWNER = 'xTVW0K1qKi'; // pre-multi-user owner of all existing data (Olivier)
@@ -187,7 +187,14 @@ export async function onRequestGet({ request, env }) {
       if (hit && hit.user && memberships.length && !hit.user.is_admin) {
         try { const s = await sb(env, `sources?owner_key=eq.${enc(hit.user.owner_key)}&select=name&limit=1`); ownHasData = !!(s && s.length); } catch (e) { ownHasData = true; }
       }
-      const ws = pickWorkspace({ own: hit && hit.user, ownHasData, isAdmin: !!(hit && hit.user && hit.user.is_admin), memberships });
+      let ws = pickWorkspace({ own: hit && hit.user, ownHasData, isAdmin: !!(hit && hit.user && hit.user.is_admin), memberships });
+      // Personal invite link (v1.27.1): the person opened /api/auth/linkedin/login?invite=<token>.
+      // It wins over everything else: they explicitly came to join that account.
+      let invited = null;
+      if (cookies.radar_invite) {
+        try { invited = await findInvite((path) => sb(env, path), cookies.radar_invite, who.sub); } catch (e) { invited = null; }
+        if (invited) ws = { kind: 'member', owner_key: invited.owner_key, member: invited.member };
+      }
       if (ws.kind === 'member') {
         member = { owner_key: ws.owner_key, member: ws.member, self_owner: (hit && hit.user && hit.user.owner_key) || null };
       } else if (hit && hit.user) {
@@ -222,9 +229,10 @@ export async function onRequestGet({ request, env }) {
         try {
           const rows = await sb(env, `config?owner_key=eq.${enc(ownerKey)}&key=eq.${TEAM_KEY}&select=value&limit=1`);
           const list = parseTeam(rows && rows[0] && rows[0].value);
-          const m = findMember(list, { sub: who.sub, email });
+          const m = (invited && findByToken(list, cookies.radar_invite, who.sub)) || findMember(list, { sub: who.sub, email });
           if (m) {
             m.sub = who.sub; m.status = 'active'; m.last_login_at = new Date().toISOString();
+            if (!m.email && email) m.email = email;
             if (!m.name && who.name) m.name = who.name;
             member.member = m;
             await sb(env, 'config?on_conflict=owner_key,key', {
@@ -282,6 +290,7 @@ export async function onRequestGet({ request, env }) {
 
   const headers = new Headers({ Location: originFor(request) + '/app.html' });
   headers.append('Set-Cookie', 'li_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+  if (cookies.radar_invite) headers.append('Set-Cookie', 'radar_invite=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
   headers.append('Set-Cookie', `radar_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
   return new Response(null, { status: 302, headers });
 }
