@@ -59,6 +59,9 @@ assert.ok(ceoBio && ceoBio.size === 4);
 const coo = r.personas.find(p => p.role === 'COO / Operations');
 assert.equal(coo.industry_group, 'Mixed industries', '2+1 COOs merged across industries');
 assert.equal(coo.verdict, 'off_icp', 'COO: 12 graded, 0 ICP');
+// under-reached: CTO is 6/25 = 24% of recommendations but 1 of 47 prospects (2%)
+const r2 = buildPersonas(leads, targets.concat([{ title: 'CTO', country: 'US', grade: 'A' }]));
+assert.equal(r2.personas.find(p => p.role === 'CTO / Technical lead').verdict, 'underserved');
 assert.equal(r.others.size, 2, 'the 2 board members are too few');
 assert.equal(r.grouped, 23);
 assert.equal(r.dims.degree.first, 4);
