@@ -308,3 +308,12 @@ scrape:skip-not-connected, invite queued) or Sales Nav ignores their filter; 11 
 ✅ tests/daily-report.test.mjs cases 11-12 (case 1 fails on v9.4). Full tests/ suite passes.
 ❌ Not live until the daily-report function is redeployed (Supabase, verify_jwt OFF) - there is no push-to-deploy
    workflow for Supabase functions (only deploy-eod-cron.yml). Live footer still says v9.4.
+
+## 2026-11-27 nightly push (branch nightly/2026-11-27-radar-daily-v10) - daily-report v10.1
+daily-report v10.1 = live v10 (deployed 11-27 00:03 UTC from a chat) + v9.5 dead-bridge calibration; repo now matches live
+✅ v10 features kept as deployed: "Bridge invitations" + "What the Chrome extension did" sections (rpc radar_ext_activity),
+   invites per account, "· N bridge invite(s)" in the subject, invite-only accounts in the fleet, site domain radar.gershoncrm.com.
+✅ tests/daily-report.test.mjs cases 13-16 (invites, extension section, 429 + invites subject, mergeInvites); cases 1-12 still pass.
+❌ DRIFT: SQL function radar_ext_activity(p_owner text, p_start timestamptz, p_end timestamptz) exists ONLY in the DB
+   (created from the 11-26 chat) - no migration file in the repo. Not added tonight (no schema changes in a nightly push).
+❌ DRIFT: v10 links to radar.gershoncrm.com while the rest of the repo moved to radar.gershon.ai (v1.22.0). Kept as live; decide which.
